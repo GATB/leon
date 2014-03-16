@@ -1,0 +1,66 @@
+project(leon)
+
+cmake_minimum_required(VERSION 2.6)
+
+################################################################################
+# Define cmake modules directory
+################################################################################
+FOREACH (path "cmake" "../../cmake")
+    IF (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
+        SET (CMAKE_MODULE_PATH  "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
+    ENDIF()
+ENDFOREACH(path)
+
+################################################################################
+# THIRD PARTIES
+################################################################################
+
+# GATB CORE
+include (GatbCore)
+
+# DSK
+LOOKUP_PATH ("dsk" "../dsk;thirdparty/dsk" ${PROJECT_SOURCE_DIR} DSK_PATH)
+LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${DSK_PATH}" "thirdparty/dsk") 
+
+# BLOOCOO
+LOOKUP_PATH ("bloocoo" "../bloocoo;thirdparty/bloocoo" ${PROJECT_SOURCE_DIR} BLOOCOO_PATH)
+LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${BLOOCOO_PATH}" "thirdparty/bloocoo") 
+
+################################################################################
+# TOOL
+################################################################################
+
+# we get compilation definitions from the gatb-core part
+add_definitions (${gatb-core-flags})
+
+# we give the headers directories from : 
+#       - from project source 
+#       - from GATB-CORE source
+#       - from dsk source 
+include_directories (src  ${gatb-core-includes} ${DSK_PATH}/src  ${BLOOCOO_PATH}/src)
+
+# we define the files to be compiled
+file (GLOB_RECURSE  ProjectFiles  src/*  ${DSK_PATH}/src/DSK.* ${BLOOCOO_PATH}/src/ReadWriter.* )
+
+# we define the artifact to be built: the project binary
+add_executable        (${PROJECT_NAME}  ${ProjectFiles})
+
+# we define which libraries to be linked with project binary
+target_link_libraries (${PROJECT_NAME}  ${gatb-core-libraries})
+
+################################################################################
+#  PACKAGING 
+################################################################################
+
+# We chose the kind of archive we want to generate
+SET (CPACK_GENERATOR            "TGZ")
+SET (CPACK_SOURCE_GENERATOR     "TGZ")
+
+# We copy the project binary to the 'bin' directory
+INSTALL (TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+# For the source archive, we exclude some unwanted directories.
+SET (CPACK_SOURCE_IGNORE_FILES  ${CPACK_SOURCE_IGNORE_FILES} "/build/" ".gitignore$")
+
+# To be done at the end. 
+INCLUDE (CPack)
