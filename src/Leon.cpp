@@ -286,7 +286,7 @@ Bloom<kmer_type>* Leon::createBloom ()
     LOCAL (itKmers);
     
     /** We instantiate the bloom object. */
-    BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CacheCoherent,getInput()->getInt(STR_NB_CORES));
+    BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
     Bloom<kmer_type>* bloom = builder.build (itKmers);
 
     /** We return the created bloom filter. */
