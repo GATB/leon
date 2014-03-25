@@ -569,7 +569,32 @@ CompressReads::CompressReads (Bloom<kmer_type>* bloom, Leon * leon, u_int64_t* n
 _total_nb_solid_kmers_in_reads (nb_solids_kmers), _local_nb_solid_kmers_in_reads(0),
 _synchro(System::thread().newSynchronizer()), _nb_living(nbliving)
 {
+<<<<<<< HEAD
 	_thread_id = __sync_fetch_and_add (_nb_living, 1);
+=======
+    printf("----- create bloom ----\n");
+    TIME_INFO (getTimeInfo(), "fill bloom filter");
+    
+    double lg2 = log(2);
+    float NBITS_PER_KMER = log (16*_kmerSize*(lg2*lg2))/(lg2*lg2);
+    NBITS_PER_KMER = 12;
+    u_int64_t solidFileSize = (System::file().getSize(_solidFile) / sizeof (kmer_count));
+    
+    u_int64_t estimatedBloomSize = (u_int64_t) ((double)solidFileSize * NBITS_PER_KMER);
+    if (estimatedBloomSize ==0 ) { estimatedBloomSize = 1000; }
+    
+    
+    //printf("raw solidFileSize %llu fsize %llu    %lu %lu \n",System::file().getSize(_solidFile), solidFileSize,sizeof (kmer_type),sizeof (kmer_count));
+    
+    Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
+                                                                new IteratorFile<kmer_count> (_solidFile),
+                                                                solidFileSize,
+                                                                "fill bloom filter"
+                                                                );
+    LOCAL (itKmers);
+    
+    BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
+    Bloom<kmer_type>* bloom = builder.build (itKmers);
 
 	
 }
