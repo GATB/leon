@@ -22,9 +22,9 @@ include (GatbCore)
 LOOKUP_PATH ("dsk" "../dsk;thirdparty/dsk" ${PROJECT_SOURCE_DIR} DSK_PATH)
 LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${DSK_PATH}" "thirdparty/dsk") 
 
-# BLOOCOO
-LOOKUP_PATH ("bloocoo" "../bloocoo;thirdparty/bloocoo" ${PROJECT_SOURCE_DIR} BLOOCOO_PATH)
-LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${BLOOCOO_PATH}" "thirdparty/bloocoo") 
+# LEON
+LOOKUP_PATH ("leon" "../leon;thirdparty/leon" ${PROJECT_SOURCE_DIR} LEON_PATH)
+LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${LEON_PATH}" "thirdparty/leon") 
 
 ################################################################################
 # TOOL
@@ -37,10 +37,10 @@ add_definitions (${gatb-core-flags})
 #       - from project source 
 #       - from GATB-CORE source
 #       - from dsk source 
-include_directories (src  ${gatb-core-includes} ${DSK_PATH}/src  ${BLOOCOO_PATH}/src)
+include_directories (src  ${gatb-core-includes} ${DSK_PATH}/src  ${LEON_PATH}/src)
 
 # we define the files to be compiled
-file (GLOB_RECURSE  ProjectFiles  src/*  ${DSK_PATH}/src/DSK.* ${BLOOCOO_PATH}/src/ReadWriter.* )
+file (GLOB_RECURSE  ProjectFiles  src/*  ${DSK_PATH}/src/DSK.* ${LEON_PATH}/src/RangeCoder.* ${LEON_PATH}/src/HeaderCoder.* ${LEON_PATH}/src/DnaCoder.*)
 
 # we define the artifact to be built: the project binary
 add_executable        (${PROJECT_NAME}  ${ProjectFiles})
