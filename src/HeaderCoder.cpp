@@ -187,6 +187,26 @@ void AbstractHeaderCoder::endHeader(){
 	_fieldIndex = 0;
 }
 
+void AbstractHeaderCoder::startBlock(){
+	_currentHeader = _leon->_firstHeader;
+	
+	for(int i=0; i<_typeModel.size(); i++){
+		_typeModel[i].clear();
+		_fieldIndexModel[i].clear();
+		_fieldColumnModel[i].clear();
+		_misSizeModel[i].clear();
+		_asciiModel[i].clear();
+		_zeroModel[i].clear();
+		
+		for(int j=0; j<8; j++)
+			_numericModels[i][j].clear();
+			
+	}
+		
+	splitHeader();
+	endHeader();
+}
+
 //====================================================================================
 // ** HeaderEncoder
 //====================================================================================
@@ -246,23 +266,6 @@ void HeaderEncoder::operator()(Sequence& sequence){
 	
 	if(sequence.getIndex() % Leon::READ_PER_BLOCK == 0){
 		writeBlock();
-
-		
-		
-		for(int i=0; i<_typeModel.size(); i++){
-			_typeModel[i].clear();
-			_fieldIndexModel[i].clear();
-			_fieldColumnModel[i].clear();
-			_misSizeModel[i].clear();
-			_asciiModel[i].clear();
-			_zeroModel[i].clear();
-			
-			for(int j=0; j<8; j++)
-				_numericModels[i][j].clear();
-				
-		}
-	
-
 		
 		//cout << "Start encoding header block" << endl;
 		//cout << sequence.getIndex() << endl;
@@ -284,14 +287,6 @@ void HeaderEncoder::writeBlock(){
 	_leon->_totalHeaderCompressedSize += _rangeEncoder.getBufferSize();
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize());
 	_rangeEncoder.clear();
-}
-
-
-void HeaderEncoder::startBlock(){
-	_currentHeader = _leon->_firstHeader;
-	
-	splitHeader();
-	endHeader();
 }
 
 void HeaderEncoder::processNextHeader(){
@@ -608,6 +603,9 @@ HeaderDecoder::~HeaderDecoder(){
 }
 
 void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
+	startBlock();
+	_rangeDecoder.clear();
+	
 	_inputFile->seekg(blockStartPos, _inputFile->beg);
 	_rangeDecoder.setInputFile(_inputFile);
 	
@@ -617,14 +615,16 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 	cout << "\t-----------------------" << endl;
 	cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
 	
-	_currentHeader = _leon->_firstHeader;
-	endHeader();
+	//_currentHeader = _leon->_firstHeader;
+	//endHeader();
+	_currentHeader.clear();
+	_misIndex = 0;
 	
 	execute();
 }
 
 void HeaderDecoder::execute(){
-	cout << "executing" << endl;
+	//cout << "executing" << endl;
 	//decodeFirstHeader();
 		
 	while(_inputFile->tellg() <= _blockStartPos+_blockSize){
@@ -785,6 +785,7 @@ void HeaderDecoder::decodeZero(){
 }
 
 void HeaderDecoder::endHeader(){
+	//cout << _currentHeader << endl;
 	for(int i=0; i<_currentHeader.size(); i++){
 		
 		//_outputFile->writeByte(_currentHeader[i]);

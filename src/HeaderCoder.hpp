@@ -69,6 +69,8 @@ class AbstractHeaderCoder
 		
 		Leon* _leon;
 		
+		void startBlock();
+		
 };
 
 //====================================================================================
@@ -99,7 +101,6 @@ class HeaderEncoder : AbstractHeaderCoder
 		int _lastMatchFieldIndex;
 		
 		//static void encodeFirstHeader();
-		void startBlock();
 		void writeBlock();
 		
 		void processNextHeader();

@@ -23,6 +23,32 @@ class AbstractDnaCoder
 		Leon* _leon;
 		collections::impl::Bloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 		
+		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
+		vector<Order0Model> _anchorAdressModel;
+		Order0Model _anchorPosSizeModel;
+		vector<Order0Model> _anchorPosModel;
+		
+		Order0Model _readSizeModel;
+		Order0Model _readAnchorRevcompModel;
+		vector<Order0Model> _readSizeValueModel;
+		Order0Model _mutationModel;
+		
+		Order0Model _noAnchorReadModel;
+		Order0Model _noAnchorReadSizeModel;
+		vector<Order0Model> _noAnchorReadSizeValueModel;
+		
+		size_t _kmerSize;
+		int _readSize;
+		KmerModel _kmerModel;
+		
+		vector<int> _uniqNoOrigMutationPos;
+		vector<int> _Npos;
+		
+		void startBlock();
+		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
+		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
+		
+		
 };
 
 //====================================================================================
@@ -44,19 +70,38 @@ class DnaEncoder : AbstractDnaCoder
 		RangeEncoder _rangeEncoder;
 		
 		//static void encodeFirstHeader();
-		void startBlock();
 		void writeBlock();
 		void execute();
 		
+		void buildKmers();
+		int findExistingAnchor(u_int32_t* anchorAdress);
+		
+		void encodeAnchorRead(int anchorPos, u_int32_t anchorAdress);
+		int encodeMutations(int pos, bool rightExtend);
+		int voteMutations(int pos, bool rightExtend);
+		
+		void encodeNoAnchorRead();
+		
+		
 		Sequence* _sequence;
-		int _readSize;
 		char* _readseq;
-		size_t _kmerSize;
-	
-		OAHash<kmer_type> _anchorKmers;
+		vector<kmer_type> _kmers;
+		KmerModel::Iterator _itKmer;
+		vector<int> _mutations;
+		
+		vector<int> _solidMutaChain;
+		int _solidMutaChainPos;
+		
+		
+		bool extendMutaChain(kmer_type kmer, int pos, bool rightExtend);
+		bool extendMutaChainRec(vector< vector< vector<kmer_type> > >& mutaChains, bool rightExtend);
+		
+		int _lala;
+		int _solidMutaChainStartPos;
+		int _solidMutaChainSize;
+		int _solidMutaChainLockTime;
 };
 
-/*
 //====================================================================================
 // ** DnaDecoder
 //====================================================================================
@@ -65,10 +110,9 @@ class DnaDecoder : AbstractDnaCoder
 		
 	public:
 		
-		HeaderDecoder(Leon* leon, ifstream* inputFile, ofstream* outputFile);
-		~HeaderDecoder();
+		DnaDecoder(Leon* leon, ifstream* inputFile, ofstream* outputFile);
+		~DnaDecoder();
 		
-		//void processNextByte(u_int8_t byte);
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize);
 	
 	private:
@@ -78,23 +122,15 @@ class DnaDecoder : AbstractDnaCoder
 		//OutputFile* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
+		string _currentSeq;
 		
 		void execute();
-		//int _prevPos;
-		void endHeader();
-		//void decodeFirstHeader();
-		void decodeMatch();
-		void decodeAscii();
-		void decodeNumeric();
-		void decodeDelta();
-		void decodeZero();
 		
-		//char _prevHeader2[1000];
-		//char _currentHeader2[1000];
-		//int _prevHeaderSize;
+		void decodeAnchorRead();
+		kmer_type decodeMutations(kmer_type kmer, int pos, bool rightExtend);
 		
-		
+		void decodeNoAnchorRead();
 };
-*/
+
 #endif /* _DNACODER_HPP_ */
 

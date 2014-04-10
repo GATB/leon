@@ -83,7 +83,6 @@ RangeEncoder::~RangeEncoder(){
 	//delete _outputFile;
 }
 
-
 void RangeEncoder::encode(Order0Model& model, uint8_t c){
 	#ifdef PRINT_DEBUG_RANGE_CODER
 		printf("\t\t\tencoding char: %c\n", c);
