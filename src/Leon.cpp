@@ -135,6 +135,9 @@ void Leon::createBloom ()
     _bloomSize = estimatedBloomSize;
     BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CacheCoherent,getInput()->getInt(STR_NB_CORES));
     _bloom = builder.build (itKmers);
+    
+    //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
+    //Bloom<kmer_type>* bloom = builder.build (itKmers);
 }
 
 void Leon::createKmerAbundanceHash(){
@@ -224,8 +227,14 @@ void Leon::executeCompression(){
     _inputBank = BankRegistery::singleton().getFactory()->createBank(_inputFilename);
 
 
-
-    
+	/*
+    Iterator<Sequence>* itSeq = createIterator<Sequence> (
+                                                          inbank->iterator(),
+                                                          inbank->estimateNbItems(),
+                                                          "Compressing headers"
+                                                          );
+    LOCAL (itSeq);
+    */
     /*************************************************/
     // We create the modified file
     /*************************************************/
