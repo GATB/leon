@@ -53,7 +53,7 @@ class Leon : public misc::impl::Tool
 		static const char* STR_DECOMPRESS;
 		
 		size_t          _kmerSize;
-		std::string     _solidFile;
+		string     _dskOutputFilename;
 		static const int READ_PER_BLOCK = 100000;
 		int _nb_cores;
 		
@@ -98,19 +98,20 @@ class Leon : public misc::impl::Tool
 		OAHash<kmer_type>* _kmerAbundance;
 		
 		//DNA decompression
-		IBank* _testBank; //debug
-		Iterator<Sequence>* _testBankIt;
 		kmer_type getAnchor(u_int32_t adress);
+		
 		
 		//Utils
 		static int nt2bin(char nt){
+
+			//return _nt2bin[nt];
+			
 			/*
 			int i;
 			i = nt;
 			i = (i>>1)&3; // that's quite clever, guillaume.
 			return i;
 			*/
-			
 			if(nt == 'A')
 				return 0;
 			else if(nt == 'C')
@@ -123,12 +124,17 @@ class Leon : public misc::impl::Tool
 				//cout << "error nt2bin N" << endl;
 				return 4;
 			}
-				
 		}
 		
 		static int bin2nt(int nt){
+			static char tab[5]{
+				tab[0] = 'A',
+				tab[1] = 'C',
+				tab[2] = 'T',
+				tab[3] = 'G',
+				tab[4] = 'N',
+			};
 			//if(nt == 4) cout << "error bin2nt N" << endl;
-			static char tab[5] = {'A', 'C', 'T', 'G', 'N'};
 			return tab[nt];
 			
 			/*
@@ -144,12 +150,14 @@ class Leon : public misc::impl::Tool
 				return 'N';*/
 		}
 		
+		//static const char _nt2bin[128];
+		//static const int _bin2nt[5];
 		
 	private:
 	 
+		
 		//static const char* STR_GZ;
 		IFile* _outputFile;
-		bool _isFasta;
 		int _nks;
 		
 		void execute ();
@@ -157,6 +165,7 @@ class Leon : public misc::impl::Tool
 		void createKmerAbundanceHash();
 		
 		//Global compression
+		bool _isFasta;
 		string _inputFilename;
 		string _outputFilename;
 		Order0Model _generalModel;
@@ -165,7 +174,7 @@ class Leon : public misc::impl::Tool
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
 		IBank* _inputBank;
-		u_int64_t _bloomSize;
+		//u_int64_t _bloomSize;
 		
 		void executeCompression();
 		void executeDecompression();
@@ -199,14 +208,22 @@ class Leon : public misc::impl::Tool
 		//OAHash<kmer_type> _anchorKmers;
 		
 		//Header decompression
-		//HeaderDecoder _headerDecoder;
+		string _headerOutputFilename;
+		ofstream* _headerOutputFile;
 		
 		//DNA Decompression
 		void decodeBloom();
 		void decodeAnchorDict();
 		
+		string _dnaOutputFilename;
+		ofstream* _dnaOutputFile;
 		RangeDecoder _anchorRangeDecoder;
 		vector<kmer_type> _vecAnchorKmers;
+		
+		//Global decompression
+		void endDecompression();
+		
+		//IFile* _outputFile;
 };
 
 

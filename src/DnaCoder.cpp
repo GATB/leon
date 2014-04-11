@@ -174,7 +174,7 @@ void DnaEncoder::writeBlock(){
 
 void DnaEncoder::execute(){
 	
-	//if(_leon->_readCount > 0) return;
+	//if(_leon->_readCount > 18) return;
 	//cout << endl << "\tEncoding seq " << _sequence->getIndex() << endl;
 	//cout << "\t\t" << _readseq << endl;
 	#ifdef PRINT_DEBUG_ENCODER
@@ -765,13 +765,9 @@ void DnaEncoder::encodeNoAnchorRead(){
 //====================================================================================
 DnaDecoder::DnaDecoder(Leon* leon, ifstream* inputFile, ofstream* outputFile) :
 AbstractDnaCoder(leon)
-//, _rangeDecoder(inputFile)
 {
 	_inputFile = inputFile;
-	// = new RangeDecoder(inputFile);
-	
-	//_outputFile = new OutputFile(outputFile);
-
+	_outputFile = outputFile;
 	
 }
 
@@ -790,8 +786,12 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 	_blockStartPos = blockStartPos;
 	_blockSize = blockSize;
 	
-	cout << "\t-----------------------" << endl;
-	cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t-----------------------" << endl;
+		cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+	#else
+		cout << "|" << flush;
+	#endif
 	
 	execute();
 }
@@ -800,25 +800,23 @@ void DnaDecoder::execute(){
 	
 	//decodeFirstHeader();
 		
-	int i=0;
+	//int i=0;
 	//while(i < Leon::READ_PER_BLOCK){
 	while(_inputFile->tellg() < _blockStartPos+_blockSize){
-		if(_leon->_readCount > 1) return;
+		//if(_leon->_readCount > 1) return;
 	
-		_currentSeq.clear();
 		
 		u_int8_t readType = _rangeDecoder.nextByte(_readTypeModel);
 		//cout << "Read type: " << (int)readType << endl;
 
-		
 		if(readType == 0)
 			decodeAnchorRead();
 		else if(readType == 1)
 			decodeNoAnchorRead();
 			
-
+		endSeq();
 		//cout << _inputFile->tellg() << " " << _blockStartPos+_blockSize << endl;
-		
+		/*
 		string trueSeq = string((*_leon->_testBankIt)->getDataBuffer());
 		trueSeq = trueSeq.substr(0, _readSize);
 		//cout << trueSeq << endl;
@@ -831,13 +829,13 @@ void DnaDecoder::execute(){
 			return;
 		}
 		_leon->_testBankIt->next();
-		
+		*/
 		#ifdef PRINT_DEBUG_DECODER
 			_leon->_readCount += 1;
 			cout << _leon->_readCount << ": " << _currentSeq << endl;
 		#endif
 		
-		i++;
+		//i++;
 		//_leon->_readCount += 1;
 		//if(i == 1) return;
 		//_currentSeq.clear();
@@ -891,9 +889,9 @@ void DnaDecoder::decodeAnchorRead(){
 	kmer_type kmer = anchor;
 	for(int i=anchorPos-1; i>=0; i--){
 		kmer = decodeMutations(kmer, i, false);
-		if((*_leon->_testBankIt)->getIndex() == 197001){
-			cout << "\t" << kmer.toString(_kmerSize) << endl;
-		}
+		//if((*_leon->_testBankIt)->getIndex() == 197001){
+		//	cout << "\t" << kmer.toString(_kmerSize) << endl;
+		//}
 	}
 	
 	kmer = anchor;
@@ -1018,6 +1016,16 @@ void DnaDecoder::decodeNoAnchorRead(){
 	for(int i=0; i<_readSize; i++){
 		_currentSeq += Leon::bin2nt(_rangeDecoder.nextByte(_noAnchorReadModel));
 	}
+	//endSeq();
 	//cout << read << endl;
 }
-		
+	
+void DnaDecoder::endSeq(){
+	_currentSeq += '\n';
+	_outputFile->write(_currentSeq.c_str(), _currentSeq.size());
+	_currentSeq.clear();
+}
+
+
+
+

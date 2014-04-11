@@ -119,7 +119,7 @@ class DnaDecoder : AbstractDnaCoder
 		
 		RangeDecoder _rangeDecoder;
 		ifstream* _inputFile;
-		//OutputFile* _outputFile;
+		ofstream* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
 		string _currentSeq;
@@ -130,6 +130,7 @@ class DnaDecoder : AbstractDnaCoder
 		kmer_type decodeMutations(kmer_type kmer, int pos, bool rightExtend);
 		
 		void decodeNoAnchorRead();
+		void endSeq();
 };
 
 #endif /* _DNACODER_HPP_ */

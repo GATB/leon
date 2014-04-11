@@ -4,10 +4,10 @@
 #include <bitset> //////////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! delete
 /*
 #define PRINT_DEBUG_ENCODER
-
 #define PRINT_DEBUG_DECODER
 */
 		
+
 //====================================================================================
 // ** AbstractHeaderCoder
 //====================================================================================
@@ -197,6 +197,7 @@ void AbstractHeaderCoder::startBlock(){
 		_misSizeModel[i].clear();
 		_asciiModel[i].clear();
 		_zeroModel[i].clear();
+		_numericSizeModel[i].clear();
 		
 		for(int j=0; j<8; j++)
 			_numericModels[i][j].clear();
@@ -590,6 +591,7 @@ AbstractHeaderCoder(leon)
 //, _rangeDecoder(inputFile)
 {
 	_inputFile = inputFile;
+	_outputFile = outputFile;
 	// = new RangeDecoder(inputFile);
 	
 	//_outputFile = new OutputFile(outputFile);
@@ -612,8 +614,12 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 	_blockStartPos = blockStartPos;
 	_blockSize = blockSize;
 	
-	cout << "\t-----------------------" << endl;
-	cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t-----------------------" << endl;
+		cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+	#else
+		cout << "|" << flush;
+	#endif
 	
 	//_currentHeader = _leon->_firstHeader;
 	//endHeader();
@@ -626,8 +632,10 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 void HeaderDecoder::execute(){
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
-		
+	
+	int i=0;
 	while(_inputFile->tellg() <= _blockStartPos+_blockSize){
+		//if(i>= 1) return;
 	//for(u_int64_t i=0; i<_blockSize; i++){
 		
 	//while(!_inputFile->eof()){
@@ -649,6 +657,7 @@ void HeaderDecoder::execute(){
 				//_currentHeader += _prevHeader
 			}*/
 			endHeader();
+			i+=1;
 		}
 		else{
 			
@@ -715,9 +724,11 @@ void HeaderDecoder::decodeAscii(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: ASCII     Column: " << (int)misColumn << "    Size: " << (int)misSize << endl;
 	#endif
-
-	for(int fieldPos=0; fieldPos<misColumn; fieldPos++){
-		_currentHeader += _prevHeader[_prevFieldPos[_fieldIndex]+fieldPos];
+	
+	if(_fieldIndex < _prevFieldCount){
+		for(int fieldPos=0; fieldPos<misColumn; fieldPos++){
+			_currentHeader += _prevHeader[_prevFieldPos[_fieldIndex]+fieldPos];
+		}
 	}
 	
 	for(int i=0; i<misSize; i++){
@@ -785,12 +796,15 @@ void HeaderDecoder::decodeZero(){
 }
 
 void HeaderDecoder::endHeader(){
+	_outputFile->write((_currentHeader+'\n').c_str(), _currentHeader.size()+1);
+	
+	//_currentHeader.erase(_currentHeader.begin());
 	//cout << _currentHeader << endl;
-	for(int i=0; i<_currentHeader.size(); i++){
+	//for(int i=0; i<_currentHeader.size(); i++){
 		
 		//_outputFile->writeByte(_currentHeader[i]);
 		//_prevHeader2[i] = _currentHeader[i];
-	}
+	//}
 	//_outputFile->writeByte('\n');
 	
 	#ifdef PRINT_DEBUG_DECODER

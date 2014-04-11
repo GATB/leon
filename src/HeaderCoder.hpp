@@ -130,7 +130,7 @@ class HeaderDecoder : AbstractHeaderCoder
 		
 		RangeDecoder _rangeDecoder;
 		ifstream* _inputFile;
-		//OutputFile* _outputFile;
+		ofstream* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
 		
