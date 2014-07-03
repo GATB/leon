@@ -103,7 +103,8 @@ class Leon : public misc::impl::Tool
 		OAHash<kmer_type>* _kmerAbundance;
 		
 		//DNA decompression
-		kmer_type getAnchor(u_int32_t adress);
+		kmer_type getAnchor(ifstream* anchorDictFile, u_int32_t adress);
+		string _anchorDictFilename;
 		
 		
 		static const int nt2binTab[128];
@@ -188,10 +189,11 @@ class Leon : public misc::impl::Tool
 		void decodeBloom();
 		void decodeAnchorDict();
 		
+		KmerModel* _kmerModel;
 		string _dnaOutputFilename;
 		ofstream* _dnaOutputFile;
 		RangeDecoder _anchorRangeDecoder;
-		vector<kmer_type> _vecAnchorKmers;
+		//vector<kmer_type> _vecAnchorKmers;
 		
 		//Global decompression
 		void endDecompression();

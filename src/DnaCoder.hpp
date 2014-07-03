@@ -130,6 +130,7 @@ class DnaDecoder : AbstractDnaCoder
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
 		string _currentSeq;
+		ifstream* _anchorDictFile;
 		
 		void decodeAnchorRead();
 		kmer_type decodeMutations(kmer_type kmer, int pos, bool rightExtend);

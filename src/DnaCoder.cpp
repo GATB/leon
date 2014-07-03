@@ -778,12 +778,15 @@ AbstractDnaCoder(leon)
 	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
 	_finished = false;
 	
+	_anchorDictFile = new ifstream(_leon->_anchorDictFilename.c_str(), ios::in);
+	
 }
 
 DnaDecoder::~DnaDecoder(){
 	//delete _rangeDecoder;
 	//delete _outputFile;
 	delete _inputFile;
+	delete _anchorDictFile;
 }
 
 void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
@@ -869,7 +872,7 @@ void DnaDecoder::decodeAnchorRead(){
 	
 	//cout << "\tRead size: " << _readSize << endl;
 	
-	kmer_type anchor = _leon->getAnchor(anchorAdress);
+	kmer_type anchor = _leon->getAnchor(_anchorDictFile, anchorAdress);
 	//anchor = max(anchor, revcomp(anchor, _kmerSize));
 	
 	if(_rangeDecoder.nextByte(_readAnchorRevcompModel) == 1)
