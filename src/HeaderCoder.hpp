@@ -30,7 +30,7 @@ class AbstractHeaderCoder
 	protected:
 		void addFieldColumn();
 	
-		enum HeaderType{HEADER_END=1, FIELD_ASCII, FIELD_NUMERIC, FIELD_DELTA, FIELD_ZERO_ONLY, FIELD_ZERO_AND_NUMERIC, HEADER_TYPE_COUNT};
+		enum HeaderType{HEADER_END=1, HEADER_END_MATCH, FIELD_ASCII, FIELD_NUMERIC, FIELD_DELTA, FIELD_DELTA_2, FIELD_ZERO_ONLY, FIELD_ZERO_AND_NUMERIC, HEADER_TYPE_COUNT};
 		//static const int MAX_FIELD_COUNT = 200;
 		
 		vector<Order0Model> _typeModel;
@@ -41,6 +41,8 @@ class AbstractHeaderCoder
 		vector<Order0Model> _numericSizeModel;
 		vector< vector<Order0Model> > _numericModels;
 		vector<Order0Model> _zeroModel;
+		
+		Order0Model _headerSizeModel;
 		
 		int typeOfChar(u_int8_t c, bool* isDigit);
 		void splitHeader();
@@ -120,21 +122,24 @@ class HeaderDecoder : AbstractHeaderCoder
 		
 	public:
 		
-		HeaderDecoder(Leon* leon, ifstream* inputFile, ofstream* outputFile);
+		HeaderDecoder(Leon* leon, const string& inputFilename);
 		~HeaderDecoder();
 		
 		//void processNextByte(u_int8_t byte);
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize);
+		void execute();
 	
+		string _buffer;
+		bool _finished;
+		
 	private:
 		
 		RangeDecoder _rangeDecoder;
 		ifstream* _inputFile;
-		ofstream* _outputFile;
+		//ofstream* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
 		
-		void execute();
 		//int _prevPos;
 		void endHeader();
 		//void decodeFirstHeader();
@@ -142,6 +147,7 @@ class HeaderDecoder : AbstractHeaderCoder
 		void decodeAscii();
 		void decodeNumeric();
 		void decodeDelta();
+		void decodeDelta2();
 		void decodeZero();
 		
 		//char _prevHeader2[1000];

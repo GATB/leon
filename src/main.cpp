@@ -37,7 +37,7 @@ int main (int argc, char* argv[])
     {
         misc::impl::ToolComposite tool;
         
-        tool.add (new DSK     ());
+        //tool.add (new DSK     ());
         tool.add (new Leon    ());
         
         tool.run (argc, argv);

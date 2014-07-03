@@ -123,6 +123,10 @@ void RangeEncoder::flush(){
 void RangeEncoder::clear(){
 	_low = 0;
 	_range = -1;
+	clearBuffer();
+}
+
+void RangeEncoder::clearBuffer(){
 	_buffer.clear();
 }
 
@@ -142,6 +146,8 @@ u_int8_t* RangeEncoder::getBuffer(bool reversed){
 u_int64_t RangeEncoder::getBufferSize(){
 	return _buffer.size();
 }
+
+
 
 //====================================================================================
 // ** RangeDecoder

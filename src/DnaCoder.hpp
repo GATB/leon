@@ -24,6 +24,7 @@ class AbstractDnaCoder
 		collections::impl::Bloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 		
 		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
+		Order0Model _anchorAdressSizeModel;
 		vector<Order0Model> _anchorAdressModel;
 		Order0Model _anchorPosSizeModel;
 		vector<Order0Model> _anchorPosModel;
@@ -49,6 +50,7 @@ class AbstractDnaCoder
 		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
 		
 		
+	
 };
 
 //====================================================================================
@@ -77,7 +79,8 @@ class DnaEncoder : AbstractDnaCoder
 		int findExistingAnchor(u_int32_t* anchorAdress);
 		
 		void encodeAnchorRead(int anchorPos, u_int32_t anchorAdress);
-		int encodeMutations(int pos, bool rightExtend);
+		kmer_type encodeMutations(int pos, kmer_type kmer, bool rightExtend);
+		//int encodeMutations(int pos, bool rightExtend);
 		int voteMutations(int pos, bool rightExtend);
 		
 		void encodeNoAnchorRead();
@@ -110,11 +113,15 @@ class DnaDecoder : AbstractDnaCoder
 		
 	public:
 		
-		DnaDecoder(Leon* leon, ifstream* inputFile, ofstream* outputFile);
+		DnaDecoder(Leon* leon, const string& inputFilename);
 		~DnaDecoder();
 		
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize);
+		void execute();
 	
+		string _buffer;
+		bool _finished;
+		
 	private:
 		
 		RangeDecoder _rangeDecoder;
@@ -123,8 +130,6 @@ class DnaDecoder : AbstractDnaCoder
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
 		string _currentSeq;
-		
-		void execute();
 		
 		void decodeAnchorRead();
 		kmer_type decodeMutations(kmer_type kmer, int pos, bool rightExtend);

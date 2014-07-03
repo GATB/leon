@@ -10,6 +10,8 @@ class Leon;
 class CompressionUtils
 {
 	public:
+	
+		
 		
 		//Take a value and return its number of byte
 		static int getByteCount(u_int64_t n){
@@ -86,9 +88,66 @@ class CompressionUtils
 			
 			return value;
 		}
+		
+		/*
+		static stringstream _convert;
+		
+		static string numberToString(u_int64_t number){
+			_convert << number;
+			string result(_convert.str());
+			//cout << result << endl;
+			return result;
+		}*/
+		
+		/*
+		static int encodeDeltaValue(u_int64_t value, u_int64_t prevValue){
+			int deltaType;
+
+			int valueByteCount = CompressionUtils::getByteCount(value);
+			
+			//#ifdef PRINT_DEBUG_ENCODER
+			//	cout << "\t\t\tPrev value: " << prevValue << endl;
+			//	cout << "\t\t\tField value: " << value << "    Byte: " << valueByteCount << endl;
+			//#endif
+			
+			u_int64_t deltaValue = value - prevValue;
+			int deltaByteCount = CompressionUtils::getByteCount(deltaValue);
+			
+			//#ifdef PRINT_DEBUG_ENCODER
+			//	cout << "\t\t\tDelta value: " << deltaValue << "    Byte: " << deltaByteCount << endl;
+			//#endif
+			if(deltaValue > 0 && deltaByteCount <= valueByteCount){
+				//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
+				value = deltaValue;
+				//valueByteCount = deltaByteCount;
+				return 1;
+			}
+			else{
+			
+				
+				u_int64_t deltaValue2 = prevValue - value;
+				int deltaByteCount2 = CompressionUtils::getByteCount(deltaValue2);
+			
+				if(deltaValue2 > 0 && deltaByteCount2 <= valueByteCount){
+					//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
+					value = deltaValue2;
+					//valueByteCount = deltaByteCount2;
+					return 2;
+				}
+				else{
+					//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
+					return 0;
+				}
+			}
+			
+			
+		}*/
+	
 };
 
+	
 
+	
 
 #endif /* _COMPRESSIONUTILS_HPP_ */
 

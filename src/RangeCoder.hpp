@@ -71,6 +71,7 @@ class RangeEncoder : AbstractRangeCoder
 		void encode(Order0Model& model, uint8_t c);
 		void flush();
 		void clear();
+		void clearBuffer();
 		u_int8_t* getBuffer(bool reversed=false);
 		u_int64_t getBufferSize();
 	

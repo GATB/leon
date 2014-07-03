@@ -11,7 +11,8 @@
 //====================================================================================
 // ** AbstractHeaderCoder
 //====================================================================================
-AbstractHeaderCoder::AbstractHeaderCoder(Leon* leon)
+AbstractHeaderCoder::AbstractHeaderCoder(Leon* leon) :
+_headerSizeModel(256)
 {
 	_leon = leon;
 	_prevHeader = "";
@@ -203,7 +204,8 @@ void AbstractHeaderCoder::startBlock(){
 			_numericModels[i][j].clear();
 			
 	}
-		
+	_headerSizeModel.clear();
+	
 	splitHeader();
 	endHeader();
 }
@@ -409,13 +411,21 @@ void HeaderEncoder::compareHeader(){
 	//cout << _lastMatchFieldIndex << " " << _fieldIndex << endl;
 	
 	//if the last field match, we have to signal to the decoder to add the last matching field of the prev header
+	
 	if(_lastMatchFieldIndex == _fieldIndex-1){
-		_misCurrentStartPos = _currentFieldSize;
-		encodeAscii();
+		_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END_MATCH);
+		_rangeEncoder.encode(_headerSizeModel, _currentHeader.size());
+		//_misCurrentStartPos = _currentFieldSize;
+		//encodeAscii();
 	}
+	else{
+		_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END);
+	}
+	//_misIndex += 1;
 	
 	//end of header
-	_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END);
+	//_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END);
+	//_rangeEncoder.encode(_headerSizeModel, _currentHeader.size());
 	
 }
 
@@ -520,25 +530,39 @@ void HeaderEncoder::encodeNumeric(){
 		cout << "\t\t\tField value: " << value << "    Byte: " << valueByteCount << endl;
 	#endif
 	
-	if(prevValue <= value){
-		u_int64_t deltaValue = value - prevValue;
-		int deltaByteCount = CompressionUtils::getByteCount(deltaValue);
+	
+	
+	//if(prevValue <= value){
+	u_int64_t deltaValue = value - prevValue;
+	int deltaByteCount = CompressionUtils::getByteCount(deltaValue);
+	
+	#ifdef PRINT_DEBUG_ENCODER
+		cout << "\t\t\tDelta value: " << deltaValue << "    Byte: " << deltaByteCount << endl;
+	#endif
+	if(deltaValue >= 0 && deltaByteCount <= valueByteCount){
+		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
+		value = deltaValue;
+		//valueByteCount = deltaByteCount;
+	}
+	else{
+	
 		
-		#ifdef PRINT_DEBUG_ENCODER
-			cout << "\t\t\tDelta value: " << deltaValue << "    Byte: " << deltaByteCount << endl;
-		#endif
-		if(deltaByteCount <= valueByteCount){
-			_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
-			value = deltaValue;
-			valueByteCount = deltaByteCount;
+		u_int64_t deltaValue2 = prevValue - value;
+		int deltaByteCount2 = CompressionUtils::getByteCount(deltaValue2);
+	
+		if(deltaValue2 >= 0 && deltaByteCount2 <= valueByteCount){
+			_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
+			value = deltaValue2;
+			//valueByteCount = deltaByteCount2;
 		}
 		else{
 			_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
 		}
 	}
-	else{
-		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
-	}
+	//}
+	//else{
+	//	_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
+	//}
 	
 
 		
@@ -586,12 +610,13 @@ void HeaderEncoder::encodeAscii(){
 //====================================================================================
 // ** HeaderDecoder
 //====================================================================================
-HeaderDecoder::HeaderDecoder(Leon* leon, ifstream* inputFile, ofstream* outputFile) :
+HeaderDecoder::HeaderDecoder(Leon* leon, const string& inputFilename) :
 AbstractHeaderCoder(leon)
 //, _rangeDecoder(inputFile)
 {
-	_inputFile = inputFile;
-	_outputFile = outputFile;
+	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
+	_finished = false;
+	//_outputFile = outputFile;
 	// = new RangeDecoder(inputFile);
 	
 	//_outputFile = new OutputFile(outputFile);
@@ -602,6 +627,7 @@ AbstractHeaderCoder(leon)
 HeaderDecoder::~HeaderDecoder(){
 	//delete _rangeDecoder;
 	//delete _outputFile;
+	delete _inputFile;
 }
 
 void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
@@ -626,15 +652,16 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 	_currentHeader.clear();
 	_misIndex = 0;
 	
-	execute();
 }
 
 void HeaderDecoder::execute(){
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
 	
-	int i=0;
+	//int i=0;
 	while(_inputFile->tellg() <= _blockStartPos+_blockSize){
+		
+		//cout << "tellg: " << _inputFile->tellg() << endl;
 		//if(i>= 1) return;
 	//for(u_int64_t i=0; i<_blockSize; i++){
 		
@@ -650,14 +677,29 @@ void HeaderDecoder::execute(){
 		//cout << "type again " << (int)type << endl;
 
 		
-		if(type == HEADER_END){/*
+		if(type == HEADER_END){
+			/*
 			u_int64_t headerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
 			int i = _prevFieldPos[_fieldIndex];
 			while(_currentHeader.size() < headerSize){
 				//_currentHeader += _prevHeader
 			}*/
 			endHeader();
-			i+=1;
+			//i+=1;
+		}
+		else if(type == HEADER_END_MATCH){
+			//decodeMatch();
+			u_int8_t headerSize = _rangeDecoder.nextByte(_headerSizeModel);
+
+			for(_fieldIndex; _fieldIndex < _prevFieldCount; _fieldIndex++){
+				#ifdef PRINT_DEBUG_DECODER
+					cout << "\t\t\tAdding from prev header: " << _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]) << endl;
+				#endif
+				_currentHeader += _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]);
+				if(_currentHeader.size() >= headerSize) break;
+			}
+			
+			endHeader();
 		}
 		else{
 			
@@ -678,6 +720,11 @@ void HeaderDecoder::execute(){
 				_fieldIndex += 1;
 				_misIndex += 1;
 			}
+			else if(type == FIELD_DELTA_2){
+				decodeDelta2();
+				_fieldIndex += 1;
+				_misIndex += 1;
+			}
 			else if(type == FIELD_ZERO_ONLY){
 				decodeZero();
 				_fieldIndex += 1;
@@ -692,7 +739,11 @@ void HeaderDecoder::execute(){
 			//_prevPos = _prevFieldPos[_fieldIndex+1];
 
 		}
+		
+		//cout << "lala" << endl;
 	}
+	
+	_finished = true;
 }
 /*
 void HeaderDecoder::decodeFirstHeader(){
@@ -751,6 +802,7 @@ void HeaderDecoder::decodeNumeric(){
 	#endif
 	
 	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
+	//_currentHeader += CompressionUtils::numberToString(value);
 	_currentHeader += to_string(value);
 	
 	#ifdef PRINT_DEBUG_DECODER
@@ -779,6 +831,27 @@ void HeaderDecoder::decodeDelta(){
 	#endif
 }
 
+void HeaderDecoder::decodeDelta2(){
+	//u_int8_t misSize = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t\tDecoding   Type: DELTA 2" << endl;//"    Size: " << (int)misSize << endl;
+	#endif
+	
+	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
+	/*
+	u_int64_t value = 0;
+	for(int i=0; i<misSize; i++){
+		u_int8_t byteValue = _rangeDecoder.nextByte(_numericModels[_misIndex][i]);
+		value |= (byteValue << i*8);
+	}
+	cout << "lala  " << _prevFieldValues[_fieldIndex] << endl;*/
+	value = _prevFieldValues[_fieldIndex] - value;
+	_currentHeader += to_string(value);
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t\t\tAdding: " << to_string(value) << endl;
+	#endif
+}
+
 void HeaderDecoder::decodeZero(){
 	u_int8_t zeroCount = _rangeDecoder.nextByte(_zeroModel[_misIndex]);
 	#ifdef PRINT_DEBUG_DECODER
@@ -796,7 +869,8 @@ void HeaderDecoder::decodeZero(){
 }
 
 void HeaderDecoder::endHeader(){
-	_outputFile->write((_currentHeader+'\n').c_str(), _currentHeader.size()+1);
+	_buffer += _currentHeader + '\n';
+	//_outputFile->write((_currentHeader+'\n').c_str(), _currentHeader.size()+1);
 	
 	//_currentHeader.erase(_currentHeader.begin());
 	//cout << _currentHeader << endl;

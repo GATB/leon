@@ -34,10 +34,13 @@ typedef kmer::impl::Kmer<>::Count kmer_count;
 #include "DnaCoder.hpp"
 //#include "RangeCoder.hpp"
 
-
-
+#include <time.h> //Used to calculate time taken by decompression
+#include <zlib.h> //Test bloom compression
 //char char2phred(char c);
 //double char2proba(char c);
+
+#include <thread>
+#include <future>
 
 class HeaderEncoder;
 class HeaderDecoder;
@@ -54,8 +57,10 @@ class Leon : public misc::impl::Tool
 		
 		size_t          _kmerSize;
 		string     _dskOutputFilename;
-		static const int READ_PER_BLOCK = 100000;
+		static const int READ_PER_BLOCK = 30000;
 		int _nb_cores;
+		
+		clock_t _time; //Used to calculate time taken by decompression
 		
 		//pthread_mutex_t writer_mutex;
 		//pthread_cond_t buffer_full_cond;
@@ -101,63 +106,28 @@ class Leon : public misc::impl::Tool
 		kmer_type getAnchor(u_int32_t adress);
 		
 		
+		static const int nt2binTab[128];
+		static const int bin2ntTab[5];
+		//static const vector<int> bin2ntTab(5;
+		
+		
+
 		//Utils
 		static int nt2bin(char nt){
-
-			//return _nt2bin[nt];
+			return nt2binTab[nt];
 			
-			/*
-			int i;
-			i = nt;
-			i = (i>>1)&3; // that's quite clever, guillaume.
-			return i;
-			*/
-			if(nt == 'A')
-				return 0;
-			else if(nt == 'C')
-				return 1;
-			else if(nt == 'T')
-				return 2;
-			else if(nt == 'G')
-				return 3;
-			else if(nt == 'N'){
-				//cout << "error nt2bin N" << endl;
-				return 4;
-			}
 		}
-		
 		static int bin2nt(int nt){
-			static char tab[5]{
-				tab[0] = 'A',
-				tab[1] = 'C',
-				tab[2] = 'T',
-				tab[3] = 'G',
-				tab[4] = 'N',
-			};
-			//if(nt == 4) cout << "error bin2nt N" << endl;
-			return tab[nt];
-			
-			/*
-			if(nt == 0)
-				return 'A';
-			else if(nt == 1)
-				return 'C';
-			else if(nt == 2)
-				return 'G';
-			else if(nt == 3)
-				return 'T';
-			else if(nt == 4)
-				return 'N';*/
+			return bin2ntTab[nt];
 		}
 		
-		//static const char _nt2bin[128];
-		//static const int _bin2nt[5];
 		
 	private:
 	 
 		
 		//static const char* STR_GZ;
 		IFile* _outputFile;
+		ofstream* _dictAnchorFile;
 		int _nks;
 		
 		void execute ();
@@ -208,10 +178,13 @@ class Leon : public misc::impl::Tool
 		//OAHash<kmer_type> _anchorKmers;
 		
 		//Header decompression
+		void startHeaderDecompression();
+		
 		string _headerOutputFilename;
 		ofstream* _headerOutputFile;
 		
 		//DNA Decompression
+		void startDnaDecompression();
 		void decodeBloom();
 		void decodeAnchorDict();
 		
