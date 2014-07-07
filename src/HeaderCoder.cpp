@@ -118,7 +118,7 @@ void AbstractHeaderCoder::makeField(){
 	
 	//Adjust the maximum number fo field column
 	int currentFieldColumn = _currentFieldPos.size();
-	while(currentFieldColumn < _fieldIndex+1){
+	while(currentFieldColumn <= _fieldIndex+1){
 		addFieldColumn();
 		currentFieldColumn = _currentFieldPos.size();
 	}
