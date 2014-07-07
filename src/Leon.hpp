@@ -62,13 +62,11 @@ class Leon : public misc::impl::Tool
 		
 		clock_t _time; //Used to calculate time taken by decompression
 		
-		//pthread_mutex_t writer_mutex;
-		//pthread_cond_t buffer_full_cond;
-		//int _next_writer_thread_id;
+		//Global compression
+		void writeBlock(u_int8_t* data, u_int64_t size);
 		
 		//Header compression
 		string _firstHeader;
-		void writeBlock(u_int8_t* data, u_int64_t size);
 		u_int64_t _totalHeaderSize;
 		u_int64_t _totalHeaderCompressedSize;
 		
@@ -79,27 +77,28 @@ class Leon : public misc::impl::Tool
 		int findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorAdress);
 		
 		u_int64_t _totalDnaSize;
-		u_int64_t _totalDnaCompressedSize;
+		//u_int64_t _totalDnaCompressedSize;
 		u_int64_t _realDnaCompressedSize;
 		Bloom<kmer_type>* _bloom;
-		//test dna compression to remove			
+		
+		//test dna compression			
 		double _MCtotal;
 		double _MCnoAternative;
 		double _MCuniqSolid;
 		double _MCuniqNoSolid;
 		double _MCmultipleSolid;
 		double _MCmultipleNoSolid;
-		u_int64_t _noAnchor_full_N_kmer_count;
-		u_int64_t _noAnchor_with_N_kmer_count;
+		//u_int64_t _noAnchor_full_N_kmer_count;
+		//u_int64_t _noAnchor_with_N_kmer_count;
 		u_int64_t _readCount;
-		double _anchorKmerCount;
+		//double _anchorKmerCount;
 		double _readWithoutAnchorCount;
-		double _total_kmer_indexed;
-		double _uniq_mutated_kmer;
-		u_int64_t _total_kmer;
-		u_int64_t _readWithoutAnchorSize;
-		u_int64_t _readWithAnchorSize;
-		double _readWithAnchorMutationChoicesSize;
+		//double _total_kmer_indexed;
+		//double _uniq_mutated_kmer;
+		//u_int64_t _total_kmer;
+		//u_int64_t _readWithoutAnchorSize;
+		//u_int64_t _readWithAnchorSize;
+		//double _readWithAnchorMutationChoicesSize;
 		OAHash<kmer_type>* _kmerAbundance;
 		
 		//DNA decompression
@@ -152,6 +151,8 @@ class Leon : public misc::impl::Tool
 		void endCompression();
 		
 		//Global decompression
+		void setupNextComponent();
+		
 		RangeDecoder _rangeDecoder;
 		//ifstream* _inputFile;
 		ifstream* _inputFile;
@@ -159,7 +160,6 @@ class Leon : public misc::impl::Tool
 		u_int64_t _filePos;
 		double _headerCompRate, _dnaCompRate;
 		
-		void setupNextComponent();
 		
 		//Header compression
 		void startHeaderCompression();

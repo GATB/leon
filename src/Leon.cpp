@@ -10,11 +10,11 @@
 TODO
 * Header coder:
 * 	Remplacer la méthode strtoul par une methode string to u_int64_t dans CompressionUtils
-* 	Optimiser l'encodage de la fin des header (lorsqu'un header est fini par un match)
 * 
 * Dna coder:
 * 	Sécurité pour ne pas saturer la OAHash _anchorKmers, remplacer map par unordered_map
 * 	Le buffer de _anchorRangeEncoder n'est jamais vidé pendant toute l'execution (Solution: utilisé un fichier temporaire) 
+*   Centraliser les méthode codeSeedBin, codeSeedNt, nt2bin, bin2nt...
 * 
 * Optimisation:
 * 	methode anchorExist: 2 acces a la map (key exist, puis operator [])
@@ -54,7 +54,7 @@ TODO
 using namespace std;
 
 //#define SERIAL //this macro is also define in the execute() method
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 //#define PRINT_DEBUG_DECODER
 
 
@@ -162,10 +162,6 @@ void Leon::execute()
 }
 
 void Leon::createBloom (){
-	#ifdef PRINT_DEBUG
-		printf("----- create bloom ----\n");
-	#endif
-	
     TIME_INFO (getTimeInfo(), "fill bloom filter");
     
     double lg2 = log(2);
@@ -265,7 +261,7 @@ void Leon::createKmerAbundanceHash(){
 	vector<int> thresholds({200, 50, 20, 10});
 	u_int64_t size = 0;
 	u_int64_t maxSize = 500000000;
-	u_int64_t absoluteMaxSize = maxSize - 50000;
+	u_int64_t absoluteMaxSize = (maxSize*3)/4;
     _kmerAbundance = new OAHash<kmer_type>(maxSize);
     
     KmerModel model(_kmerSize);
@@ -386,6 +382,7 @@ void Leon::executeCompression(){
 void Leon::writeBlock(u_int8_t* data, u_int64_t size){
 	if(size <= 0) return;
 	
+	
 	//cout << "\t-----------------------" << endl;
 	//cout << "\tWrite block " << _blockSizes.size() << endl;
 	//cout << "\tSequence " << encoder->_lastSequenceIndex-READ_PER_BLOCK << " - " << encoder->_lastSequenceIndex << endl;
@@ -432,7 +429,7 @@ void Leon::endCompression(){
 	_outputFile->flush();
 	
 	u_int64_t inputFileSize = System::file().getSize(_inputFilename.c_str());
-	cout << endl;
+	cout << "End compression" << endl;
 	
 	cout << "\tInput: " << endl;
 	cout << "\t\tFilename: " << _inputFilename << endl;
@@ -547,7 +544,6 @@ void Leon::endHeaderCompression(){
 		CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes[i]);
 	}
 	
-	_blockSizes.clear();
 	//Encode description start position in the output file
 	//CompressionUtils::encodeFixedNumeric(_rangeEncoder, _generalModel, descriptionStartPos, 8);
 	
@@ -562,15 +558,16 @@ void Leon::endHeaderCompression(){
 	//_outputFile->fwrite(descStr.c_str(), descStr.size(), 1);
 	_headerCompRate = ((double)_totalHeaderCompressedSize / _totalHeaderSize);
 	
-	#ifdef PRINT_DEBUG
-		cout << "End header compression" << endl;
-		cout << "\tBlock count: " << _blockSizes.size() << endl;
-		//cout << "\tBlock data size: " << _rangeEncoder.getBufferSize() << endl;
-		cout << "\tTotal header size: " << _totalHeaderSize << endl;
-		cout << "\tTotal header compressed size: " << _totalHeaderCompressedSize << endl;
-		cout << "\tCompression rate: " << (float)(_headerCompRate) << endl;
-	#endif
+	//#ifdef PRINT_DEBUG
+	cout << "\tEnd header compression" << endl;
+	//cout << "\t\tData blocks count: " << _blockSizes.size() << endl;
+	//cout << "\tBlock data size: " << _rangeEncoder.getBufferSize() << endl;
+	cout << "\t\tHeaders size: " << _totalHeaderSize << endl;
+	cout << "\t\tHeaders compressed size: " << _totalHeaderCompressedSize << endl;
+	cout << "\t\tCompression rate: " << (float)(_headerCompRate) << endl;
+	//#endif
 	//_rangeEncoder.clear();
+	_blockSizes.clear();
 }
 
 
@@ -609,7 +606,7 @@ void Leon::endHeaderCompression(){
 
 void Leon::startDnaCompression(){
 	#ifdef PRINT_DEBUG
-		cout << endl << "Start dna compression" << endl;
+		cout << endl << "Start reads compression" << endl;
     #endif
     
     
@@ -631,7 +628,7 @@ void Leon::startDnaCompression(){
 	
 	_anchorAdress = 0;
 	_totalDnaSize = 0;
-	_totalDnaCompressedSize = 0;
+	//_totalDnaCompressedSize = 0;
 	_realDnaCompressedSize = 0;
 	
 	createKmerAbundanceHash();
@@ -654,70 +651,78 @@ void Leon::startDnaCompression(){
 }
 
 void Leon::endDnaCompression(){
-	#ifdef PRINT_DEBUG
-		cout << endl;
-		cout << endl;
-		cout << System::file().getBaseName(getInput()->getStr(STR_URI_FILE)) << endl;
-		cout << "\tRead count: " << _readCount << endl;
-		cout << "\tDna size: " << _totalDnaSize << endl;
-		cout << "\tRead per anchor: " << _readCount / _anchorKmerCount << endl;
-		cout << "\tBit per anchor: " << log2(_anchorKmerCount) << endl;
-		cout << "\tAnchor count: " << _anchorKmerCount << endl;
-		cout << endl;
-		cout << "\tRead without anchor: " << (_readWithoutAnchorCount*100) / _readCount << "%" << endl;
-		cout << "\t\tWith N: " << (_noAnchor_with_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
-		cout << "\t\tFull N: " << (_noAnchor_full_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
-		//cout << "\tAnchor hash size: " << _anchorKmerCount*(sizeof(kmer_type)+sizeof(int)) << endl;
-		//cout << "Total kmer: " <<  _leon->_total_kmer << endl;
-		//cout << "Kmer in bloom:  " << (_leon->_total_kmer_indexed*100) / _leon->_total_kmer << "%" << endl;
-		//cout << "Uniq mutated kmer: " << (_leon->_uniq_mutated_kmer*100) / _leon->_total_kmer << "%" << endl;
-		//cout << "anchor Hash:   memory_usage: " << _anchorKmers.memory_usage() << "    memory_needed: " << _anchorKmers.size_entry ()*_anchorKmerCount << " (" << (_anchorKmers.size_entry ()*_leon->_anchorKmerCount*100) / _anchorKmers.memory_usage() << "%)" << endl;
-		cout << endl;
-	#endif
-	
-	u_int64_t readWithAnchorCount = _readCount - _readWithoutAnchorCount;
-	
-	//@ anchor kmer
-	_readWithAnchorSize += ((double)readWithAnchorCount * log2(_anchorKmerCount)) / 8;
-	_readWithAnchorSize += readWithAnchorCount*2;
-	_readWithAnchorSize += _readWithAnchorMutationChoicesSize;
-	
-	//anchor dict
-	_totalDnaCompressedSize += _anchorKmerCount*sizeof(kmer_type);
-	//bloom
-    _totalDnaCompressedSize += _bloom->getSize();
-	//read without anchor (read_size * 0.375) 3 bit/nt
-	_totalDnaCompressedSize += _readWithoutAnchorSize;
-	_totalDnaCompressedSize += _readWithAnchorSize;
 	
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes.size());
 	for(int i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
 		CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes[i]);
 	}
+	_blockSizes.clear();
 	
 	writeBloom();
 	writeAnchorDict();
 	
 	_dnaCompRate = ((double)_realDnaCompressedSize / _totalDnaSize);
 	
-	#ifdef PRINT_DEBUG
-		cout << "\tCompression rate: " << ((double)_totalDnaCompressedSize / _totalDnaSize) << "    " << (float)_dnaCompRate << endl;
-		cout << "\t\tBloom: " << ((_bloom->getSize()*100) / (double)_totalDnaCompressedSize) << "%" << endl;
-		cout << "\t\tAnchor kmer dictionnary: " << ((System::file().getSize(_outputFilename + ".adtemp")*100) / (double)_totalDnaCompressedSize) << "%" << endl;
-		cout << "\t\tRead with anchor: " << ((_readWithAnchorSize*100) / (double)_totalDnaCompressedSize) << "%" << endl;
-		cout << "\t\t\t@anchor: " << (((double)readWithAnchorCount * log2(_anchorKmerCount)*100 / 8) / (double)_readWithAnchorSize) << "%" << endl;
-		cout << "\t\t\tMutations choices: " << ((_readWithAnchorMutationChoicesSize*100) / (double)_readWithAnchorSize)  << endl;
-		cout << "\t\t\tOther: " << ((readWithAnchorCount*2*100)/(double)_readWithAnchorSize) << "%" << endl;
-		cout << "\t\tRead without anchor: " << ((_readWithoutAnchorSize*100) / (double)_totalDnaCompressedSize) << "%" << endl;
-		cout << endl;
-		cout << "\tTotal mutations: " << _MCtotal << endl;
-		cout << "\t\tUniq origNT solid: " << ((_MCuniqSolid*100)/_MCtotal) << endl;
-		cout << "\t\tMultiple origNT solid: " << ((_MCmultipleSolid*100)/_MCtotal) << endl;
-		cout << "\t\tNo alternative: " << ((_MCnoAternative*100)/_MCtotal) << endl;
-		cout << "\t\tUniq origNT no solid: " << ((_MCuniqNoSolid*100)/_MCtotal) << endl;
-		cout << "\t\tMultiple origNT no solid: " << ((_MCmultipleNoSolid*100)/_MCtotal) << endl;
-	#endif
+	//#ifdef PRINT_DEBUG
+	//	cout << endl;
+	//	cout << endl;
+	cout << "\tEnd reads decompression" << endl;
+	cout << "\t\tReads count: " << _readCount << endl;
+	cout << "\t\tReads size: " << _totalDnaSize << endl;
+	cout << "\t\tReads compressed size: " << _realDnaCompressedSize << endl;
+	cout << "\t\tCompression rate: " << (float)_dnaCompRate << endl;
+	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_realDnaCompressedSize) << "%" << endl;
+		
+	//cout << "\t\tReads stats" << endl;
+	//cout << System::file().getBaseName(getInput()->getStr(STR_URI_FILE)) << endl;
+	cout << "\t\tReads per anchor: " << _readCount / _anchorKmers.size() << endl;
+	//cout << "\tBit per anchor: " << log2(_anchorKmerCount) << endl;
+	//cout << "\tAnchor count: " << _anchorKmerCount << endl;
+	//cout << endl;
+	cout << "\t\tRead without anchor: " << (_readWithoutAnchorCount*100) / _readCount << "%" << endl;
+	cout << "\t\tDe Bruijn graph" << endl;
+	//cout << "\t\t\t\tTotal encoded nt: " << _MCtotal << endl;
+	cout << "\t\t\tSimple path: " << ((_MCuniqSolid*100)/_MCtotal) << endl;
+	cout << "\t\t\tBifurcation: " << ((_MCmultipleSolid*100)/_MCtotal) << endl;
+	cout << "\t\t\tBreak: " << ((_MCnoAternative*100)/_MCtotal) << endl;
+	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/_MCtotal) << endl;
+	cout << "\t\t\tOther: " << ((_MCmultipleNoSolid*100)/_MCtotal) << endl;
+	//cout << "\t\tWith N: " << (_noAnchor_with_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
+	//cout << "\t\tFull N: " << (_noAnchor_full_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
+	//cout << "\tAnchor hash size: " << _anchorKmerCount*(sizeof(kmer_type)+sizeof(int)) << endl;
+	//cout << "Total kmer: " <<  _leon->_total_kmer << endl;
+	//cout << "Kmer in bloom:  " << (_leon->_total_kmer_indexed*100) / _leon->_total_kmer << "%" << endl;
+	//cout << "Uniq mutated kmer: " << (_leon->_uniq_mutated_kmer*100) / _leon->_total_kmer << "%" << endl;
+	//cout << "anchor Hash:   memory_usage: " << _anchorKmers.memory_usage() << "    memory_needed: " << _anchorKmers.size_entry ()*_anchorKmerCount << " (" << (_anchorKmers.size_entry ()*_leon->_anchorKmerCount*100) / _anchorKmers.memory_usage() << "%)" << endl;
+	//cout << endl;
+	//#endif
+	
+	//u_int64_t readWithAnchorCount = _readCount - _readWithoutAnchorCount;
+	
+	//@ anchor kmer
+	//_readWithAnchorSize += ((double)readWithAnchorCount * log2(_anchorKmerCount)) / 8;
+	//_readWithAnchorSize += readWithAnchorCount*2;
+	//_readWithAnchorSize += _readWithAnchorMutationChoicesSize;
+	
+	//anchor dict
+	//_totalDnaCompressedSize += _anchorKmerCount*sizeof(kmer_type);
+	//bloom
+    //_totalDnaCompressedSize += _bloom->getSize();
+	//read without anchor (read_size * 0.375) 3 bit/nt
+	//_totalDnaCompressedSize += _readWithoutAnchorSize;
+	//_totalDnaCompressedSize += _readWithAnchorSize;
+	
+	//#ifdef PRINT_DEBUG
+		//cout << "\tCompression rate: " << ((double)_totalDnaCompressedSize / _totalDnaSize) << "    " << (float)_dnaCompRate << endl;
+		//cout << "\t\tAnchor kmer dictionnary: " << ((System::file().getSize(_outputFilename + ".adtemp")*100) / (double)_totalDnaCompressedSize) << "%" << endl;
+		//cout << "\t\tRead with anchor: " << ((_readWithAnchorSize*100) / (double)_totalDnaCompressedSize) << "%" << endl;
+		//cout << "\t\t\t@anchor: " << (((double)readWithAnchorCount * log2(_anchorKmerCount)*100 / 8) / (double)_readWithAnchorSize) << "%" << endl;
+		//cout << "\t\t\tMutations choices: " << ((_readWithAnchorMutationChoicesSize*100) / (double)_readWithAnchorSize)  << endl;
+		//cout << "\t\t\tOther: " << ((readWithAnchorCount*2*100)/(double)_readWithAnchorSize) << "%" << endl;
+		//cout << "\t\tRead without anchor: " << ((_readWithoutAnchorSize*100) / (double)_totalDnaCompressedSize) << "%" << endl;
+		//cout << endl;
+	//#endif
 	
 }
 
@@ -774,10 +779,8 @@ void Leon::writeAnchorDict(){
         _outputFile->fwrite(buffer, tempFile.gcount(), 1);
     }
     
-	
 	tempFile.close();
 	remove((_outputFilename + ".adtemp").c_str());
-
 }
 
 bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
@@ -866,7 +869,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	
 	
 	*anchorAdress = _anchorAdress;
-	_anchorKmerCount += 1;
+	//_anchorKmerCount += 1;
 	_anchorAdress += 1;
 	return bestPos;
 }
