@@ -99,50 +99,60 @@ class CompressionUtils
 			return result;
 		}*/
 		
-		/*
-		static int encodeDeltaValue(u_int64_t value, u_int64_t prevValue){
-			int deltaType;
+		
+		static u_int8_t getDeltaValue(u_int64_t value, u_int64_t prevValue, u_int64_t* resultDeltaValue){
+			
+			bool isDelta1Valid = false;
+			bool isDelta2Valid = false;
 
-			int valueByteCount = CompressionUtils::getByteCount(value);
+			u_int64_t deltaValue1 = value - prevValue;
+			u_int64_t deltaValue2 = prevValue - value;
 			
-			//#ifdef PRINT_DEBUG_ENCODER
-			//	cout << "\t\t\tPrev value: " << prevValue << endl;
-			//	cout << "\t\t\tField value: " << value << "    Byte: " << valueByteCount << endl;
-			//#endif
 			
-			u_int64_t deltaValue = value - prevValue;
-			int deltaByteCount = CompressionUtils::getByteCount(deltaValue);
-			
-			//#ifdef PRINT_DEBUG_ENCODER
-			//	cout << "\t\t\tDelta value: " << deltaValue << "    Byte: " << deltaByteCount << endl;
-			//#endif
-			if(deltaValue > 0 && deltaByteCount <= valueByteCount){
-				//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
-				value = deltaValue;
-				//valueByteCount = deltaByteCount;
-				return 1;
+			if(deltaValue1 >= 0 && deltaValue1 < value){
+				isDelta1Valid = true;
 			}
-			else{
+			if(deltaValue2 >= 0 && deltaValue2 < value){
+				isDelta2Valid = true;
+			}
 			
-				
-				u_int64_t deltaValue2 = prevValue - value;
-				int deltaByteCount2 = CompressionUtils::getByteCount(deltaValue2);
-			
-				if(deltaValue2 > 0 && deltaByteCount2 <= valueByteCount){
-					//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
-					value = deltaValue2;
-					//valueByteCount = deltaByteCount2;
-					return 2;
+			if(isDelta1Valid && isDelta2Valid){
+				if(deltaValue1 <= deltaValue2){
+					*resultDeltaValue = deltaValue1;
+					return 1;
 				}
 				else{
-					//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
-					return 0;
+					*resultDeltaValue = deltaValue2;
+					return 2;
 				}
 			}
+			else if(isDelta1Valid){
+				*resultDeltaValue = deltaValue1;
+				return 1;
+			}
+			else if(isDelta2Valid){
+				*resultDeltaValue = deltaValue2;
+				return 2;
+			}
 			
-			
-		}*/
+			*resultDeltaValue = value;
+			return 0;	
+		}
 	
+	
+	
+		static u_int64_t getValueFromDelta(u_int8_t deltaType, u_int64_t prevValue, u_int64_t deltaValue){
+			
+			if(deltaType == 0){
+				return deltaValue;
+			}
+			if(deltaType == 1){
+				return prevValue + deltaValue;	
+			}
+			else if(deltaType == 2){
+				return prevValue - deltaValue;
+			}
+		}
 };
 
 	

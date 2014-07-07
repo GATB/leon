@@ -28,8 +28,16 @@ _readTypeModel(2), //only 2 value in this model: read with anchor or without anc
 _noAnchorReadModel(5), _mutationModel(5), //5value: A, C, G, T, N
 _noAnchorReadSizeModel(8),
 _readSizeModel(8),
-_anchorAdressSizeModel(8),
-_readAnchorRevcompModel(2)
+_anchorAddressSizeModel(8),
+_readAnchorRevcompModel(2),
+_readSizeDeltaTypeModel(3),
+_anchorPosDeltaTypeModel(3),
+_anchorAddressDeltaTypeModel(3),
+_NposDeltaTypeModel(3),
+_errorPosDeltaTypeModel(3),
+_NposSizeModel(8),
+_errorPosSizeModel(8),
+_numericSizeModel(8)
 {
 	_leon = leon;
 	_bloom = _leon->_bloom;
@@ -37,10 +45,13 @@ _readAnchorRevcompModel(2)
 	
 	
 	for(int i=0; i<8; i++){
-		_anchorAdressModel.push_back(Order0Model(256));
+		_anchorAddressModel.push_back(Order0Model(256));
 		_anchorPosModel.push_back(Order0Model(256));
 		_noAnchorReadSizeValueModel.push_back(Order0Model(256));
 		_readSizeValueModel.push_back(Order0Model(256));
+		_NposModel.push_back(Order0Model(256));
+		_errorPosModel.push_back(Order0Model(256));
+		_numericModel.push_back(Order0Model(256));
 	}
 	
 	
@@ -48,10 +59,13 @@ _readAnchorRevcompModel(2)
 
 void AbstractDnaCoder::startBlock(){
 	for(int i=0; i<8; i++){
-		_anchorAdressModel[i].clear();
+		_anchorAddressModel[i].clear();
 		_anchorPosModel[i].clear();
 		_noAnchorReadSizeValueModel[i].clear();
 		_readSizeValueModel[i].clear();
+		_NposModel[i].clear();
+		_errorPosModel[i].clear();
+		_numericModel[i].clear();
 	}
 	_anchorPosSizeModel.clear();
 	_readTypeModel.clear();
@@ -60,8 +74,21 @@ void AbstractDnaCoder::startBlock(){
 	_readSizeModel.clear();
 	_readAnchorRevcompModel.clear();
 	_noAnchorReadSizeModel.clear();
-	_anchorAdressSizeModel.clear();
-		
+	_anchorAddressSizeModel.clear();
+	_readSizeDeltaTypeModel.clear();
+	_anchorPosDeltaTypeModel.clear();
+	_anchorAddressDeltaTypeModel.clear();
+	_NposDeltaTypeModel.clear();
+	_errorPosDeltaTypeModel.clear();
+	_NposSizeModel.clear();
+	_errorPosSizeModel.clear();
+	_numericSizeModel.clear();
+	
+	_prevReadSize = 0;
+	_prevAnchorPos = 0;
+	_prevAnchorAddress = 0;
+	_prevNpos = 0;
+	_prevErrorPos = 0;
 }
 /*
 void AbstractDnaCoder::codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right){
@@ -186,7 +213,7 @@ void DnaEncoder::execute(){
 	
 	//cout << _readseq << endl;
 	
-	_leon->_readCount += 1;
+	_leon->_readCount += 1; //unsynch
 	
 	if(_readSize < _kmerSize){
 		encodeNoAnchorRead();
@@ -195,20 +222,20 @@ void DnaEncoder::execute(){
 	 
 	//cout << _leon->_readCount << endl;
 	//kmer_type anchorKmer = 0;
-	u_int32_t anchorAdress;
+	u_int32_t anchorAddress;
 	
 	buildKmers();
-	int anchorPos = findExistingAnchor(&anchorAdress);
+	int anchorPos = findExistingAnchor(&anchorAddress);
 	
 	if(anchorPos == -1)
-		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAdress);
+		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);
 	
 	//cout << anchorPos << endl;
 	
 	if(anchorPos == -1)
 		encodeNoAnchorRead();
 	else{
-		encodeAnchorRead(anchorPos, anchorAdress);
+		encodeAnchorRead(anchorPos, anchorAddress);
 	}
 	
 }
@@ -273,13 +300,13 @@ void DnaEncoder::buildKmers(){
 	
 }
 
-int DnaEncoder::findExistingAnchor(u_int32_t* anchorAdress){
+int DnaEncoder::findExistingAnchor(u_int32_t* anchorAddress){
 	kmer_type kmer, kmerMin;
 	
 	for(int i=0; i<_kmers.size(); i++){
 		kmer = _kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
-		if(_leon->anchorExist(kmerMin, anchorAdress)){
+		if(_leon->anchorExist(kmerMin, anchorAddress)){
 			return i;
 		}
 	}
@@ -287,18 +314,38 @@ int DnaEncoder::findExistingAnchor(u_int32_t* anchorAdress){
 }
 
 
-void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAdress){
+void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\t\tEncode anchor read" << endl;
 	#endif
 	
+	//encode read type (0: read with anchor, 1: read without anchor)
 	_rangeEncoder.encode(_readTypeModel, 0);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeModel, _readSizeValueModel, _readSize);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, anchorPos);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAdressSizeModel, _anchorAdressModel, anchorAdress);
+	
+	u_int64_t deltaValue;
+	u_int8_t deltaType;
+	
+	//Encode read size
+	deltaType = CompressionUtils::getDeltaValue(_readSize, _prevReadSize, &deltaValue);
+	_rangeEncoder.encode(_readSizeDeltaTypeModel, deltaType);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeModel, _readSizeValueModel, deltaValue);
+	_prevReadSize = _readSize;
+	
+	//Encode anchor pos
+	deltaType = CompressionUtils::getDeltaValue(anchorPos, _prevAnchorPos, &deltaValue);
+	_rangeEncoder.encode(_anchorPosDeltaTypeModel, deltaType);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, deltaValue);
+	_prevAnchorPos = anchorPos;
+	
+	//Encode anchor address
+	deltaType = CompressionUtils::getDeltaValue(anchorAddress, _prevAnchorAddress, &deltaValue);
+	_rangeEncoder.encode(_anchorAddressDeltaTypeModel, deltaType);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressSizeModel, _anchorAddressModel, deltaValue);
+	_prevAnchorAddress = anchorAddress;
 	
 	kmer_type anchor = _kmers[anchorPos];
 	
+	//Encore a bit that says if the anchor is normal or revcomp
 	if(anchor == min(anchor, revcomp(anchor, _kmerSize)))
 		_rangeEncoder.encode(_readAnchorRevcompModel, 0);
 	else
@@ -309,48 +356,54 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAdress){
 		cout << "\t\t\tAnchor: " << _kmers[anchorPos].toString(_kmerSize) << endl;
 	#endif
 	
-	_mutations.clear();
-	_uniqNoOrigMutationPos.clear();
+	_bifurcations.clear();
+	_errorPos.clear();
 	
 	kmer_type kmer = anchor;
 	for(int i=anchorPos-1; i>=0; i--){
-		kmer = encodeMutations(i, kmer, false);
-		//i = encodeMutations(i, false);
+		kmer = buildBifurcationList(i, kmer, false);
+		//i = buildBifurcationList(i, false);
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
 	
 	kmer = anchor;
 	for(int i=anchorPos+_kmerSize; i<_readSize; i++){
 		//cout << "Pos: " << i << endl;
-		kmer = encodeMutations(i, kmer, true);
-		//i = encodeMutations(i, true);
+		kmer = buildBifurcationList(i, kmer, true);
+		//i = buildBifurcationList(i, true);
 	//for(int i=anchorPos; i<_kmers.size()-1; i++)
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
 		
 		
-
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, _Npos.size());
+	//Encode N positions
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _Npos.size());
 	for(int i=0; i<_Npos.size(); i++){
-		CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, _Npos[i]);
+		deltaType = CompressionUtils::getDeltaValue(_Npos[i], _prevNpos, &deltaValue);
+		_rangeEncoder.encode(_NposDeltaTypeModel, deltaType);
+		CompressionUtils::encodeNumeric(_rangeEncoder, _NposSizeModel, _NposModel, deltaValue);
+		_prevNpos = _Npos[i];
 	}
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, _uniqNoOrigMutationPos.size());
-	for(int i=0; i<_uniqNoOrigMutationPos.size(); i++){
-		CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, _uniqNoOrigMutationPos[i]);
+	//Encode the positions of sequencing errors
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _errorPos.size());
+	for(int i=0; i<_errorPos.size(); i++){
+		deltaType = CompressionUtils::getDeltaValue(_errorPos[i], _prevErrorPos, &deltaValue);
+		_rangeEncoder.encode(_errorPosDeltaTypeModel, deltaType);
+		CompressionUtils::encodeNumeric(_rangeEncoder, _errorPosSizeModel, _errorPosModel, deltaValue);
+		_prevErrorPos = _errorPos[i];
 	}
 	
-	for(int i=0; i<_mutations.size(); i++){
-		//cout << Leon::nt2bin(_mutations[i]) << " ";
-		_rangeEncoder.encode(_mutationModel, Leon::nt2bin(_mutations[i]));
+	for(int i=0; i<_bifurcations.size(); i++){
+		//cout << Leon::nt2bin(_bifurcations[i]) << " ";
+		_rangeEncoder.encode(_mutationModel, Leon::nt2bin(_bifurcations[i]));
 	}
 	//cout << endl;
 }
 	
-kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend){
+kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightExtend){
 		
-	char nextNt;
-	nextNt = _readseq[pos];
+	char nextNt = _readseq[pos];
 		
 	if(std::find(_Npos.begin(), _Npos.end(), pos) != _Npos.end()){
 		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
@@ -358,7 +411,10 @@ kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend)
 		//return pos;
 	}
 	
-	kmer_type kmerMin;
+	kmer_type kmerMin, uniqKmer;
+	int uniqNt;
+	bool isKmerSolid = false;
+	
 	//kmer_type kmer;
 
 	//if(rightExtend)
@@ -368,9 +424,6 @@ kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend)
 	
 	//cout << "Kmer: " << kmer.toString(_kmerSize) << endl;
 	
-	kmer_type uniqKmer, mutatedSolidKmer;
-	int uniqNt;
-	bool isKmerSolid = false;
 	
 	
 	
@@ -413,9 +466,9 @@ kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend)
 		}
 		else{
 			_leon->_MCuniqNoSolid += 1;
-			_leon->_readWithAnchorMutationChoicesSize += 0.25;
-			_mutations.push_back(nextNt);
-			_uniqNoOrigMutationPos.push_back(pos);
+			//_leon->_readWithAnchorMutationChoicesSize += 0.25;
+			_bifurcations.push_back(nextNt);
+			_errorPos.push_back(pos);
 		}
 		//codeSeedNT(&_kmerModel, &kmer, uniqNt, rightExtend);
 		return uniqKmer;
@@ -451,7 +504,7 @@ kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend)
 								#ifdef PRINT_DEBUG_EXTMUTA
 									cout << _readseq[i] << endl;
 								#endif
-								_mutations.push_back(_readseq[i]);
+								_bifurcations.push_back(_readseq[i]);
 							}
 							return _solidMutaChainStartPos+_solidMutaChainSize-2;
 						}
@@ -460,7 +513,7 @@ kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend)
 								#ifdef PRINT_DEBUG_EXTMUTA
 									cout << _readseq[i] << endl;
 								#endif
-								_mutations.push_back(_readseq[i]);
+								_bifurcations.push_back(_readseq[i]);
 							}
 							return _solidMutaChainStartPos-_solidMutaChainSize+2;
 						}*//*
@@ -477,8 +530,8 @@ kmer_type DnaEncoder::encodeMutations(int pos, kmer_type kmer, bool rightExtend)
 			}
 		}
 		
-		_leon->_readWithAnchorMutationChoicesSize += 0.25;
-		_mutations.push_back(nextNt);
+		//_leon->_readWithAnchorMutationChoicesSize += 0.25;
+		_bifurcations.push_back(nextNt);
 		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
 		return kmer;
 	}
@@ -735,8 +788,8 @@ void DnaEncoder::encodeNoAnchorRead(){
 	
 	_rangeEncoder.encode(_readTypeModel, 1);
 	
-	_leon->_readWithoutAnchorSize += _readSize*0.375;
-	_leon->_readWithoutAnchorCount += 1;
+	//_leon->_readWithoutAnchorSize += _readSize*0.375;
+	_leon->_readWithoutAnchorCount += 1; //unsynch
 	
 	/*
 	for(int i=0; i<_readSize; i++){
@@ -866,63 +919,89 @@ void DnaDecoder::decodeAnchorRead(){
 		cout << "\t\tDecode anchor read" << endl;
 	#endif
 		
-	_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeModel, _readSizeValueModel);
-	int anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel);
-	u_int64_t anchorAdress = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAdressSizeModel, _anchorAdressModel);
+	u_int8_t deltaType;
+	u_int64_t deltaValue;
 	
-	//cout << "\tRead size: " << _readSize << endl;
+	//Decode read size
+	deltaType = _rangeDecoder.nextByte(_readSizeDeltaTypeModel);
+	deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeModel, _readSizeValueModel);
+	_readSize = CompressionUtils::getValueFromDelta(deltaType, _prevReadSize, deltaValue);
+	_prevReadSize = _readSize;
 	
-	kmer_type anchor = _leon->getAnchor(_anchorDictFile, anchorAdress);
-	//anchor = max(anchor, revcomp(anchor, _kmerSize));
+	//Decode anchor pos
+	deltaType = _rangeDecoder.nextByte(_anchorPosDeltaTypeModel);
+	deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel);
+	int anchorPos = CompressionUtils::getValueFromDelta(deltaType, _prevAnchorPos, deltaValue);
+	_prevAnchorPos = anchorPos;
 	
+	
+	//Decode anchor address
+	deltaType = _rangeDecoder.nextByte(_anchorAddressDeltaTypeModel);
+	deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressSizeModel, _anchorAddressModel);
+	u_int64_t anchorAddress = CompressionUtils::getValueFromDelta(deltaType, _prevAnchorAddress, deltaValue);
+	_prevAnchorAddress = anchorAddress;
+	
+	kmer_type anchor = _leon->getAnchor(_anchorDictFile, anchorAddress);
+	
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t\t\tRead size: " << _readSize << endl;
+		cout << "\t\t\tAnchor pos: " << anchorPos << endl;
+		cout << "\t\t\tAnchor adress: " << anchorAddress << endl;
+		cout << "\t\t\tAnchor: " << anchor.toString(_kmerSize) << endl;
+	#endif
+	
+	//Decode the bit that says if the anchor is revcomp or not
 	if(_rangeDecoder.nextByte(_readAnchorRevcompModel) == 1)
 		anchor = revcomp(anchor, _kmerSize);
 		
-	_currentSeq = anchor.toString(_kmerSize);
-	
-	/*if((*_leon->_testBankIt)->getIndex() == 197001){
-		cout << "\t\t\tAnchor pos: " << anchorPos << endl;
-		cout << "\t\t\tAnchor: " << anchor.toString(_kmerSize) << endl;
-		cout << "\t\t\t@ Anchor: " << anchorAdress << endl;
-	}//#endif*/
-	
-	_uniqNoOrigMutationPos.clear();
+	_currentSeq = anchor.toString(_kmerSize);	
+	_errorPos.clear();
 	_Npos.clear();
 	
-	
-	u_int64_t NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel);
-	//cout << NposCount << endl;
+	//Decode N pos
+	u_int64_t NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 	for(int i=0; i<NposCount; i++){
-		_Npos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
+		
+		deltaType = _rangeDecoder.nextByte(_NposDeltaTypeModel);
+		deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _NposSizeModel, _NposModel); //reprise
+		u_int64_t nPos = CompressionUtils::getValueFromDelta(deltaType, _prevNpos, deltaValue);
+		_Npos.push_back(nPos);
+		_prevNpos = nPos;
+		//_Npos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
 	}
 	
-	
-	u_int64_t uniqNoOrigMutation = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel);
-	for(int i=0; i<uniqNoOrigMutation; i++){
-		_uniqNoOrigMutationPos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
+	//Decode error pos
+	u_int64_t errorPosCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	for(int i=0; i<errorPosCount; i++){
+		
+		deltaType = _rangeDecoder.nextByte(_errorPosDeltaTypeModel);
+		deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _errorPosSizeModel, _errorPosModel); //reprise
+		u_int64_t errorPos = CompressionUtils::getValueFromDelta(deltaType, _prevErrorPos, deltaValue);
+		_errorPos.push_back(errorPos);
+		_prevErrorPos = errorPos;
+		//_errorPos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
 	}
 	
+	//Extend anchor to the left
 	kmer_type kmer = anchor;
 	for(int i=anchorPos-1; i>=0; i--){
-		kmer = decodeMutations(kmer, i, false);
-		//if((*_leon->_testBankIt)->getIndex() == 197001){
-		//	cout << "\t" << kmer.toString(_kmerSize) << endl;
-		//}
+		kmer = extendAnchor(kmer, i, false);
 	}
 	
+	//Extend anchor to the right
 	kmer = anchor;
 	for(int i=anchorPos+_kmerSize; i<_readSize; i++){
-		kmer = decodeMutations(kmer, i, true);
+		kmer = extendAnchor(kmer, i, true);
 		//cout << "\t" << kmer.toString(_kmerSize) << endl;
 	}
 	
-	
+	//Inject N in the decoded read sequence
 	for(int i=0; i<_Npos.size(); i++){
 		_currentSeq[_Npos[i]] = 'N';
 	}
 }
 
-kmer_type DnaDecoder::decodeMutations(kmer_type kmer, int pos, bool rightExtend){
+kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	
 	u_int8_t nextNt;
 	kmer_type resultKmer;
@@ -945,10 +1024,10 @@ kmer_type DnaDecoder::decodeMutations(kmer_type kmer, int pos, bool rightExtend)
 		return resultKmer;
 	}
 	
-	if(std::find(_uniqNoOrigMutationPos.begin(), _uniqNoOrigMutationPos.end(), pos) != _uniqNoOrigMutationPos.end()){
+	if(std::find(_errorPos.begin(), _errorPos.end(), pos) != _errorPos.end()){
 		nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_mutationModel));
 		//cout << "tap 0     " << nextNt << endl;
-		//_uniqNoOrigMutationPos.erase(_uniqNoOrigMutationPos.begin());
+		//_errorPos.erase(_errorPos.begin());
 		if(rightExtend){
 			_currentSeq += nextNt;
 		}
@@ -1056,6 +1135,9 @@ void DnaDecoder::decodeNoAnchorRead(){
 	
 void DnaDecoder::endSeq(){
 	_buffer += _currentSeq + '\n';
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t\t\tRead: " << _currentSeq << endl;
+	#endif
 	//_outputFile->write(_currentSeq.c_str(), _currentSeq.size());
 	_currentSeq.clear();
 }

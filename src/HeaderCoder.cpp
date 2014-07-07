@@ -287,7 +287,7 @@ void HeaderEncoder::writeBlock(){
 		_rangeEncoder.flush();
 	}
 	
-	_leon->_totalHeaderCompressedSize += _rangeEncoder.getBufferSize();
+	_leon->_totalHeaderCompressedSize += _rangeEncoder.getBufferSize(); //unsynch
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize());
 	_rangeEncoder.clear();
 }
@@ -523,15 +523,28 @@ void HeaderEncoder::encodeNumeric(){
 	u_int64_t prevValue = _prevFieldValues[_fieldIndex];
 
 
-	int valueByteCount = CompressionUtils::getByteCount(value);
+	//int valueByteCount = CompressionUtils::getByteCount(value);
 	
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\t\t\tPrev value: " << prevValue << endl;
 		cout << "\t\t\tField value: " << value << "    Byte: " << valueByteCount << endl;
 	#endif
 	
+	u_int64_t deltaValue;
+	int deltaType = CompressionUtils::getDeltaValue(value, prevValue, &deltaValue);
 	
-	
+	if(deltaType == 0){
+		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
+	}
+	else if(deltaType == 1){
+		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
+		value = deltaValue;
+	}
+	else if(deltaType == 2){
+		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
+		value = deltaValue;
+	}
+	/*
 	//if(prevValue <= value){
 	u_int64_t deltaValue = value - prevValue;
 	int deltaByteCount = CompressionUtils::getByteCount(deltaValue);
@@ -563,7 +576,7 @@ void HeaderEncoder::encodeNumeric(){
 	//else{
 	//	_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
 	//}
-	
+	*/
 
 		
 	  
@@ -824,8 +837,10 @@ void HeaderDecoder::decodeDelta(){
 		value |= (byteValue << i*8);
 	}
 	cout << "lala  " << _prevFieldValues[_fieldIndex] << endl;*/
-	value += _prevFieldValues[_fieldIndex];
+	//value += _prevFieldValues[_fieldIndex];
+	value = CompressionUtils::getValueFromDelta(1, _prevFieldValues[_fieldIndex], value);
 	_currentHeader += to_string(value);
+	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tAdding: " << to_string(value) << endl;
 	#endif
@@ -845,8 +860,10 @@ void HeaderDecoder::decodeDelta2(){
 		value |= (byteValue << i*8);
 	}
 	cout << "lala  " << _prevFieldValues[_fieldIndex] << endl;*/
-	value = _prevFieldValues[_fieldIndex] - value;
+	//value = _prevFieldValues[_fieldIndex] - value;
+	value = CompressionUtils::getValueFromDelta(2, _prevFieldValues[_fieldIndex], value);
 	_currentHeader += to_string(value);
+	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tAdding: " << to_string(value) << endl;
 	#endif

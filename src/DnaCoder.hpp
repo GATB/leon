@@ -23,15 +23,31 @@ class AbstractDnaCoder
 		Leon* _leon;
 		collections::impl::Bloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 		
+		Order0Model _readSizeDeltaTypeModel;
+		Order0Model _anchorPosDeltaTypeModel;
+		Order0Model _anchorAddressDeltaTypeModel;
+		Order0Model _NposDeltaTypeModel;
+		Order0Model _errorPosDeltaTypeModel;
+		
 		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
-		Order0Model _anchorAdressSizeModel;
-		vector<Order0Model> _anchorAdressModel;
+		
+		Order0Model _anchorAddressSizeModel;
+		vector<Order0Model> _anchorAddressModel;
+		
 		Order0Model _anchorPosSizeModel;
 		vector<Order0Model> _anchorPosModel;
 		
+		Order0Model _numericSizeModel;
+		vector<Order0Model> _numericModel;
+		
+		Order0Model _NposSizeModel;
+		vector<Order0Model> _NposModel;
+		Order0Model _errorPosSizeModel;
+		vector<Order0Model> _errorPosModel;
+		
 		Order0Model _readSizeModel;
-		Order0Model _readAnchorRevcompModel;
 		vector<Order0Model> _readSizeValueModel;
+		Order0Model _readAnchorRevcompModel;
 		Order0Model _mutationModel;
 		
 		Order0Model _noAnchorReadModel;
@@ -42,14 +58,18 @@ class AbstractDnaCoder
 		int _readSize;
 		KmerModel _kmerModel;
 		
-		vector<int> _uniqNoOrigMutationPos;
+		vector<int> _errorPos;
 		vector<int> _Npos;
 		
 		void startBlock();
 		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
 		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
 		
-		
+		u_int64_t _prevReadSize;
+		u_int64_t _prevAnchorPos;
+		u_int64_t _prevAnchorAddress;
+		u_int64_t _prevNpos;
+		u_int64_t _prevErrorPos;
 	
 };
 
@@ -76,11 +96,11 @@ class DnaEncoder : AbstractDnaCoder
 		void execute();
 		
 		void buildKmers();
-		int findExistingAnchor(u_int32_t* anchorAdress);
+		int findExistingAnchor(u_int32_t* anchorAddress);
 		
-		void encodeAnchorRead(int anchorPos, u_int32_t anchorAdress);
-		kmer_type encodeMutations(int pos, kmer_type kmer, bool rightExtend);
-		//int encodeMutations(int pos, bool rightExtend);
+		void encodeAnchorRead(int anchorPos, u_int32_t anchorAddress);
+		kmer_type buildBifurcationList(int pos, kmer_type kmer, bool rightExtend);
+		//int buildBifurcationList(int pos, bool rightExtend);
 		int voteMutations(int pos, bool rightExtend);
 		
 		void encodeNoAnchorRead();
@@ -90,7 +110,7 @@ class DnaEncoder : AbstractDnaCoder
 		char* _readseq;
 		vector<kmer_type> _kmers;
 		KmerModel::Iterator _itKmer;
-		vector<int> _mutations;
+		vector<int> _bifurcations;
 		
 		vector<int> _solidMutaChain;
 		int _solidMutaChainPos;
@@ -133,7 +153,7 @@ class DnaDecoder : AbstractDnaCoder
 		ifstream* _anchorDictFile;
 		
 		void decodeAnchorRead();
-		kmer_type decodeMutations(kmer_type kmer, int pos, bool rightExtend);
+		kmer_type extendAnchor(kmer_type kmer, int pos, bool rightExtend);
 		
 		void decodeNoAnchorRead();
 		void endSeq();
