@@ -73,6 +73,7 @@ class AbstractHeaderCoder
 		
 		void startBlock();
 		
+		int _processedSequenceCount;
 };
 
 //====================================================================================
@@ -88,7 +89,7 @@ class HeaderEncoder : AbstractHeaderCoder
 		~HeaderEncoder();
 
 		void operator()(Sequence& sequence);
-		int getId();
+		//int getId();
 		u_int64_t _lastSequenceIndex;
 		
 	private:
@@ -126,7 +127,7 @@ class HeaderDecoder : AbstractHeaderCoder
 		~HeaderDecoder();
 		
 		//void processNextByte(u_int8_t byte);
-		void setup(u_int64_t blockStartPos, u_int64_t blockSize);
+		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
 		void execute();
 	
 		string _buffer;
@@ -153,7 +154,7 @@ class HeaderDecoder : AbstractHeaderCoder
 		//char _prevHeader2[1000];
 		//char _currentHeader2[1000];
 		//int _prevHeaderSize;
-		
+		int _sequenceCount;
 		
 };
 

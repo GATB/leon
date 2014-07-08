@@ -63,12 +63,12 @@ class Leon : public misc::impl::Tool
 		clock_t _time; //Used to calculate time taken by decompression
 		
 		//Global compression
-		void writeBlock(u_int8_t* data, u_int64_t size);
+		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount);
 		
 		//Header compression
 		string _firstHeader;
 		u_int64_t _totalHeaderSize;
-		u_int64_t _totalHeaderCompressedSize;
+		//u_int64_t _totalHeaderCompressedSize;
 		
 		//Dna compression
 		u_int32_t _anchorAdress;
@@ -78,7 +78,8 @@ class Leon : public misc::impl::Tool
 		
 		u_int64_t _totalDnaSize;
 		//u_int64_t _totalDnaCompressedSize;
-		u_int64_t _realDnaCompressedSize;
+		//u_int64_t _realDnaCompressedSize;
+		u_int64_t _compressedSize;
 		Bloom<kmer_type>* _bloom;
 		
 		//test dna compression			

@@ -89,6 +89,12 @@ void AbstractDnaCoder::startBlock(){
 	_prevAnchorAddress = 0;
 	_prevNpos = 0;
 	_prevErrorPos = 0;
+	
+	_processedSequenceCount = 0;
+}
+
+void AbstractDnaCoder::endRead(){
+	_processedSequenceCount += 1;
 }
 /*
 void AbstractDnaCoder::codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right){
@@ -136,6 +142,7 @@ void AbstractDnaCoder::codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bo
 	return codeSeedBin(model, kmer, Leon::nt2bin(nt), right);
 }
 
+
 //====================================================================================
 // ** DnaEncoder
 //====================================================================================
@@ -179,8 +186,8 @@ void DnaEncoder::writeBlock(){
 		_rangeEncoder.flush();
 	}
 	
-	_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize());
+	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount);
 	_rangeEncoder.clear();
 	
 	/*
@@ -217,6 +224,7 @@ void DnaEncoder::execute(){
 	
 	if(_readSize < _kmerSize){
 		encodeNoAnchorRead();
+		endRead();
 		return;
 	}
 	 
@@ -225,10 +233,10 @@ void DnaEncoder::execute(){
 	u_int32_t anchorAddress;
 	
 	buildKmers();
-	int anchorPos = findExistingAnchor(&anchorAddress);
+	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
 	
 	if(anchorPos == -1)
-		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);
+		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);  //unsynch
 	
 	//cout << anchorPos << endl;
 	
@@ -238,6 +246,7 @@ void DnaEncoder::execute(){
 		encodeAnchorRead(anchorPos, anchorAddress);
 	}
 	
+	endRead();
 }
 
 void DnaEncoder::buildKmers(){
@@ -458,7 +467,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		
 	}
 	
-	_leon->_MCtotal += 1;
+	_leon->_MCtotal += 1; //unsynch
 		
 	if(indexedKmerCount == 1){
 		if(isKmerSolid){
@@ -842,7 +851,7 @@ DnaDecoder::~DnaDecoder(){
 	delete _anchorDictFile;
 }
 
-void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
+void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
 	startBlock();
 	_rangeDecoder.clear();
 	
@@ -859,15 +868,19 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 		cout << "|" << flush;
 	#endif
 	
+	_sequenceCount = sequenceCount;
 }
 
 void DnaDecoder::execute(){
 	
 	//decodeFirstHeader();
 		
+	while(_processedSequenceCount < _sequenceCount){
+		
+		//cout << "lala" << endl;
 	//int i=0;
 	//while(i < Leon::READ_PER_BLOCK){
-	while(_inputFile->tellg() < _blockStartPos+_blockSize){
+	//while(_inputFile->tellg() <= _blockStartPos+_blockSize){
 		//if(_leon->_readCount > 1) return;
 	
 	
@@ -879,7 +892,7 @@ void DnaDecoder::execute(){
 		else if(readType == 1)
 			decodeNoAnchorRead();
 			
-		endSeq();
+		endRead();
 		//cout << _inputFile->tellg() << " " << _blockStartPos+_blockSize << endl;
 		/*
 		string trueSeq = string((*_leon->_testBankIt)->getDataBuffer());
@@ -1133,7 +1146,9 @@ void DnaDecoder::decodeNoAnchorRead(){
 	//cout << read << endl;
 }
 	
-void DnaDecoder::endSeq(){
+void DnaDecoder::endRead(){
+	AbstractDnaCoder::endRead();
+	
 	_buffer += _currentSeq + '\n';
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tRead: " << _currentSeq << endl;

@@ -379,7 +379,7 @@ void Leon::executeCompression(){
 	endCompression();
 }
 		
-void Leon::writeBlock(u_int8_t* data, u_int64_t size){
+void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount){
 	if(size <= 0) return;
 	
 	
@@ -389,10 +389,13 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size){
 	//cout << "Thread id: " << thread_id << endl;
 	//cout << "\tEncoded size (byte): " << size << endl;
 	
+	_compressedSize += size;
+	
 	_outputFile->fwrite(data, size, 1);
 	//int thread_id = encoder->getId();
 	
 	_blockSizes.push_back(size);
+	_blockSizes.push_back(encodedSequenceCount);
 		
 	/*
 	int thread_id = encoder->getId();
@@ -487,7 +490,7 @@ void Leon::startHeaderCompression(){
     
     
 	_totalHeaderSize = 0;
-	_totalHeaderCompressedSize = 0;
+	_compressedSize = 0;
 	
 	#ifdef PRINT_DEBUG
 		cout << endl << "Start header compression" << endl;
@@ -556,14 +559,14 @@ void Leon::endHeaderCompression(){
 	//descStr += (u_int8_t)descStr.size();
 	//cout << descStr.size() << " " << descStr << endl;
 	//_outputFile->fwrite(descStr.c_str(), descStr.size(), 1);
-	_headerCompRate = ((double)_totalHeaderCompressedSize / _totalHeaderSize);
+	_headerCompRate = ((double)_compressedSize / _totalHeaderSize);
 	
 	//#ifdef PRINT_DEBUG
 	cout << "\tEnd header compression" << endl;
 	//cout << "\t\tData blocks count: " << _blockSizes.size() << endl;
 	//cout << "\tBlock data size: " << _rangeEncoder.getBufferSize() << endl;
 	cout << "\t\tHeaders size: " << _totalHeaderSize << endl;
-	cout << "\t\tHeaders compressed size: " << _totalHeaderCompressedSize << endl;
+	cout << "\t\tHeaders compressed size: " << _compressedSize << endl;
 	cout << "\t\tCompression rate: " << (float)(_headerCompRate) << endl;
 	//#endif
 	//_rangeEncoder.clear();
@@ -609,7 +612,6 @@ void Leon::startDnaCompression(){
 		cout << endl << "Start reads compression" << endl;
     #endif
     
-    
 
 	//Create and fill bloom
     createBloom ();
@@ -629,7 +631,7 @@ void Leon::startDnaCompression(){
 	_anchorAdress = 0;
 	_totalDnaSize = 0;
 	//_totalDnaCompressedSize = 0;
-	_realDnaCompressedSize = 0;
+	_compressedSize = 0;
 	
 	createKmerAbundanceHash();
     
@@ -662,7 +664,7 @@ void Leon::endDnaCompression(){
 	writeBloom();
 	writeAnchorDict();
 	
-	_dnaCompRate = ((double)_realDnaCompressedSize / _totalDnaSize);
+	_dnaCompRate = ((double)_compressedSize / _totalDnaSize);
 	
 	//#ifdef PRINT_DEBUG
 	//	cout << endl;
@@ -670,9 +672,9 @@ void Leon::endDnaCompression(){
 	cout << "\tEnd reads decompression" << endl;
 	cout << "\t\tReads count: " << _readCount << endl;
 	cout << "\t\tReads size: " << _totalDnaSize << endl;
-	cout << "\t\tReads compressed size: " << _realDnaCompressedSize << endl;
+	cout << "\t\tReads compressed size: " << _compressedSize << endl;
 	cout << "\t\tCompression rate: " << (float)_dnaCompRate << endl;
-	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_realDnaCompressedSize) << "%" << endl;
+	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "%" << endl;
 		
 	//cout << "\t\tReads stats" << endl;
 	//cout << System::file().getBaseName(getInput()->getStr(STR_URI_FILE)) << endl;
@@ -729,7 +731,7 @@ void Leon::endDnaCompression(){
 void Leon::writeBloom(){
 	//_bloom->save(_outputFilename + ".bloom.temp");
 	//cout << _bloom->getBitSize() << endl;
-	_realDnaCompressedSize += _bloom->getSize();
+	_compressedSize += _bloom->getSize();
 	
 	//_outputFile->fwrite(_anchorRangeEncoder.getBuffer(), size, 1);
 
@@ -758,8 +760,11 @@ void Leon::writeAnchorDict(){
 	
 	u_int64_t size = System::file().getSize(_outputFilename + ".adtemp");
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
-	_realDnaCompressedSize += size;
+	_compressedSize += size;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, size);
+	
+	//Encode anchors count
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _anchorKmers.size());
 	
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
 	//cout << "\t pos: " << _outputFile->tell() << endl;
@@ -987,7 +992,7 @@ void Leon::startHeaderDecompression(){
 	_headerOutputFilename = _outputFilename + ".temp.header";
 	_headerOutputFile = new ofstream(_headerOutputFilename.c_str());
 	
-	
+	/*
 	#ifdef SERIAL
 		HeaderDecoder decoder(this, _inputFilename);
 		for(int i=0; i<_blockSizes.size(); i++){
@@ -1005,7 +1010,7 @@ void Leon::startHeaderDecompression(){
 		cout << endl;
 	
 	#else
-		
+	*/
 		
 		
 		vector<HeaderDecoder*> decoders;
@@ -1040,8 +1045,9 @@ void Leon::startHeaderDecompression(){
 				//cout << i << "  " << _blockSizes.size() << endl;
 				
 				u_int64_t blockSize = _blockSizes[i];
+				int sequenceCount = _blockSizes[i+1];
 				HeaderDecoder* decoder = decoders[j];
-				decoder->setup(_filePos, blockSize);
+				decoder->setup(_filePos, blockSize, sequenceCount);
 				
 				//cout << j << " " << decoder << endl;
 				//std::future<void> t( std::async(&HeaderDecoder::execute, &decoder));
@@ -1058,7 +1064,7 @@ void Leon::startHeaderDecompression(){
 				//_headerOutputFile->write(decoder._buffer.c_str(),decoder._buffer.size());
 				//decoder._buffer.clear();
 				_filePos += blockSize;
-				i += 1;
+				i += 2;
 			}
 			
 			//cout << "Living thread: " << livingThreadCount << endl;
@@ -1104,7 +1110,7 @@ void Leon::startHeaderDecompression(){
 		ts.clear();
 		
 		cout << endl;
-	#endif
+	//#endif
 	
 }
 
@@ -1123,7 +1129,7 @@ void Leon::startDnaDecompression(){
 	_dnaOutputFilename = _outputFilename + ".temp.dna";
 	_dnaOutputFile = new ofstream(_dnaOutputFilename.c_str()); 
 	
-
+	/*
 	#ifdef SERIAL
 		DnaDecoder decoder(this, _inputFilename);
 		
@@ -1141,7 +1147,7 @@ void Leon::startDnaDecompression(){
 		}
 		cout << endl;
 	
-	#else
+	#else*/
 		//_nb_cores = 1;
 	
 		vector<DnaDecoder*> decoders;
@@ -1175,8 +1181,9 @@ void Leon::startDnaDecompression(){
 				//cout << i << "  " << _blockSizes.size() << endl;
 				
 				u_int64_t blockSize = _blockSizes[i];
+				int sequenceCount = _blockSizes[i+1];
 				DnaDecoder* decoder = decoders[j];
-				decoder->setup(_filePos, blockSize);
+				decoder->setup(_filePos, blockSize, sequenceCount);
 				
 				//cout << "lala" << _filePos << endl;
 				
@@ -1195,7 +1202,7 @@ void Leon::startDnaDecompression(){
 				//_headerOutputFile->write(decoder._buffer.c_str(),decoder._buffer.size());
 				//decoder._buffer.clear();
 				_filePos += blockSize;
-				i += 1;
+				i += 2;
 			}
 			
 			//cout << "Living thread: " << livingThreadCount << endl;
@@ -1243,7 +1250,7 @@ void Leon::startDnaDecompression(){
 		
 		cout << endl;
 		
-	#endif
+	//#endif
 	
 	//Remove anchor dict file
 	//delete _anchorDictFile;
@@ -1285,6 +1292,7 @@ void Leon::decodeBloom(){
 	u_int64_t bloomPos = _inputFile->tellg();
 	for(int i=0; i<_blockSizes.size(); i++){
 		bloomPos += _blockSizes[i];
+		i += 1;
 	}
 	//cout << "Anchor dict pos: " << dictPos << endl;
 	
@@ -1335,6 +1343,7 @@ void Leon::decodeAnchorDict(){
 	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 	//cout << anchorDictSize << endl;
 	
+	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";
@@ -1346,7 +1355,10 @@ void Leon::decodeAnchorDict(){
 	//KmerModel model(_kmerSize, KMER_DIRECT);
 	//int i=0;
 	//cout << _inputFile->tellg()  << " " << dictPos+anchorDictSize << endl;
-	while(_inputFile->tellg() < dictPos+anchorDictSize){
+	//while(_inputFile->tellg() < dictPos+anchorDictSize){
+	u_int64_t currentAnchorCount = 0;
+	
+	while(currentAnchorCount < anchorCount){
 		u_int8_t c = _anchorRangeDecoder.nextByte(_anchorDictModel);
 		anchorKmer += Leon::bin2nt(c);
 		if(anchorKmer.size() == _kmerSize){
@@ -1366,6 +1378,7 @@ void Leon::decodeAnchorDict(){
 			anchorKmer.clear();
 			//i++;
 			//if(i > 50) break;
+			currentAnchorCount += 1;
 		}
 	}
 	

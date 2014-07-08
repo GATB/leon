@@ -186,6 +186,8 @@ void AbstractHeaderCoder::endHeader(){
 	_prevHeader = _currentHeader;
 	_misIndex = 0;
 	_fieldIndex = 0;
+	
+	_processedSequenceCount += 1;
 }
 
 void AbstractHeaderCoder::startBlock(){
@@ -208,6 +210,8 @@ void AbstractHeaderCoder::startBlock(){
 	
 	splitHeader();
 	endHeader();
+	
+	_processedSequenceCount = 0;
 }
 
 //====================================================================================
@@ -260,9 +264,9 @@ void HeaderEncoder::encodeFirstHeader(IFile* outputFile, const string& firstHead
 	//endHeader();
 }*/
 
-int HeaderEncoder::getId(){
-	return ((_lastSequenceIndex / Leon::READ_PER_BLOCK) % _leon->_nb_cores);
-}
+//int HeaderEncoder::getId(){
+//	return ((_lastSequenceIndex / Leon::READ_PER_BLOCK) % _leon->_nb_cores);
+//}
 
 void HeaderEncoder::operator()(Sequence& sequence){
 	_lastSequenceIndex = sequence.getIndex();
@@ -287,8 +291,7 @@ void HeaderEncoder::writeBlock(){
 		_rangeEncoder.flush();
 	}
 	
-	_leon->_totalHeaderCompressedSize += _rangeEncoder.getBufferSize(); //unsynch
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize());
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount);
 	_rangeEncoder.clear();
 }
 
@@ -643,7 +646,7 @@ HeaderDecoder::~HeaderDecoder(){
 	delete _inputFile;
 }
 
-void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
+void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
 	startBlock();
 	_rangeDecoder.clear();
 	
@@ -665,14 +668,16 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize){
 	_currentHeader.clear();
 	_misIndex = 0;
 	
+	_sequenceCount = sequenceCount;
 }
 
 void HeaderDecoder::execute(){
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
 	
+	while(_processedSequenceCount < _sequenceCount){
 	//int i=0;
-	while(_inputFile->tellg() <= _blockStartPos+_blockSize){
+	//while(_inputFile->tellg() <= _blockStartPos+_blockSize){
 		
 		//cout << "tellg: " << _inputFile->tellg() << endl;
 		//if(i>= 1) return;

@@ -62,8 +62,10 @@ class AbstractDnaCoder
 		vector<int> _Npos;
 		
 		void startBlock();
+		void endRead();
 		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
 		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
+		
 		
 		u_int64_t _prevReadSize;
 		u_int64_t _prevAnchorPos;
@@ -71,6 +73,7 @@ class AbstractDnaCoder
 		u_int64_t _prevNpos;
 		u_int64_t _prevErrorPos;
 	
+		int _processedSequenceCount;
 };
 
 //====================================================================================
@@ -136,7 +139,7 @@ class DnaDecoder : AbstractDnaCoder
 		DnaDecoder(Leon* leon, const string& inputFilename);
 		~DnaDecoder();
 		
-		void setup(u_int64_t blockStartPos, u_int64_t blockSize);
+		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
 		void execute();
 	
 		string _buffer;
@@ -149,6 +152,7 @@ class DnaDecoder : AbstractDnaCoder
 		ofstream* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
+		int _decodedSequenceCount;
 		string _currentSeq;
 		ifstream* _anchorDictFile;
 		
@@ -156,7 +160,9 @@ class DnaDecoder : AbstractDnaCoder
 		kmer_type extendAnchor(kmer_type kmer, int pos, bool rightExtend);
 		
 		void decodeNoAnchorRead();
-		void endSeq();
+		void endRead();
+		
+		int _sequenceCount;
 };
 
 #endif /* _DNACODER_HPP_ */
