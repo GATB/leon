@@ -58,6 +58,7 @@ class AbstractHeaderCoder
 		int _prevFieldCount;
 		int _fieldIndex;
 		int _misIndex;
+	
 		vector<u_int64_t> _prevFieldValues;
 		vector<u_int64_t> _currentFieldValues;
 		vector<u_int64_t> _prevFieldZeroValues;
@@ -102,7 +103,9 @@ class HeaderEncoder : AbstractHeaderCoder
 		//int _encoderFieldIndex;
 		int _prevFieldSize, _currentFieldSize;
 		int _lastMatchFieldIndex;
-		
+		u_int64_t _seqId;
+		int _thread_id;
+
 		//static void encodeFirstHeader();
 		void writeBlock();
 		

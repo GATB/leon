@@ -8,6 +8,12 @@
 #include "CompressionUtils.hpp"
 #include <gatb/gatb_core.hpp>
 
+
+
+
+
+
+
 using namespace std;
 class Leon;
 
@@ -66,6 +72,7 @@ class AbstractDnaCoder
 		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
 		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
 		
+		u_int64_t _seqId;
 		
 		u_int64_t _prevReadSize;
 		u_int64_t _prevAnchorPos;
@@ -122,6 +129,8 @@ class DnaEncoder : AbstractDnaCoder
 		bool extendMutaChain(kmer_type kmer, int pos, bool rightExtend);
 		bool extendMutaChainRec(vector< vector< vector<kmer_type> > >& mutaChains, bool rightExtend);
 		
+		int _thread_id;
+
 		int _lala;
 		int _solidMutaChainStartPos;
 		int _solidMutaChainSize;

@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <gatb/gatb_core.hpp>
+#include <sys/time.h>
 
 /** NOTE: we should not include namespaces here => only to make user life easier... */
 using namespace gatb::core;
@@ -28,10 +29,17 @@ typedef kmer::impl::Kmer<>::Type  kmer_type;
 typedef kmer::impl::Kmer<>::Count kmer_count;
 
 
+
+
+
+
+
 #include <string>
 #include <sstream>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
+#include "OrderedBlocks.h"
+
 //#include "RangeCoder.hpp"
 
 #include <time.h> //Used to calculate time taken by decompression
@@ -42,6 +50,9 @@ typedef kmer::impl::Kmer<>::Count kmer_count;
 #include <thread>
 #include <future>
 
+#include <pthread.h>
+
+
 class HeaderEncoder;
 class HeaderDecoder;
 class DnaEncoder;
@@ -50,8 +61,9 @@ class Leon : public misc::impl::Tool
 {
 	public:
 		
-		Leon();
-		
+		Leon( bool compress);
+		~Leon();
+	
 		static const char* STR_COMPRESS;
 		static const char* STR_DECOMPRESS;
 		
@@ -63,7 +75,7 @@ class Leon : public misc::impl::Tool
 		clock_t _time; //Used to calculate time taken by decompression
 		
 		//Global compression
-		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount);
+		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 		
 		//Header compression
 		string _firstHeader;
@@ -102,6 +114,11 @@ class Leon : public misc::impl::Tool
 		//double _readWithAnchorMutationChoicesSize;
 		OAHash<kmer_type>* _kmerAbundance;
 		
+		int   _nb_thread_living;
+		OrderedBlocks * _blockwriter;
+
+		void setBlockWriter (OrderedBlocks* blockwriter) { SP_SETATTR(blockwriter); }
+
 		//DNA decompression
 		kmer_type getAnchor(ifstream* anchorDictFile, u_int32_t adress);
 		string _anchorDictFilename;
@@ -126,6 +143,8 @@ class Leon : public misc::impl::Tool
 	private:
 	 
 		
+		 struct timeval _tim;
+		double _wdebut_leon, _wfin_leon;
 		//static const char* STR_GZ;
 		IFile* _outputFile;
 		ofstream* _dictAnchorFile;
@@ -185,6 +204,10 @@ class Leon : public misc::impl::Tool
 		string _headerOutputFilename;
 		ofstream* _headerOutputFile;
 		
+	
+		pthread_mutex_t findAndInsert_mutex;
+		pthread_mutex_t writeblock_mutex;
+
 		//DNA Decompression
 		void startDnaDecompression();
 		void decodeBloom();

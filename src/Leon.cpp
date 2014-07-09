@@ -51,10 +51,11 @@ TODO
 #include "Leon.hpp"
 #include <DSK.hpp>
 
+
 using namespace std;
 
 //#define SERIAL //this macro is also define in the execute() method
-//#define PRINT_DEBUG
+#define PRINT_DEBUG
 //#define PRINT_DEBUG_DECODER
 
 
@@ -92,29 +93,52 @@ const char Leon::_nt2bin['N'] = {0};
 const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 */
 
-Leon::Leon () :
+Leon::Leon ( bool compress) :
 Tool("leon"),
 _generalModel(256), _numericSizeModel(8),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
-_anchorDictModel(5) //5value: A, C, G, T, N
+_anchorDictModel(5),_nb_thread_living(0), _blockwriter(0) //5value: A, C, G, T, N
 {
     //_kmerSize(27)
+
     /** We get an OptionsParser for DSK. */
-    OptionsParser parserDSK = DSK::getOptionsParser();
-    getParser()->add (parserDSK);
+
+    	OptionsParser parserDSK = DSK::getOptionsParser();
+    	getParser()->add (parserDSK);
     
+	if( !compress)
+	{
+		getParser()->remove("-kmer-size");
+		getParser()->remove("-abundance");
+		getParser()->remove("-max-memory");
+		getParser()->remove("-out");
+		getParser()->remove("-max-disk");
+		
+	}
     getParser()->push_back (new OptionNoParam (Leon::STR_COMPRESS, "compress", false));
     getParser()->push_back (new OptionNoParam (Leon::STR_DECOMPRESS, "decompress", false));
 
     /** We add options specific to this tool. */
 
+	pthread_mutex_init(&findAndInsert_mutex, NULL);
+	pthread_mutex_init(&writeblock_mutex, NULL);
+
+	
     
 }
 
+Leon::~Leon ()
+{
+	setBlockWriter(0);
+}
 
 void Leon::execute()
 {
        
 	_time = clock(); //Used to calculate time taken by decompression
+	
+	gettimeofday(&_tim, NULL);
+	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
+	
 	
     bool compress = false;
     bool decompress = false;
@@ -358,6 +382,8 @@ void Leon::executeCompression(){
     _outputFilename = dir + "/" + prefix + ".leon";
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
+	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
+
 	
 	#ifdef PRINT_DEBUG
 		cout << "\tOutput filename: " << _outputFilename << endl;
@@ -374,12 +400,16 @@ void Leon::executeCompression(){
     
     //Compression
 	startHeaderCompression();
+	
+	setBlockWriter(0);
+	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
+
 	startDnaCompression();
 	
 	endCompression();
 }
 		
-void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount){
+void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID){
 	if(size <= 0) return;
 	
 	
@@ -391,11 +421,34 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount){
 	
 	_compressedSize += size;
 	
-	_outputFile->fwrite(data, size, 1);
-	//int thread_id = encoder->getId();
 	
-	_blockSizes.push_back(size);
-	_blockSizes.push_back(encodedSequenceCount);
+#ifdef SERIAL
+	_outputFile->fwrite(data, size, 1);
+	
+#else
+	_blockwriter->insert(data,size,blockID);
+	_blockwriter->incDone(1);
+
+#endif
+	
+	
+	//int thread_id = encoder->getId();
+
+	
+	pthread_mutex_lock(&writeblock_mutex);
+
+	if ((2*(blockID+1)) > _blockSizes.size() )
+	{
+		_blockSizes.resize(2*(blockID+1));
+	}
+	
+	_blockSizes[2*blockID] = size ;
+	_blockSizes[2*blockID+1] = encodedSequenceCount;
+	
+	
+	pthread_mutex_unlock(&writeblock_mutex);
+
+
 		
 	/*
 	int thread_id = encoder->getId();
@@ -445,8 +498,19 @@ void Leon::endCompression(){
 	cout << "\tCompression rate: " << (float)((double)outputFileSize / (double)inputFileSize) << endl;
 	cout << "\t\tHeader: " << (float)_headerCompRate << endl;
 	cout << "\t\tDna: " << (float)_dnaCompRate << endl << endl;
-	printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
-	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));
+	
+	
+	
+	
+	
+	gettimeofday(&_tim, NULL);
+	_wfin_leon  = _tim.tv_sec +(_tim.tv_usec/1000000.0);
+	printf("\tTime: %.2fs\n", (  _wfin_leon - _wdebut_leon) );
+	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
+
+	
+	//printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
+	//printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));
 }
 		
 		
@@ -498,7 +562,7 @@ void Leon::startHeaderCompression(){
     
     //write first header to file and store it in _firstHeader variable
 	ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE), ios::in);
-	getline(inputFileTemp, _firstHeader);
+	getline(inputFileTemp, _firstHeader);   //should be get comment from itseq
 	inputFileTemp.close();
 	_firstHeader.erase(_firstHeader.begin());
 	
@@ -571,6 +635,7 @@ void Leon::endHeaderCompression(){
 	//#endif
 	//_rangeEncoder.clear();
 	_blockSizes.clear();
+	printf("end endHeaderCompression \n");
 }
 
 
@@ -685,10 +750,10 @@ void Leon::endDnaCompression(){
 	cout << "\t\tRead without anchor: " << (_readWithoutAnchorCount*100) / _readCount << "%" << endl;
 	cout << "\t\tDe Bruijn graph" << endl;
 	//cout << "\t\t\t\tTotal encoded nt: " << _MCtotal << endl;
-	cout << "\t\t\tSimple path: " << ((_MCuniqSolid*100)/_MCtotal) << endl;
+//GR	cout << "\t\t\tSimple path: " << ((_MCuniqSolid*100)/_MCtotal) << endl;
 	cout << "\t\t\tBifurcation: " << ((_MCmultipleSolid*100)/_MCtotal) << endl;
 	cout << "\t\t\tBreak: " << ((_MCnoAternative*100)/_MCtotal) << endl;
-	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/_MCtotal) << endl;
+//GR	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/_MCtotal) << endl;
 	cout << "\t\t\tOther: " << ((_MCmultipleNoSolid*100)/_MCtotal) << endl;
 	//cout << "\t\tWith N: " << (_noAnchor_with_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
 	//cout << "\t\tFull N: " << (_noAnchor_full_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
@@ -802,6 +867,7 @@ bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
 
 int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorAdress){
 	
+	pthread_mutex_lock(&findAndInsert_mutex);
 
 		
 	//cout << "\tSearching and insert anchor" << endl;
@@ -864,18 +930,23 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	}
 	
 	if(maxAbundance == -1)
+	{
+		pthread_mutex_unlock(&findAndInsert_mutex);
 		return -1;
+	}
 
 	encodeInsertedAnchor(bestKmer);
 	
 	_anchorKmers[bestKmer] = _anchorAdress;
 	//_anchorKmers.insert(bestKmer, _anchorAdress);
 	
-	
+		
 	
 	*anchorAdress = _anchorAdress;
 	//_anchorKmerCount += 1;
 	_anchorAdress += 1;
+	
+	pthread_mutex_unlock(&findAndInsert_mutex);
 	return bestPos;
 }
 
@@ -885,7 +956,7 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 	string kmerStr = kmer.toString(_kmerSize);
 	//if(i<10) cout << "\t\t" << kmerStr << endl;
 	for(int i=0; i<kmerStr.size(); i++){
-		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));  
 	}
 	
 	//i+= 1;
@@ -1450,8 +1521,16 @@ void Leon::endDecompression(){
 	System::file().remove(_dnaOutputFilename);
 	
 	cout << "\tOutput filename: " << _outputFile->getPath() << endl;
-	printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
-	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_outputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));
+//	printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
+//	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_outputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));
+//	
+//
+	gettimeofday(&_tim, NULL);
+	_wfin_leon  = _tim.tv_sec +(_tim.tv_usec/1000000.0);
+	
+	printf("\tTime: %.2fs\n", (  _wfin_leon - _wdebut_leon) );
+	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_outputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
+
 	
 	//Test decompressed file against original reads file (decompressed and original read file must be in the same dir)
 	cout << endl << "\tChecking decompressed file" << endl;

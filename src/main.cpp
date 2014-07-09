@@ -32,13 +32,24 @@ int main (int argc, char* argv[])
     // We dump some information about the gatb core library
     std::cout << LibraryInfo::getInfo();
 
+	bool compress =false;
+	
     // We define a try/catch block in case some method fails
     try
     {
         misc::impl::ToolComposite tool;
-        
-        //tool.add (new DSK     ());
-        tool.add (new Leon    ());
+		
+		
+		for (int i=1; i< argc; i++) {
+			if( strncmp("-c",argv[i],2)  == 0)
+			{
+				tool.add (new DSK  () );
+				compress = true;
+			}
+		}
+		
+		
+        tool.add (new Leon    (compress));
         
         tool.run (argc, argv);
     }

@@ -149,22 +149,46 @@ void AbstractDnaCoder::codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bo
 DnaEncoder::DnaEncoder(Leon* leon) :
 AbstractDnaCoder(leon), _itKmer(_kmerModel)
 {
+	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
+
 }
 
 DnaEncoder::DnaEncoder(const DnaEncoder& copy) :
 AbstractDnaCoder(copy._leon), _itKmer(_kmerModel)
 {
+	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
+
+	startBlock();
 	//_leon = copy._leon;
 	//_bloom = copy._bloom;
 }
 
 DnaEncoder::~DnaEncoder(){
-	writeBlock();
+
+	if((_seqId+1) % Leon::READ_PER_BLOCK != 0){
+		writeBlock();
+	}
+	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
+
+	
+#ifndef SERIAL
+	//_leon->_blockwriter->incDone(1);
+	_leon->_blockwriter->waitForWriter();
+	
+	if(nb_remaining==1)
+	{
+		_leon->_blockwriter->FlushWriter();
+	}
+#endif
+
+	
+	
 }
 
 void DnaEncoder::operator()(Sequence& sequence){
 	_sequence = &sequence;
 	//cout << _sequence->getIndex() << endl;
+	_seqId = _sequence->getIndex() ;
 	_readSize = _sequence->getDataSize();
 	_readseq = _sequence->getDataBuffer();
 	
@@ -173,12 +197,17 @@ void DnaEncoder::operator()(Sequence& sequence){
 	
 	//_lastSequenceIndex = sequence->getIndex();
 	
-	if(_sequence->getIndex() % Leon::READ_PER_BLOCK == 0){
+//	if(_sequence->getIndex() % Leon::READ_PER_BLOCK == 0){
+
+	execute();
+	
+	
+	if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
+		
 		writeBlock();
 		startBlock();
 	}
 	
-	execute();
 }
 
 void DnaEncoder::writeBlock(){
@@ -186,8 +215,11 @@ void DnaEncoder::writeBlock(){
 		_rangeEncoder.flush();
 	}
 	
+	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
+	//printf("Tid %i  :  blockid %i sid %llu \n",_thread_id, blockId, _seqId );
+
 	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount);
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
 	_rangeEncoder.clear();
 	
 	/*

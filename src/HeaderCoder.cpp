@@ -220,6 +220,9 @@ void AbstractHeaderCoder::startBlock(){
 HeaderEncoder::HeaderEncoder(Leon* leon) :
 AbstractHeaderCoder(leon)
 {
+	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
+
+	
 	//_firstHeader = firstHeader;
 	//_rangeEncoder = new RangeEncoder();
 }
@@ -227,13 +230,37 @@ AbstractHeaderCoder(leon)
 HeaderEncoder::HeaderEncoder(const HeaderEncoder& copy) :
 AbstractHeaderCoder(NULL)
 {
+
+	
 	_leon = copy._leon;
+	
+	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
+	startBlock();
+
 	//_firstHeader = copy._firstHeader;
 	//_rangeEncoder = new RangeEncoder();
 }
 
 HeaderEncoder::~HeaderEncoder(){
-	writeBlock();
+	
+	
+	if((_seqId+1) % Leon::READ_PER_BLOCK != 0){
+		writeBlock();
+	}
+	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
+	
+	
+#ifndef SERIAL
+	//_leon->_blockwriter->incDone(1);
+	_leon->_blockwriter->waitForWriter();
+	
+	if(nb_remaining==1)
+	{
+		_leon->_blockwriter->FlushWriter();
+	}
+#endif
+
+	
 	
 	//if(_rangeEncoder->buffer.size() > 0){
 		/*
@@ -270,20 +297,22 @@ void HeaderEncoder::encodeFirstHeader(IFile* outputFile, const string& firstHead
 
 void HeaderEncoder::operator()(Sequence& sequence){
 	_lastSequenceIndex = sequence.getIndex();
-	
-	if(sequence.getIndex() % Leon::READ_PER_BLOCK == 0){
-		writeBlock();
-		
-		//cout << "Start encoding header block" << endl;
-		//cout << sequence.getIndex() << endl;
-		startBlock();
-	}
-	
+	_seqId = sequence.getIndex() ;
+
+
 	_currentHeader = sequence.getComment();
 	
 	_leon->_totalHeaderSize += _currentHeader.size(); //unsynch
 	
 	processNextHeader();
+	
+	
+	if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
+		
+		writeBlock();
+		startBlock();
+	}
+	
 }
 
 void HeaderEncoder::writeBlock(){
@@ -291,7 +320,9 @@ void HeaderEncoder::writeBlock(){
 		_rangeEncoder.flush();
 	}
 	
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount);
+	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
+
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
 	_rangeEncoder.clear();
 }
 
