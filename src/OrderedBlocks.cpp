@@ -73,7 +73,7 @@ void  OrderedBlocks::insert(u_int8_t* data, u_int64_t size, int blockId)
 		id  = blockId - _base;
         if(id < _nbMax )
         {
-			
+			//cout << blockId << " " << id << " " << size << endl;
 			_buffReceive[id] =  std::vector<u_int8_t> (data,data +  size);
 			
             break;
@@ -120,6 +120,7 @@ void  OrderedBlocks::incDone (int nbdone)
         }
         //buffReceive is full, will be written
 		
+		//cout << "lala: " << _buffReceive.size() << endl;
         _buffWrite.swap(_buffReceive);
         
         _to_be_written = _nbMax;
@@ -182,6 +183,14 @@ void  OrderedBlocks::FlushWriter ()
         pthread_cond_wait(&writer_available_cond, &writer_mutex);
     }
     pthread_mutex_unlock(&writer_mutex);
+    
+    //cout << "FLUSHED" << endl;
+    _base = 0;
+    _writer_available = 1;
+    _buffer_full = 0;
+    _idx = 0;
+    _to_be_written = 0;
+    //_nbMax(buffsize), _buffWrite (buffsize), _buffReceive (buffsize), _base(0), _writer_available(1), _buffer_full(0), _idx(0),_to_be_written(0)
 }
 
 
@@ -221,6 +230,7 @@ void * writer(void * args)
         for ( std::vector< std::vector<u_int8_t>>::iterator it = _buffWrite->begin(); (it != _buffWrite->end()) && (*to_be_written) ; it++)
         {
             //outbank->insert((*it));
+            //cout << "Size: " << (*it).size() << endl;
 			outbank->fwrite( &(*it)[0] ,(*it).size(), 1);
             (*to_be_written) --;
         }

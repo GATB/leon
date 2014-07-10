@@ -61,16 +61,19 @@ class Leon : public misc::impl::Tool
 {
 	public:
 		
-		Leon( bool compress);
+		Leon( bool compress, bool decompress);
 		~Leon();
 	
 		static const char* STR_COMPRESS;
 		static const char* STR_DECOMPRESS;
+		static const char* STR_TEST_DECOMPRESSED_FILE;
 		
 		size_t          _kmerSize;
 		string     _dskOutputFilename;
 		static const int READ_PER_BLOCK = 30000;
 		int _nb_cores;
+		
+		bool _compress, _decompress;
 		
 		clock_t _time; //Used to calculate time taken by decompression
 		
@@ -217,7 +220,7 @@ class Leon : public misc::impl::Tool
 		string _dnaOutputFilename;
 		ofstream* _dnaOutputFile;
 		RangeDecoder _anchorRangeDecoder;
-		//vector<kmer_type> _vecAnchorKmers;
+		vector<kmer_type> _vecAnchorKmers;
 		
 		//Global decompression
 		void endDecompression();

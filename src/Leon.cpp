@@ -55,7 +55,7 @@ TODO
 using namespace std;
 
 //#define SERIAL //this macro is also define in the execute() method
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 //#define PRINT_DEBUG_DECODER
 
 
@@ -63,6 +63,7 @@ using namespace std;
 const u_int64_t ANCHOR_KMERS_HASH_SIZE = 500000000;
 const char* Leon::STR_COMPRESS = "-c";
 const char* Leon::STR_DECOMPRESS = "-d";
+const char* Leon::STR_TEST_DECOMPRESSED_FILE = "-test-file";
 
 const int Leon::nt2binTab[128] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -93,29 +94,55 @@ const char Leon::_nt2bin['N'] = {0};
 const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 */
 
-Leon::Leon ( bool compress) :
+Leon::Leon ( bool compress, bool decompress) :
 Tool("leon"),
 _generalModel(256), _numericSizeModel(8),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
 _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0) //5value: A, C, G, T, N
 {
     //_kmerSize(27)
-
+	_compress = compress;
+	_decompress = decompress;
+	
     /** We get an OptionsParser for DSK. */
 
-    	OptionsParser parserDSK = DSK::getOptionsParser();
-    	getParser()->add (parserDSK);
+	OptionsParser parserDSK = DSK::getOptionsParser();
+	getParser()->add (parserDSK);
+
+	//getParser()->push_back (new OptionNoParam (Leon::STR_COMPRESS, "compression mode", false));
+	//getParser()->push_back (new OptionNoParam (Leon::STR_DECOMPRESS, "decompression mode", false));
     
-	if( !compress)
-	{
+   
+	if((compress && decompress) || (!compress && !decompress)){
+		//cout << "Choose one option among -c (compress) or -d (decompress)" << endl;
 		getParser()->remove("-kmer-size");
 		getParser()->remove("-abundance");
 		getParser()->remove("-max-memory");
 		getParser()->remove("-out");
 		getParser()->remove("-max-disk");
-		
+		getParser()->remove("-file");
+		getParser()->remove("-verbose");
+		//getParser()->remove("-nb-cores");
+		//getParser()->remove("-c");
+		//getParser()->remove("-d");
 	}
-    getParser()->push_back (new OptionNoParam (Leon::STR_COMPRESS, "compress", false));
-    getParser()->push_back (new OptionNoParam (Leon::STR_DECOMPRESS, "decompress", false));
+	else if(compress){
+		//getParser()->remove("-c");
+		//getParser()->remove("-d");
+	}
+	else if(decompress){
+		getParser()->remove("-kmer-size");
+		getParser()->remove("-abundance");
+		getParser()->remove("-max-memory");
+		getParser()->remove("-out");
+		getParser()->remove("-max-disk");
+		//getParser()->remove("-c");
+		//getParser()->remove("-d");
+		getParser()->remove("-file");
+		getParser()->push_front (new OptionOneParam(STR_URI_FILE, "compressed leon file (.leon)", true));
+		getParser()->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
+	}
+	
+	
 
     /** We add options specific to this tool. */
 
@@ -140,11 +167,11 @@ void Leon::execute()
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
 	
-    bool compress = false;
-    bool decompress = false;
-    if(getParser()->saw (Leon::STR_COMPRESS)) compress = true;
-    if(getParser()->saw (Leon::STR_DECOMPRESS)) decompress = true;
-	if((compress && decompress) || (!compress && !decompress)){
+    //bool compress = false;
+    //bool decompress = false;
+    //if(getParser()->saw (Leon::STR_COMPRESS)) compress = true;
+    //if(getParser()->saw (Leon::STR_DECOMPRESS)) decompress = true;
+	if((_compress && _decompress) || (!_compress && !_decompress)){
 		cout << "Choose one option among -c (compress) or -d (decompress)" << endl;
 		return;
 	}
@@ -159,7 +186,7 @@ void Leon::execute()
 		_numericModel.push_back(Order0Model(256));
 	}
 	
-	if(compress){
+	if(_compress){
 		//#define SERIAL
 		executeCompression();
 	}
@@ -178,7 +205,7 @@ void Leon::execute()
     //getInfo()->add (1, "result");
     //getInfo()->add (2, "nb solid kmers in reads", "%ld", total_nb_solid_kmers_in_reads);
     
-    if(!compress){
+    if(_decompress){
 		delete _inputFile;
 		delete _descInputFile;
 	}
@@ -401,8 +428,9 @@ void Leon::executeCompression(){
     //Compression
 	startHeaderCompression();
 	
-	setBlockWriter(0);
-	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
+	//_blockWrit
+	//setBlockWriter(0);
+	//setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	startDnaCompression();
 	
@@ -750,10 +778,10 @@ void Leon::endDnaCompression(){
 	cout << "\t\tRead without anchor: " << (_readWithoutAnchorCount*100) / _readCount << "%" << endl;
 	cout << "\t\tDe Bruijn graph" << endl;
 	//cout << "\t\t\t\tTotal encoded nt: " << _MCtotal << endl;
-//GR	cout << "\t\t\tSimple path: " << ((_MCuniqSolid*100)/_MCtotal) << endl;
+	cout << "\t\t\tSimple path: " << ((_MCuniqSolid*100)/_MCtotal) << endl;
 	cout << "\t\t\tBifurcation: " << ((_MCmultipleSolid*100)/_MCtotal) << endl;
 	cout << "\t\t\tBreak: " << ((_MCnoAternative*100)/_MCtotal) << endl;
-//GR	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/_MCtotal) << endl;
+	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/_MCtotal) << endl;
 	cout << "\t\t\tOther: " << ((_MCmultipleNoSolid*100)/_MCtotal) << endl;
 	//cout << "\t\tWith N: " << (_noAnchor_with_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
 	//cout << "\t\tFull N: " << (_noAnchor_full_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
@@ -851,6 +879,7 @@ void Leon::writeAnchorDict(){
     
 	tempFile.close();
 	remove((_outputFilename + ".adtemp").c_str());
+	delete buffer;
 }
 
 bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
@@ -1017,11 +1046,11 @@ void Leon::executeDecompression(){
 	//the first bit holds the file format. 0: fastq, 1: fasta
 	_isFasta = ((infoByte & 0x01) == 0x01);
 	if(_isFasta){
-		cout << "\tInput format: Fasta" << endl;
+		cout << "\tOutput format: Fasta" << endl;
 		_outputFilename += "_d.fasta";
 	}
 	else{
-		cout << "\tInput format: Fastq" << endl;
+		cout << "\tOutput format: Fastq" << endl;
 		_outputFilename += "_d.fastq";
 	}
 	
@@ -1344,7 +1373,7 @@ void Leon::setupNextComponent(){
 		//size += blockSize;
 	}
 	
-	cout << "\tBlock count: " << blockCount << endl;
+	cout << "\tBlock count: " << blockCount/2 << endl;
 	/*
 	for(int i=0; i<_blockSizes.size(); i++){
 		cout << _blockSizes[i] << " ";
@@ -1438,13 +1467,13 @@ void Leon::decodeAnchorDict(){
 			//if(i<=10) cout << anchorKmer << endl;
 			//cout << "1: " << anchorKmer << endl;
 			
-			//kmer_type kmer = model.codeSeed(anchorKmer.c_str(), Data::ASCII);
+			kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII);
 			
 			//cout << "2: " << model.toString(kmer) << endl;
 			//lala += 1;
-			//_vecAnchorKmers.push_back(kmer);
+			_vecAnchorKmers.push_back(kmer);
 			
-			anchorDictFile << anchorKmer;// + '\n';
+			//anchorDictFile << anchorKmer;// + '\n'; //A remettre pour le mode anchor dict sur disk
 			//cout << anchorKmer << endl;
 			anchorKmer.clear();
 			//i++;
@@ -1466,9 +1495,10 @@ void Leon::decodeAnchorDict(){
 
 kmer_type Leon::getAnchor(ifstream* anchorDictFile, u_int32_t adress){
 	
+	return _vecAnchorKmers[adress];
+	
 	anchorDictFile->seekg(_kmerSize*adress);
 	
-	//string kmer;
 	char buffer[_kmerSize];
 	
 	anchorDictFile->read(buffer, _kmerSize);
@@ -1491,6 +1521,10 @@ void Leon::endDecompression(){
 	ifstream headerInputFile(_headerOutputFilename.c_str());
 	ifstream dnaInputFile(_dnaOutputFilename.c_str());
 	
+	//int maxBufferSize = 4096*16;
+	//int realBufferSize = 0;
+	//string buffer;
+	
 	while(reading){
 		
 		
@@ -1500,20 +1534,32 @@ void Leon::endDecompression(){
 			else
 				line.insert(0, "@");
 			line += '\n';
+			//buffer += line;
 			_outputFile->fwrite(line.c_str(), line.size(), 1);
 		}
 		else
 			reading = false;
 		
 		if(getline(dnaInputFile, line)){
-			//_outputFile->fwrite(">lala\n", string(">lala\n").size(), 1);
 			line += '\n';
+			//buffer += line;
 			_outputFile->fwrite(line.c_str(), line.size(), 1);
 		}
 		else
 			reading = false;
 			
+		//if(buffer.size() > maxBufferSize){
+		//	_outputFile->fwrite(buffer.c_str(), buffer.size(), 1);
+		//	buffer.clear();
+		//}
+			
 	}
+	
+	//if(buffer.size() > maxBufferSize){
+	//	_outputFile->fwrite(buffer.c_str(), buffer.size(), 1);
+	//	buffer.clear();
+	//}
+		
 	_outputFile->flush();
 	
 	//Remove temp files
@@ -1533,80 +1579,82 @@ void Leon::endDecompression(){
 
 	
 	//Test decompressed file against original reads file (decompressed and original read file must be in the same dir)
-	cout << endl << "\tChecking decompressed file" << endl;
-	
-	string dir = System::file().getDirectory(_inputFilename);
-    string prefix = System::file().getBaseName(_inputFilename);
-    
-    string originalFilename;
-	IBank* originalBank;
-	IBank* newBank;
-	Iterator<Sequence>* originalBankIt;
-	Iterator<Sequence>* newBankIt;
-	
-	if(_isFasta)
-		originalFilename = dir + "/" + prefix + ".fasta";
-	else
-		originalFilename = dir + "/" + prefix + ".fastq";
+	if(getParser()->saw (Leon::STR_TEST_DECOMPRESSED_FILE)){
 		
+		cout << endl << "\tChecking decompressed file" << endl;
+		
+		string dir = System::file().getDirectory(_inputFilename);
+		string prefix = System::file().getBaseName(_inputFilename);
+		
+		string originalFilename;
+		IBank* originalBank;
+		IBank* newBank;
+		Iterator<Sequence>* originalBankIt;
+		Iterator<Sequence>* newBankIt;
+		
+		if(_isFasta)
+			originalFilename = dir + "/" + prefix + ".fasta";
+		else
+			originalFilename = dir + "/" + prefix + ".fastq";
+			
+		
+		cout << "\t\tOriginal file: " << originalFilename << endl;
+		cout << "\t\tNew file: " << _outputFile->getPath() << endl;
 	
-	cout << "\t\tOriginal file: " << originalFilename << endl;
-	cout << "\t\tNew file: " << _outputFile->getPath() << endl;
-	
-	originalBank = BankRegistery::singleton().getFactory()->createBank(originalFilename);
-	originalBankIt = originalBank->iterator();
-	originalBankIt->first();
-	newBank = BankRegistery::singleton().getFactory()->createBank(_outputFile->getPath());
-	newBankIt = newBank->iterator();
-	newBankIt->first();
-	
-	//int i=0;
-	
-	while(true){
-		if(newBankIt->isDone()){
-			if(originalBankIt->isDone())
-				cout << "\tOK" << endl;
-			else
-				cout << "\tDecompressed file end but not the original file" << endl;
-			break;
+		originalBank = BankRegistery::singleton().getFactory()->createBank(originalFilename);
+		originalBankIt = originalBank->iterator();
+		originalBankIt->first();
+		newBank = BankRegistery::singleton().getFactory()->createBank(_outputFile->getPath());
+		newBankIt = newBank->iterator();
+		newBankIt->first();
+		
+		//int i=0;
+		
+		while(true){
+			if(newBankIt->isDone()){
+				if(originalBankIt->isDone())
+					cout << "\tOK" << endl;
+				else
+					cout << "\tDecompressed file end but not the original file" << endl;
+				break;
+			}
+			if(originalBankIt->isDone()){
+				if(newBankIt->isDone())
+					cout << "\tOK" << endl;
+				else
+					cout << "\tOriginal file end but not the decomrpessed file" << endl;
+				break;
+			}
+			
+			string originalHeader = (*originalBankIt)->getComment();
+			string originalDna = (string((*originalBankIt)->getDataBuffer())).substr(0, (*originalBankIt)->getDataSize());
+			
+			
+			string newHeader = (*newBankIt)->getComment();
+			string newDna = (string((*newBankIt)->getDataBuffer())).substr(0, (*newBankIt)->getDataSize());
+			
+			if(originalHeader != newHeader){
+				cout << "\tSeq " << (*newBankIt)->getIndex() << "    Header different" << endl;
+				cout << "\t\t" << originalHeader << endl;
+				cout << "\t\t" << newHeader << endl;
+				break;
+			}
+			
+			if(originalDna != newDna){
+				cout << "\tSeq " << (*newBankIt)->getIndex() << "    Dna different" << endl;
+				cout << "\t\t" << originalDna << endl;
+				cout << "\t\t" << newDna << endl;
+				break;
+			}
+			
+			originalBankIt->next();
+			newBankIt->next();
+			
+			//i ++;
+			//cout << i << endl;
+			//if(i > 20) return;
 		}
-		if(originalBankIt->isDone()){
-			if(newBankIt->isDone())
-				cout << "\tOK" << endl;
-			else
-				cout << "\tOriginal file end but not the decomrpessed file" << endl;
-			break;
-		}
-		
-		string originalHeader = (*originalBankIt)->getComment();
-		string originalDna = (string((*originalBankIt)->getDataBuffer())).substr(0, (*originalBankIt)->getDataSize());
-		
-		
-		string newHeader = (*newBankIt)->getComment();
-		string newDna = (string((*newBankIt)->getDataBuffer())).substr(0, (*newBankIt)->getDataSize());
-		
-		if(originalHeader != newHeader){
-			cout << "\tSeq " << (*newBankIt)->getIndex() << "    Header different" << endl;
-			cout << "\t\t" << originalHeader << endl;
-			cout << "\t\t" << newHeader << endl;
-			break;
-		}
-		
-		if(originalDna != newDna){
-			cout << "\tSeq " << (*newBankIt)->getIndex() << "    Dna different" << endl;
-			cout << "\t\t" << originalDna << endl;
-			cout << "\t\t" << newDna << endl;
-			break;
-		}
-		
-		originalBankIt->next();
-		newBankIt->next();
-		
-		//i ++;
-		//cout << i << endl;
-		//if(i > 20) return;
 	}
-	
 }
 
 

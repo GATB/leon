@@ -216,7 +216,7 @@ void DnaEncoder::writeBlock(){
 	}
 	
 	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
-	//printf("Tid %i  :  blockid %i sid %llu \n",_thread_id, blockId, _seqId );
+	//printf("Tid %i  :  blockid %i sid %llu     size: %llu\n",_thread_id, blockId, _seqId, _rangeEncoder.getBufferSize() );
 
 	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);

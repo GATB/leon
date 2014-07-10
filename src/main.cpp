@@ -33,6 +33,7 @@ int main (int argc, char* argv[])
     std::cout << LibraryInfo::getInfo();
 
 	bool compress =false;
+	bool decompress = false;
 	
     // We define a try/catch block in case some method fails
     try
@@ -48,8 +49,15 @@ int main (int argc, char* argv[])
 			}
 		}
 		
+		for (int i=1; i< argc; i++) {
+			if( strncmp("-d",argv[i],2)  == 0)
+			{
+				//tool.add (new DSK  () );
+				decompress = true;
+			}
+		}
 		
-        tool.add (new Leon    (compress));
+        tool.add (new Leon    (compress, decompress));
         
         tool.run (argc, argv);
     }
