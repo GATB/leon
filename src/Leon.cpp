@@ -1221,6 +1221,7 @@ void Leon::startHeaderDecompression(){
 			
 			//cout << "Living thread: " << livingThreadCount << endl;
 			
+			/*
 			while(true){
 				//cout << "allo" << endl;
 				bool finished = true;
@@ -1233,7 +1234,7 @@ void Leon::startHeaderDecompression(){
 				
 				if(finished) break;
 				//std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
-			}
+			}*/
 			
 			//cout << "it's the end" << endl;
 			//cout << "Block: " << i << " " << _blockSizes.size()-1 << endl;
@@ -1359,6 +1360,7 @@ void Leon::startDnaDecompression(){
 			
 			//cout << "Living thread: " << livingThreadCount << endl;
 			
+			/*
 			while(true){
 				//cout << "allo" << endl;
 				bool finished = true;
@@ -1372,7 +1374,7 @@ void Leon::startDnaDecompression(){
 				
 				if(finished) break;
 				//std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
-			}
+			}*/
 			
 			//cout << "it's the end" << endl;
 			//cout << "Block: " << i << " " << _blockSizes.size()-1 << endl;
