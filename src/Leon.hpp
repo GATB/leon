@@ -207,7 +207,7 @@ class Leon : public misc::impl::Tool
 		string _headerOutputFilename;
 		ofstream* _headerOutputFile;
 		
-	
+	   	int _auto_cutoff;
 		pthread_mutex_t findAndInsert_mutex;
 		pthread_mutex_t writeblock_mutex;
 

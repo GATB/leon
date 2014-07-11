@@ -114,6 +114,7 @@ _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0) //5value: A, C, G, T, 
    
 	if((compress && decompress) || (!compress && !decompress)){
 		//cout << "Choose one option among -c (compress) or -d (decompress)" << endl;
+
 		getParser()->remove("-kmer-size");
 		getParser()->remove("-abundance");
 		getParser()->remove("-max-memory");
@@ -215,12 +216,49 @@ void Leon::execute()
 void Leon::createBloom (){
     TIME_INFO (getTimeInfo(), "fill bloom filter");
     
+	
+	
+	
+	_auto_cutoff = 0 ;
+    //retrieve cutoff
+	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
+	LOCAL (storage);
+	
+	Collection<NativeInt64>& cutoff  = storage->getGroup("dsk").getCollection<NativeInt64> ("cutoff");
+    Iterator<NativeInt64>* iter = cutoff.iterator();
+    LOCAL (iter);
+    for (iter->first(); !iter->isDone(); iter->next())  {
+		_auto_cutoff = iter->item().toInt();
+	}
+	//////
+	
+	
+	
+	
+	u_int64_t nbs = 0 ;
+    //retrieve nb solids
+
+	
+	Collection<NativeInt64>& storagesolid  = storage->getGroup("dsk").getCollection<NativeInt64> ("nbsolidsforcutoff");
+    Iterator<NativeInt64>* iter2 = storagesolid.iterator();
+    LOCAL (iter2);
+    for (iter2->first(); !iter2->isDone(); iter2->next())  {
+		nbs = iter2->item().toInt();
+	}
+	//////
+	
+	
+	
+	
     double lg2 = log(2);
     float NBITS_PER_KMER = log (16*_kmerSize*(lg2*lg2))/(lg2*lg2);
     NBITS_PER_KMER = 12;
     u_int64_t solidFileSize = (System::file().getSize(_dskOutputFilename) / sizeof (kmer_count));
     
-    u_int64_t estimatedBloomSize = (u_int64_t) ((double)solidFileSize * NBITS_PER_KMER);
+	//todo changer l'estimation du nombre de kmer, a faire avec lhisto et le cutoff
+	
+    u_int64_t estimatedBloomSize = (u_int64_t) ((double)nbs * NBITS_PER_KMER);
+	//(u_int64_t) ((double)solidFileSize * NBITS_PER_KMER);
     if (estimatedBloomSize ==0 ) { estimatedBloomSize = 1000; }
     
     
@@ -240,7 +278,10 @@ void Leon::createBloom (){
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
     //cout << "ESTIMATED:" << estimatedBloomSize << endl;
     //_bloomSize = estimatedBloomSize;
-    BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
+	
+	printf("will use cutoff %i   total solids %lli\n",_auto_cutoff,nbs);
+	//modif ici pour virer les kmers < auto cutoff
+    BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers);
     
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
@@ -421,10 +462,12 @@ void Leon::executeCompression(){
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
         System::file().getBaseName (prefix) + ".h5";
 
-	//cout << _dskOutputFilename << endl;
+	cout << _dskOutputFilename << endl;
 	
 
-    
+
+	
+	
     //Compression
 	startHeaderCompression();
 	

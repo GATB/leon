@@ -109,10 +109,10 @@ class CompressionUtils
 			u_int64_t deltaValue2 = prevValue - value;
 			
 			
-			if(deltaValue1 >= 0 && deltaValue1 < value){
+			if( deltaValue1 < value){ //deltaValue1 >= 0 &&
 				isDelta1Valid = true;
 			}
-			if(deltaValue2 >= 0 && deltaValue2 < value){
+			if( deltaValue2 < value){ //deltaValue2 >= 0 &&
 				isDelta2Valid = true;
 			}
 			
@@ -152,6 +152,7 @@ class CompressionUtils
 			else if(deltaType == 2){
 				return prevValue - deltaValue;
 			}
+			return deltaValue; //avoid warning;
 		}
 };
 
