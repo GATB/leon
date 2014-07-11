@@ -97,6 +97,8 @@ class HeaderEncoder : AbstractHeaderCoder
 		
 		RangeEncoder _rangeEncoder;
 		
+		u_int64_t _totalHeaderSize;
+	
 		int _fieldPos;
 		//int _misPrevStartPos, _misCurrentStartPos;
 		int _misCurrentStartPos;

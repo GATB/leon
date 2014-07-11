@@ -147,14 +147,19 @@ void AbstractDnaCoder::codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bo
 // ** DnaEncoder
 //====================================================================================
 DnaEncoder::DnaEncoder(Leon* leon) :
-AbstractDnaCoder(leon), _itKmer(_kmerModel)
+AbstractDnaCoder(leon), _itKmer(_kmerModel), _totalDnaSize(0), _readCount(0), _MCtotal(0), _readWithoutAnchorCount(0),
+_MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _MCmultipleNoSolid(0)
 {
+
+	
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
 }
 
 DnaEncoder::DnaEncoder(const DnaEncoder& copy) :
-AbstractDnaCoder(copy._leon), _itKmer(_kmerModel)
+AbstractDnaCoder(copy._leon), _itKmer(_kmerModel),
+ _totalDnaSize(0), _readCount(0), _MCtotal(0), _readWithoutAnchorCount(0),
+_MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _MCmultipleNoSolid(0)
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
@@ -170,6 +175,17 @@ DnaEncoder::~DnaEncoder(){
 	}
 	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
 
+	//printf("this decoder %lli seq  %lli  mctotal   %lli mltnos\n",_readCount,_MCtotal,_MCmultipleNoSolid);
+	__sync_fetch_and_add(&_leon->_readCount, _readCount);
+	__sync_fetch_and_add(&_leon->_MCtotal, _MCtotal);
+	__sync_fetch_and_add(&_leon->_readWithoutAnchorCount, _readWithoutAnchorCount);
+	__sync_fetch_and_add(&_leon->_totalDnaSize, _totalDnaSize);
+	__sync_fetch_and_add(&_leon->_MCuniqSolid, _MCuniqSolid);
+	__sync_fetch_and_add(&_leon->_MCuniqNoSolid, _MCuniqNoSolid);
+	__sync_fetch_and_add(&_leon->_MCnoAternative, _MCnoAternative);
+	__sync_fetch_and_add(&_leon->_MCmultipleSolid, _MCmultipleSolid);
+	__sync_fetch_and_add(&_leon->_MCmultipleNoSolid, _MCmultipleNoSolid);
+	
 	
 #ifndef SERIAL
 	//_leon->_blockwriter->incDone(1);
@@ -192,8 +208,7 @@ void DnaEncoder::operator()(Sequence& sequence){
 	_readSize = _sequence->getDataSize();
 	_readseq = _sequence->getDataBuffer();
 		
-	__sync_fetch_and_add (&_leon->_totalDnaSize, _readSize);
-	
+	_totalDnaSize += _readSize ;
 	//_lastSequenceIndex = sequence->getIndex();
 	
 //	if(_sequence->getIndex() % Leon::READ_PER_BLOCK == 0){
@@ -251,8 +266,8 @@ void DnaEncoder::execute(){
 	
 	//cout << _readseq << endl;
 	
-	__sync_fetch_and_add (&_leon->_readCount, 1);
-
+	_readCount +=1;
+	
 	if(_readSize < _kmerSize){
 		encodeNoAnchorRead();
 		endRead();
@@ -498,14 +513,14 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		
 	}
 	
-	__sync_fetch_and_add(&_leon->_MCtotal,1); //todo maybe put local val synced at end
+	_MCtotal +=1;
 	
 	if(indexedKmerCount == 1){
 		if(isKmerSolid){
-			_leon->_MCuniqSolid += 1;
+			_MCuniqSolid += 1;
 		}
 		else{
-			_leon->_MCuniqNoSolid += 1;
+			_MCuniqNoSolid += 1;
 			//_leon->_readWithAnchorMutationChoicesSize += 0.25;
 			_bifurcations.push_back(nextNt);
 			_errorPos.push_back(pos);
@@ -515,11 +530,11 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	}
 	else{
 		if(indexedKmerCount == 0){
-			_leon->_MCnoAternative += 1;
+			_MCnoAternative += 1;
 		}
 		else{
 			if(isKmerSolid){
-				_leon->_MCmultipleSolid += 1;
+				_MCmultipleSolid += 1;
 				
 				/*
 				if(_solidMutaChainLockTime <= 0){
@@ -566,7 +581,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 					
 			}
 			else{
-				_leon->_MCmultipleNoSolid += 1;
+				_MCmultipleNoSolid += 1;
 			}
 		}
 		
@@ -829,8 +844,8 @@ void DnaEncoder::encodeNoAnchorRead(){
 	_rangeEncoder.encode(_readTypeModel, 1);
 	
 	//_leon->_readWithoutAnchorSize += _readSize*0.375;
-	__sync_fetch_and_add(&_leon->_readWithoutAnchorCount,1);
-
+	_readWithoutAnchorCount +=1;
+	
 	/*
 	for(int i=0; i<_readSize; i++){
 		if(_readseq[i] == 'N'){
@@ -940,7 +955,7 @@ void DnaDecoder::execute(){
 		_leon->_testBankIt->next();
 		*/
 		#ifdef PRINT_DEBUG_DECODER
-			_leon->_readCount += 1;
+			_readCount += 1;
 			cout << _leon->_readCount << ": " << _currentSeq << endl;
 		#endif
 		
@@ -1040,6 +1055,7 @@ void DnaDecoder::decodeAnchorRead(){
 	}
 	
 	//Inject N in the decoded read sequence
+	//printf("npos s %i currseq %s \n",_Npos.size(),_currentSeq.c_str());
 	for(int i=0; i<_Npos.size(); i++){
 		_currentSeq[_Npos[i]] = 'N';
 	}

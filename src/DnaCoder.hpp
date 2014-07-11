@@ -74,6 +74,8 @@ class AbstractDnaCoder
 		
 		u_int64_t _seqId;
 		
+
+	
 		u_int64_t _prevReadSize;
 		u_int64_t _prevAnchorPos;
 		u_int64_t _prevAnchorAddress;
@@ -124,7 +126,16 @@ class DnaEncoder : AbstractDnaCoder
 		
 		vector<int> _solidMutaChain;
 		int _solidMutaChainPos;
-		
+		u_int64_t _totalDnaSize;
+		u_int64_t _readCount;
+		u_int64_t _MCtotal;
+		u_int64_t _readWithoutAnchorCount;
+		u_int64_t _MCuniqSolid;
+		u_int64_t _MCuniqNoSolid;
+		u_int64_t _MCnoAternative;
+		u_int64_t _MCmultipleSolid;
+		u_int64_t _MCmultipleNoSolid;
+	
 		
 		bool extendMutaChain(kmer_type kmer, int pos, bool rightExtend);
 		bool extendMutaChainRec(vector< vector< vector<kmer_type> > >& mutaChains, bool rightExtend);

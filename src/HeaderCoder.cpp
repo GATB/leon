@@ -218,7 +218,7 @@ void AbstractHeaderCoder::startBlock(){
 // ** HeaderEncoder
 //====================================================================================
 HeaderEncoder::HeaderEncoder(Leon* leon) :
-AbstractHeaderCoder(leon)
+AbstractHeaderCoder(leon) , _totalHeaderSize(0)
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
@@ -228,7 +228,7 @@ AbstractHeaderCoder(leon)
 }
 
 HeaderEncoder::HeaderEncoder(const HeaderEncoder& copy) :
-AbstractHeaderCoder(NULL)
+AbstractHeaderCoder(NULL), _totalHeaderSize(0)
 {
 
 	
@@ -249,6 +249,7 @@ HeaderEncoder::~HeaderEncoder(){
 	}
 	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
 	
+	__sync_fetch_and_add(&_leon->_totalHeaderSize, _totalHeaderSize);
 	
 #ifndef SERIAL
 	//_leon->_blockwriter->incDone(1);
@@ -302,7 +303,7 @@ void HeaderEncoder::operator()(Sequence& sequence){
 
 	_currentHeader = sequence.getComment();
 	
-	__sync_fetch_and_add(&_leon->_totalHeaderSize, _currentHeader.size());
+	_totalHeaderSize += _currentHeader.size();
 	
 	processNextHeader();
 	

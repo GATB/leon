@@ -99,11 +99,13 @@ class Leon : public misc::impl::Tool
 		
 		//test dna compression			
 		u_int64_t _MCtotal;
-		double _MCnoAternative;
-		double _MCuniqSolid;
-		double _MCuniqNoSolid;
-		double _MCmultipleSolid;
-		double _MCmultipleNoSolid;
+	
+		u_int64_t _MCnoAternative;
+		u_int64_t _MCuniqSolid;
+		u_int64_t _MCuniqNoSolid;
+		u_int64_t _MCmultipleSolid;
+		u_int64_t _MCmultipleNoSolid;
+	
 		//u_int64_t _noAnchor_full_N_kmer_count;
 		//u_int64_t _noAnchor_with_N_kmer_count;
 		u_int64_t _readCount;

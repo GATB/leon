@@ -97,7 +97,10 @@ const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 Leon::Leon ( bool compress, bool decompress) :
 Tool("leon"),
 _generalModel(256), _numericSizeModel(8),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
-_anchorDictModel(5),_nb_thread_living(0), _blockwriter(0) //5value: A, C, G, T, N
+_anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
+_readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
+_MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0)
+
 {
     //_kmerSize(27)
 	_compress = compress;
@@ -805,7 +808,7 @@ void Leon::endDnaCompression(){
 	//#ifdef PRINT_DEBUG
 	//	cout << endl;
 	//	cout << endl;
-	cout << "\tEnd reads decompression" << endl;
+	cout << "\tEnd reads compression" << endl;
 	cout << "\t\tReads count: " << _readCount << endl;
 	cout << "\t\tReads size: " << _totalDnaSize << endl;
 	cout << "\t\tReads compressed size: " << _compressedSize << endl;
@@ -821,6 +824,8 @@ void Leon::endDnaCompression(){
 	cout << "\t\tRead without anchor: " << ((double)_readWithoutAnchorCount*100) / _readCount << "%" << endl;
 	cout << "\t\tDe Bruijn graph" << endl;
 	//cout << "\t\t\t\tTotal encoded nt: " << _MCtotal << endl;
+	//cout << "\t\t\t\tTotal _MCmultipleNoSolid nt: " << _MCmultipleNoSolid << endl;
+
 	cout << "\t\t\tSimple path: " << ((_MCuniqSolid*100)/ (double)_MCtotal) << endl;
 	cout << "\t\t\tBifurcation: " << ((_MCmultipleSolid*100)/(double)_MCtotal) << endl;
 	cout << "\t\t\tBreak: " << ((_MCnoAternative*100)/(double)_MCtotal) << endl;
@@ -1503,15 +1508,15 @@ void Leon::decodeAnchorDict(){
 	
 	while(currentAnchorCount < anchorCount){
 		u_int8_t c = _anchorRangeDecoder.nextByte(_anchorDictModel);
-		anchorKmer += Leon::bin2nt(c);
+		anchorKmer += Leon::bin2nt(c); //convert to char
 		if(anchorKmer.size() == _kmerSize){
 			
 			//cout << anchorKmer << endl;
 			//if(i<=10) cout << anchorKmer << endl;
 			//cout << "1: " << anchorKmer << endl;
 			
-			kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII);
-			
+			kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII); //then convert to bin
+			//could be optimized if needed
 			//cout << "2: " << model.toString(kmer) << endl;
 			//lala += 1;
 			_vecAnchorKmers.push_back(kmer);
