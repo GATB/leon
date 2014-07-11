@@ -191,9 +191,8 @@ void DnaEncoder::operator()(Sequence& sequence){
 	_seqId = _sequence->getIndex() ;
 	_readSize = _sequence->getDataSize();
 	_readseq = _sequence->getDataBuffer();
-	
-	_leon->_totalDnaSize += _readSize; //unsynch
-	
+		
+	__sync_fetch_and_add (&_leon->_totalDnaSize, _readSize);
 	
 	//_lastSequenceIndex = sequence->getIndex();
 	
@@ -252,8 +251,8 @@ void DnaEncoder::execute(){
 	
 	//cout << _readseq << endl;
 	
-	_leon->_readCount += 1; //unsynch
-	
+	__sync_fetch_and_add (&_leon->_readCount, 1);
+
 	if(_readSize < _kmerSize){
 		encodeNoAnchorRead();
 		endRead();
@@ -499,8 +498,8 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		
 	}
 	
-	_leon->_MCtotal += 1; //unsynch
-		
+	__sync_fetch_and_add(&_leon->_MCtotal,1); //todo maybe put local val synced at end
+	
 	if(indexedKmerCount == 1){
 		if(isKmerSolid){
 			_leon->_MCuniqSolid += 1;
@@ -830,8 +829,8 @@ void DnaEncoder::encodeNoAnchorRead(){
 	_rangeEncoder.encode(_readTypeModel, 1);
 	
 	//_leon->_readWithoutAnchorSize += _readSize*0.375;
-	_leon->_readWithoutAnchorCount += 1; //unsynch
-	
+	__sync_fetch_and_add(&_leon->_readWithoutAnchorCount,1);
+
 	/*
 	for(int i=0; i<_readSize; i++){
 		if(_readseq[i] == 'N'){

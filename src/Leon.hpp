@@ -98,7 +98,7 @@ class Leon : public misc::impl::Tool
 		Bloom<kmer_type>* _bloom;
 		
 		//test dna compression			
-		double _MCtotal;
+		u_int64_t _MCtotal;
 		double _MCnoAternative;
 		double _MCuniqSolid;
 		double _MCuniqNoSolid;
@@ -108,7 +108,7 @@ class Leon : public misc::impl::Tool
 		//u_int64_t _noAnchor_with_N_kmer_count;
 		u_int64_t _readCount;
 		//double _anchorKmerCount;
-		double _readWithoutAnchorCount;
+		u_int64_t _readWithoutAnchorCount;
 		//double _total_kmer_indexed;
 		//double _uniq_mutated_kmer;
 		//u_int64_t _total_kmer;

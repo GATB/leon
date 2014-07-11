@@ -302,7 +302,7 @@ void HeaderEncoder::operator()(Sequence& sequence){
 
 	_currentHeader = sequence.getComment();
 	
-	_leon->_totalHeaderSize += _currentHeader.size(); //unsynch
+	__sync_fetch_and_add(&_leon->_totalHeaderSize, _currentHeader.size());
 	
 	processNextHeader();
 	
