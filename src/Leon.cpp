@@ -713,7 +713,7 @@ void Leon::endHeaderCompression(){
 	//#endif
 	//_rangeEncoder.clear();
 	_blockSizes.clear();
-	printf("end endHeaderCompression \n");
+	//printf("end endHeaderCompression \n");
 }
 
 
@@ -821,7 +821,7 @@ void Leon::endDnaCompression(){
 		
 	//cout << "\t\tReads stats" << endl;
 	//cout << System::file().getBaseName(getInput()->getStr(STR_URI_FILE)) << endl;
-	cout << "\t\tReads per anchor: " << _readCount / _anchorKmers.size() << endl;
+	cout << "\t\tReads per anchor: " << _readCount / _anchorAdress << endl;
 	//cout << "\tBit per anchor: " << log2(_anchorKmerCount) << endl;
 	//cout << "\tAnchor count: " << _anchorKmerCount << endl;
 	//cout << endl;
@@ -870,7 +870,7 @@ void Leon::endDnaCompression(){
 		//cout << "\t\tRead without anchor: " << ((_readWithoutAnchorSize*100) / (double)_totalDnaCompressedSize) << "%" << endl;
 		//cout << endl;
 	//#endif
-	
+	_anchorKmers.clear();
 }
 
 void Leon::writeBloom(){
@@ -909,7 +909,7 @@ void Leon::writeAnchorDict(){
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, size);
 	
 	//Encode anchors count
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _anchorKmers.size());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _anchorAdress);
 	
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
 	//cout << "\t pos: " << _outputFile->tell() << endl;
@@ -1406,7 +1406,7 @@ void Leon::startDnaDecompression(){
 	
 	//Remove anchor dict file
 	//delete _anchorDictFile;
-	System::file().remove(_anchorDictFilename);
+	//System::file().remove(_anchorDictFilename);
 	
 	delete _kmerModel;
 }
@@ -1489,8 +1489,8 @@ void Leon::decodeAnchorDict(){
 		cout << "\tDecode anchor dict" << endl;
 	#endif
 	
-	_anchorDictFilename = _outputFilename + ".temp.dict";
-	ofstream anchorDictFile(_anchorDictFilename.c_str(), ios::out);
+	//_anchorDictFilename = _outputFilename + ".temp.dict";
+	//ofstream anchorDictFile(_anchorDictFilename.c_str(), ios::out);
 	
 	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 	//cout << anchorDictSize << endl;
@@ -1538,8 +1538,8 @@ void Leon::decodeAnchorDict(){
 		cout << "\t\tAnchor count: " << _vecAnchorKmers.size() << endl;
 	#endif
 	
-	anchorDictFile.flush();
-	anchorDictFile.close();
+	//anchorDictFile.flush();
+	//anchorDictFile.close();
 	
 }
 
@@ -1549,14 +1549,14 @@ kmer_type Leon::getAnchor(ifstream* anchorDictFile, u_int32_t adress){
 	
 	return _vecAnchorKmers[adress];
 	
-	anchorDictFile->seekg(_kmerSize*adress);
+	//anchorDictFile->seekg(_kmerSize*adress);
 	
-	char buffer[_kmerSize];
+	//char buffer[_kmerSize];
 	
-	anchorDictFile->read(buffer, _kmerSize);
+	//anchorDictFile->read(buffer, _kmerSize);
 	//kmer_type kmer = model.codeSeed(anchorKmer.c_str(), Data::ASCII);
 	//return _vecAnchorKmers[adress];
-	return _kmerModel->codeSeed(buffer, Data::ASCII);
+	//return _kmerModel->codeSeed(buffer, Data::ASCII);
 }
 
 void Leon::endDecompression(){
