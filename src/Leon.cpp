@@ -221,47 +221,51 @@ void Leon::createBloom (){
     
 	
 	
+	//u_int64_t solidFileSize
 	
 	_auto_cutoff = 0 ;
-    //retrieve cutoff
-	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
-	LOCAL (storage);
-	
-	Collection<NativeInt64>& cutoff  = storage->getGroup("dsk").getCollection<NativeInt64> ("cutoff");
-    Iterator<NativeInt64>* iter = cutoff.iterator();
-    LOCAL (iter);
-    for (iter->first(); !iter->isDone(); iter->next())  {
-		_auto_cutoff = iter->item().toInt();
-	}
-	//////
-	
-	
-	
-	
 	u_int64_t nbs = 0 ;
-    //retrieve nb solids
 
-	
-	Collection<NativeInt64>& storagesolid  = storage->getGroup("dsk").getCollection<NativeInt64> ("nbsolidsforcutoff");
-    Iterator<NativeInt64>* iter2 = storagesolid.iterator();
-    LOCAL (iter2);
-    for (iter2->first(); !iter2->isDone(); iter2->next())  {
-		nbs = iter2->item().toInt();
+	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
+		
+		//retrieve cutoff
+		Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
+		LOCAL (storage);
+		
+		Collection<NativeInt64>& cutoff  = storage->getGroup("dsk").getCollection<NativeInt64> ("cutoff");
+		Iterator<NativeInt64>* iter = cutoff.iterator();
+		LOCAL (iter);
+		for (iter->first(); !iter->isDone(); iter->next())  {
+			_auto_cutoff = iter->item().toInt();
+		}
+		//////
+		
+		//retrieve nb solids
+		
+		
+		Collection<NativeInt64>& storagesolid  = storage->getGroup("dsk").getCollection<NativeInt64> ("nbsolidsforcutoff");
+		Iterator<NativeInt64>* iter2 = storagesolid.iterator();
+		LOCAL (iter2);
+		for (iter2->first(); !iter2->isDone(); iter2->next())  {
+			nbs = iter2->item().toInt();
+		}
+		//////
+		
 	}
-	//////
-	
-	
+	else
+	{
+		_auto_cutoff =0;
+		nbs  = (System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
+
+	}
 	
 	
     double lg2 = log(2);
     float NBITS_PER_KMER = log (16*_kmerSize*(lg2*lg2))/(lg2*lg2);
     NBITS_PER_KMER = 12;
-    u_int64_t solidFileSize = (System::file().getSize(_dskOutputFilename) / sizeof (kmer_count));
     
-	//todo changer l'estimation du nombre de kmer, a faire avec lhisto et le cutoff
 	
     u_int64_t estimatedBloomSize = (u_int64_t) ((double)nbs * NBITS_PER_KMER);
-	//(u_int64_t) ((double)solidFileSize * NBITS_PER_KMER);
     if (estimatedBloomSize ==0 ) { estimatedBloomSize = 1000; }
     
     
@@ -270,7 +274,7 @@ void Leon::createBloom (){
     /** We create the kmers iterator from the solid file. */
     Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
                                                                 new IteratorFile<kmer_count>(_dskOutputFilename),
-                                                                solidFileSize,
+                                                                nbs,
                                                                 "fill bloom filter"
                                                                 );
     LOCAL (itKmers);
