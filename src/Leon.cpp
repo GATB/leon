@@ -153,13 +153,14 @@ _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_rea
 	pthread_mutex_init(&findAndInsert_mutex, NULL);
 	pthread_mutex_init(&writeblock_mutex, NULL);
 
-	
+
     
 }
 
 Leon::~Leon ()
 {
 	setBlockWriter(0);
+	delete _progress_decode;
 }
 
 void Leon::execute()
@@ -484,6 +485,7 @@ void Leon::executeCompression(){
 
 	startDnaCompression();
 	
+	
 	endCompression();
 }
 		
@@ -497,7 +499,10 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	//cout << "Thread id: " << thread_id << endl;
 	//cout << "\tEncoded size (byte): " << size << endl;
 	
-	_compressedSize += size;
+	
+
+	
+	
 	
 	
 #ifdef SERIAL
@@ -510,10 +515,13 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 #endif
 	
 	
+	pthread_mutex_lock(&writeblock_mutex);
+
+	_compressedSize += size;
+
 	//int thread_id = encoder->getId();
 
 	
-	pthread_mutex_lock(&writeblock_mutex);
 
 	if ((2*(blockID+1)) > _blockSizes.size() )
 	{
@@ -827,6 +835,7 @@ void Leon::endDnaCompression(){
 	//cout << endl;
 	cout << "\t\tRead without anchor: " << ((double)_readWithoutAnchorCount*100) / _readCount << "%" << endl;
 	cout << "\t\tDe Bruijn graph" << endl;
+	
 	//cout << "\t\t\t\tTotal encoded nt: " << _MCtotal << endl;
 	//cout << "\t\t\t\tTotal _MCmultipleNoSolid nt: " << _MCmultipleNoSolid << endl;
 
@@ -1064,6 +1073,19 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 
 
 
+void * decoder_header_thread(void * args)
+{
+	HeaderDecoder * header_decoder = (HeaderDecoder*) args;
+	header_decoder->execute();
+ 	pthread_exit(0);
+}
+
+void * decoder_dna_thread(void * args)
+{
+	DnaDecoder * dna_decoder = (DnaDecoder*) args;
+	dna_decoder->execute();
+ 	pthread_exit(0);
+}
 
 
 
@@ -1120,7 +1142,7 @@ void Leon::executeDecompression(){
 }
 
 void Leon::startHeaderDecompression(){
-	cout << "\tDecompressing headers" << endl;
+	//cout << "\tDecompressing headers" << endl;
 	
 	//Decode the first header
 	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
@@ -1137,9 +1159,13 @@ void Leon::startHeaderDecompression(){
 	//_filePos = _descInputFile->tellg();
 	//cout << "Block start pos: " << blockStartPos << endl;
 	
-
-
+	
 	setupNextComponent();
+	
+	
+	_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing headers"), System::thread().newSynchronizer()   );
+	_progress_decode->init();
+	
 	
 	_headerOutputFilename = _outputFilename + ".temp.header";
 	_headerOutputFile = new ofstream(_headerOutputFilename.c_str());
@@ -1177,7 +1203,9 @@ void Leon::startHeaderDecompression(){
 		//	int i = 0;
 		//}
 
-		vector<thread> ts(_nb_cores);
+		//vector<thread> ts(_nb_cores);
+		pthread_t * tab_threads = new pthread_t [_nb_cores];
+
 		//cout << ts.size() << endl;
 		int i = 0;
 		int livingThreadCount = 0;
@@ -1205,8 +1233,10 @@ void Leon::startHeaderDecompression(){
 				//std::future<void> t( std::async(&HeaderDecoder::execute, &decoder));
 				//t.get();
 				
+				
+				pthread_create(&tab_threads[j], NULL, decoder_header_thread, decoder);
 
-				ts[j] = thread(&HeaderDecoder::execute, decoder);
+				//ts[j] = thread(&HeaderDecoder::execute, decoder);
 				//ts[j].join();
 				//t.join();
 				
@@ -1241,7 +1271,9 @@ void Leon::startHeaderDecompression(){
 			
 			for(int j=0; j < livingThreadCount; j++){
 				//cout << j << endl;
-				ts[j].join();
+			//	ts[j].join();
+				pthread_join(tab_threads[j], NULL);
+
 				HeaderDecoder* decoder = decoders[j];
 				//if(!decoder->_buffer.empty()){
 				_headerOutputFile->write(decoder->_buffer.c_str(), decoder->_buffer.size());
@@ -1260,17 +1292,31 @@ void Leon::startHeaderDecompression(){
 			delete decoders[i];
 		}
 		decoders.clear();
-		ts.clear();
-		
+	//	ts.clear();
+	delete [] tab_threads;
+
+	
 		cout << endl;
 	//#endif
-	
+	_progress_decode->finish();
+
 }
 
 void Leon::startDnaDecompression(){
-	cout << "\tDecompressing dna" << endl;
+	//cout << "\tDecompressing dna" << endl;
+	
+	
+
+	
 	setupNextComponent();
 
+	
+
+	delete _progress_decode;
+	_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing dna"), System::thread().newSynchronizer()   );
+	_progress_decode->init();
+
+	
 
 	_kmerModel = new KmerModel(_kmerSize, KMER_DIRECT);
 	
@@ -1315,7 +1361,9 @@ void Leon::startDnaDecompression(){
 		//	int i = 0;
 		//}
 
-		vector<thread> ts(_nb_cores);
+	//	vector<thread> ts(_nb_cores);
+		pthread_t * tab_threads = new pthread_t [_nb_cores];
+
 		//cout << ts.size() << endl;
 		int i = 0;
 		int livingThreadCount = 0;
@@ -1345,7 +1393,10 @@ void Leon::startDnaDecompression(){
 				//t.get();
 				
 
-				ts[j] = thread(&DnaDecoder::execute, decoder);
+				//ts[j] = thread(&DnaDecoder::execute, decoder);
+				
+				pthread_create(&tab_threads[j], NULL, decoder_dna_thread, decoder);
+
 				//ts[j].join();
 				//t.join();
 				
@@ -1381,7 +1432,9 @@ void Leon::startDnaDecompression(){
 			
 			for(int j=0; j < livingThreadCount; j++){
 				//cout << j << endl;
-				ts[j].join();
+				//ts[j].join();
+				pthread_join(tab_threads[j], NULL);
+
 				DnaDecoder* decoder = decoders[j];
 				//if(!headerDecoder->_buffer.empty()){
 				_dnaOutputFile->write(decoder->_buffer.c_str(), decoder->_buffer.size());
@@ -1400,8 +1453,9 @@ void Leon::startDnaDecompression(){
 			delete decoders[i];
 		}
 		decoders.clear();
-		ts.clear();
-		
+		//ts.clear();
+	delete [] tab_threads;
+
 		cout << endl;
 		
 	//#endif
@@ -1410,6 +1464,8 @@ void Leon::startDnaDecompression(){
 	//delete _anchorDictFile;
 	//System::file().remove(_anchorDictFilename);
 	
+	_progress_decode->finish();
+
 	delete _kmerModel;
 }
 
@@ -1420,14 +1476,17 @@ void Leon::setupNextComponent(){
 	_blockSizes.clear();
 	//u_int64_t size = 0;
 	
-	u_int64_t blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
-	for(int i=0; i<blockCount; i++){
+	_blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	for(int i=0; i<_blockCount; i++){
 		u_int64_t blockSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 		_blockSizes.push_back(blockSize);
 		//size += blockSize;
 	}
 	
-	cout << "\tBlock count: " << blockCount/2 << endl;
+	
+
+	
+	cout << "\tBlock count: " << _blockCount/2 << endl;
 	/*
 	for(int i=0; i<_blockSizes.size(); i++){
 		cout << _blockSizes[i] << " ";

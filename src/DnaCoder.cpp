@@ -83,7 +83,6 @@ void AbstractDnaCoder::startBlock(){
 	_NposSizeModel.clear();
 	_errorPosSizeModel.clear();
 	_numericSizeModel.clear();
-	
 	_prevReadSize = 0;
 	_prevAnchorPos = 0;
 	_prevAnchorAddress = 0;
@@ -150,8 +149,6 @@ DnaEncoder::DnaEncoder(Leon* leon) :
 AbstractDnaCoder(leon), _itKmer(_kmerModel), _totalDnaSize(0), _readCount(0), _MCtotal(0), _readWithoutAnchorCount(0),
 _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _MCmultipleNoSolid(0)
 {
-
-	
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
 }
@@ -175,7 +172,7 @@ DnaEncoder::~DnaEncoder(){
 	}
 	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
 
-	//printf("this decoder %lli seq  %lli  mctotal   %lli mltnos\n",_readCount,_MCtotal,_MCmultipleNoSolid);
+	//printf("\~ this decoder %lli seq  %lli  mctotal   %lli mltnos %p   tid %i \n",_readCount,_MCtotal,_MCmultipleNoSolid,this,_thread_id);
 	__sync_fetch_and_add(&_leon->_readCount, _readCount);
 	__sync_fetch_and_add(&_leon->_MCtotal, _MCtotal);
 	__sync_fetch_and_add(&_leon->_readWithoutAnchorCount, _readWithoutAnchorCount);
@@ -230,7 +227,7 @@ void DnaEncoder::writeBlock(){
 	}
 	
 	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
-	//printf("Tid %i  :  blockid %i sid %llu     size: %llu\n",_thread_id, blockId, _seqId, _rangeEncoder.getBufferSize() );
+	//printf("\nTid %i  WB :  blockid %i sid %llu     size: %llu mltnos %lli (nosolid for block %i) \n",_thread_id, blockId, _seqId, _rangeEncoder.getBufferSize(), _MCmultipleNoSolid,tempnosolid );
 
 	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
@@ -255,6 +252,7 @@ void DnaEncoder::writeBlock(){
 }
 
 void DnaEncoder::execute(){
+	
 	
 	//if(_leon->_readCount > 18) return;
 	//cout << endl << "\tEncoding seq " << _sequence->getIndex() << endl;
@@ -293,6 +291,7 @@ void DnaEncoder::execute(){
 	}
 	
 	endRead();
+
 }
 
 void DnaEncoder::buildKmers(){
@@ -413,6 +412,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	
 	_bifurcations.clear();
 	_errorPos.clear();
+
 	
 	kmer_type kmer = anchor;
 	for(int i=anchorPos-1; i>=0; i--){
@@ -911,7 +911,7 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 		cout << "\t-----------------------" << endl;
 		cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
 	#else
-		cout << "|" << flush;
+		_leon->_progress_decode->inc(1);
 	#endif
 	
 	_sequenceCount = sequenceCount;

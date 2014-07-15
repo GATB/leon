@@ -191,6 +191,7 @@ void AbstractHeaderCoder::endHeader(){
 }
 
 void AbstractHeaderCoder::startBlock(){
+
 	_currentHeader = _leon->_firstHeader;
 	
 	for(int i=0; i<_typeModel.size(); i++){
@@ -692,7 +693,8 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequ
 		cout << "\t-----------------------" << endl;
 		cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
 	#else
-		cout << "|" << flush;
+		_leon->_progress_decode->inc(1);
+
 	#endif
 	
 	//_currentHeader = _leon->_firstHeader;
@@ -741,7 +743,7 @@ void HeaderDecoder::execute(){
 			//decodeMatch();
 			u_int8_t headerSize = _rangeDecoder.nextByte(_headerSizeModel);
 
-			for(_fieldIndex; _fieldIndex < _prevFieldCount; _fieldIndex++){
+			for(/*_fieldIndex*/; _fieldIndex < _prevFieldCount; _fieldIndex++){
 				#ifdef PRINT_DEBUG_DECODER
 					cout << "\t\t\tAdding from prev header: " << _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]) << endl;
 				#endif
@@ -811,7 +813,7 @@ void HeaderDecoder::decodeMatch(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tMatch to field: " << (int)misFieldIndex << endl;
 	#endif
-	for(_fieldIndex; _fieldIndex < misFieldIndex; _fieldIndex++){
+	for(/*_fieldIndex*/; _fieldIndex < misFieldIndex; _fieldIndex++){
 		#ifdef PRINT_DEBUG_DECODER
 			cout << "\t\t\tAdding from prev header: " << _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]) << endl;
 		#endif
@@ -853,10 +855,14 @@ void HeaderDecoder::decodeNumeric(){
 	
 	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
 	//_currentHeader += CompressionUtils::numberToString(value);
-	_currentHeader += to_string(value);
+	
+	char temp[200];
+	snprintf(temp,200,"%llu",value);
+	_currentHeader += string(temp);
+	//_currentHeader += to_string(value); // C++11
 	
 	#ifdef PRINT_DEBUG_DECODER
-		cout << "\t\t\tAdding: " << to_string(value) << endl;
+		cout << "\t\t\tAdding: " << string(temp) << endl;
 	#endif
 }
 
@@ -876,10 +882,14 @@ void HeaderDecoder::decodeDelta(){
 	cout << "lala  " << _prevFieldValues[_fieldIndex] << endl;*/
 	//value += _prevFieldValues[_fieldIndex];
 	value = CompressionUtils::getValueFromDelta(1, _prevFieldValues[_fieldIndex], value);
-	_currentHeader += to_string(value);
+	
+	char temp[200];
+	snprintf(temp,200,"%llu",value);
+	_currentHeader += string(temp);
+	//_currentHeader += to_string(value);
 	
 	#ifdef PRINT_DEBUG_DECODER
-		cout << "\t\t\tAdding: " << to_string(value) << endl;
+		cout << "\t\t\tAdding: " << string(temp) << endl;
 	#endif
 }
 
@@ -899,10 +909,13 @@ void HeaderDecoder::decodeDelta2(){
 	cout << "lala  " << _prevFieldValues[_fieldIndex] << endl;*/
 	//value = _prevFieldValues[_fieldIndex] - value;
 	value = CompressionUtils::getValueFromDelta(2, _prevFieldValues[_fieldIndex], value);
-	_currentHeader += to_string(value);
+	char temp[200];
+	snprintf(temp,200,"%llu",value);
+	_currentHeader += string(temp);
+	//_currentHeader += to_string(value);
 	
 	#ifdef PRINT_DEBUG_DECODER
-		cout << "\t\t\tAdding: " << to_string(value) << endl;
+		cout << "\t\t\tAdding: " << string(temp) << endl;
 	#endif
 }
 

@@ -106,6 +106,7 @@ class Leon : public misc::impl::Tool
 		u_int64_t _MCmultipleSolid;
 		u_int64_t _MCmultipleNoSolid;
 	
+		u_int64_t _blockCount;
 		//u_int64_t _noAnchor_full_N_kmer_count;
 		//u_int64_t _noAnchor_with_N_kmer_count;
 		u_int64_t _readCount;
@@ -122,6 +123,8 @@ class Leon : public misc::impl::Tool
 		int   _nb_thread_living;
 		OrderedBlocks * _blockwriter;
 
+		 ProgressSynchro * _progress_decode;
+	
 		void setBlockWriter (OrderedBlocks* blockwriter) { SP_SETATTR(blockwriter); }
 
 		//DNA decompression
@@ -144,7 +147,7 @@ class Leon : public misc::impl::Tool
 			return bin2ntTab[nt];
 		}
 		
-		
+
 	private:
 	 
 		
