@@ -28,8 +28,8 @@ LOOKUP_PATH ("dsk" "../dsk;thirdparty/dsk" ${PROJECT_SOURCE_DIR} DSK_PATH)
 LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${DSK_PATH}" "thirdparty/dsk") 
 
 # LEON
-LOOKUP_PATH ("leon" "../leon;thirdparty/leon" ${PROJECT_SOURCE_DIR} LEON_PATH)
-LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${LEON_PATH}" "thirdparty/leon") 
+#LOOKUP_PATH ("leon" "../leon;thirdparty/leon" ${PROJECT_SOURCE_DIR} LEON_PATH)
+#LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${LEON_PATH}" "thirdparty/leon") 
 
 ################################################################################
 # TOOL

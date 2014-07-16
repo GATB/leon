@@ -6,13 +6,13 @@ cd build
 cmake ..
 # Run the newly created makefile:
 make
-# Copy the created binaries in ../bin:
-cp leon ../bin/
+# Copy the created binaries in directory:
+cp leon ../
 # Go back at the installation root directory
 cd ..
 #toy example
-./bin/leon -file data/toy.fasta -c
+./leon -file data/toy.fasta -c
 #decompress and check file
-./bin/leon -file data/toy.leon -d -test-file
+./leon -file data/toy.leon -d -test-file
 
  
