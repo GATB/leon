@@ -227,7 +227,7 @@ void * writer(void * args)
         //writes the buffer
 
 		
-        for ( std::vector< std::vector<u_int8_t>>::iterator it = _buffWrite->begin(); (it != _buffWrite->end()) && (*to_be_written) ; it++)
+        for ( std::vector< std::vector<u_int8_t>  >::iterator it = _buffWrite->begin(); (it != _buffWrite->end()) && (*to_be_written) ; it++)
         {
             //outbank->insert((*it));
             //cout << "Size: " << (*it).size() << endl;

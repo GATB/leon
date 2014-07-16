@@ -8,7 +8,8 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
-
+#include <stdint.h>
+#include <sys/types.h>
 //#include "File.hpp"
 
 using namespace std;

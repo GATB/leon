@@ -47,8 +47,6 @@ typedef kmer::impl::Kmer<>::Count kmer_count;
 //char char2phred(char c);
 //double char2proba(char c);
 
-#include <thread>
-#include <future>
 
 #include <pthread.h>
 

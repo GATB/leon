@@ -357,8 +357,9 @@ void Leon::createKmerAbundanceHash(){
 	#ifdef PRINT_DEBUG
 		cout << "\tFilling kmer abundance hash" << endl;
 	#endif
-	
-	vector<int> thresholds({200, 50, 20, 10});
+
+	int ithresholds[4] = {200,50,20,10};
+	vector<int> thresholds(ithresholds, ithresholds + sizeof(ithresholds) / sizeof(int));	
 	u_int64_t size = 0;
 	u_int64_t maxSize = 500000000;
 	u_int64_t absoluteMaxSize = (maxSize*3)/4;
@@ -647,7 +648,7 @@ void Leon::startHeaderCompression(){
     #endif
     
     //write first header to file and store it in _firstHeader variable
-	ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE), ios::in);
+	ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE).c_str(), ios::in);
 	getline(inputFileTemp, _firstHeader);   //should be get comment from itseq
 	inputFileTemp.close();
 	_firstHeader.erase(_firstHeader.begin());
