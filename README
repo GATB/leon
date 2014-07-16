@@ -1,0 +1,39 @@
+                        *********************************************
+			****************    Leon  *******************
+			**************** User's manual **************
+			*********************************************
+								
+		Gaetan Benoit, Claire Lemaitre, Dominique Lavenier, Guillaume Rizk.		  		  
+					  July 2014
+
+
+								
+LICENSE
+	*  GNU AFFERO GENERAL PUBLIC LICENSE
+	*  Copyright (C) 2014 INRIA
+	see the LICENSE file
+	
+INSTALL
+	see the INSTALL file
+	# NOTE: If you retrieved a source archive, you can compile the project with 'sh INSTALL’
+
+	compilation was tested with gcc and g++ version>=4.5 and clang version>=4.1
+	
+MANUAL	 
+								
+1/ Description
+	Leon is a fasta read compressor using a probabilistic de Bruijn Graph, without the need of any reference genome.
+		
+2/ Usage
+
+Usage for Leon :
+    -file       (1 arg) :    input file (e.g. FASTA/FASTQ for compression or .leon file for decompression)  
+    -c                  :    compress  
+    -d                  :    decompress  
+
+Examples : 
+
+leon -file read.fasta -c 
+leon -file read.leon  -d 
+
+ 

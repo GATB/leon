@@ -118,13 +118,19 @@ _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_rea
 	if((compress && decompress) || (!compress && !decompress)){
 		//cout << "Choose one option among -c (compress) or -d (decompress)" << endl;
 
-		getParser()->remove("-kmer-size");
-		getParser()->remove("-abundance");
-		getParser()->remove("-max-memory");
-		getParser()->remove("-out");
-		getParser()->remove("-max-disk");
-		getParser()->remove("-file");
-		getParser()->remove("-verbose");
+		
+		/*
+		 getParser()->remove("-file");
+		 getParser()->remove("-max-memory");
+		 getParser()->remove("-verbose");
+		 getParser()->remove("-kmer-size");
+		 getParser()->remove("-abundance");
+		 getParser()->remove("-out");
+		 getParser()->remove("-max-disk");
+
+
+		*/
+		
 		//getParser()->remove("-nb-cores");
 		//getParser()->remove("-c");
 		//getParser()->remove("-d");
@@ -172,6 +178,7 @@ void Leon::execute()
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
 	
+	
     //bool compress = false;
     //bool decompress = false;
     //if(getParser()->saw (Leon::STR_COMPRESS)) compress = true;
@@ -181,6 +188,8 @@ void Leon::execute()
 		return;
 	}
 
+	//getParser()->displayWarnings(); //pb si ici, affiche warnings apres exec dsk ,et prob option -c -d qui sont pas dans le parser car 'globales'
+	
     u_int64_t total_nb_solid_kmers_in_reads = 0;
     int nb_threads_living;
     _nb_cores = getInput()->getInt(STR_NB_CORES);
@@ -226,7 +235,10 @@ void Leon::createBloom (){
 	
 	_auto_cutoff = 0 ;
 	u_int64_t nbs = 0 ;
-
+	u_int64_t nb_kmers_infile;
+	
+	nb_kmers_infile = (System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
+	
 	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
 		
 		//retrieve cutoff
@@ -256,7 +268,7 @@ void Leon::createBloom (){
 	else
 	{
 		_auto_cutoff =0;
-		nbs  = (System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
+		nbs  = nb_kmers_infile;
 
 	}
 	
@@ -275,7 +287,7 @@ void Leon::createBloom (){
     /** We create the kmers iterator from the solid file. */
     Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
                                                                 new IteratorFile<kmer_count>(_dskOutputFilename),
-                                                                nbs,
+                                                                nb_kmers_infile,
                                                                 "fill bloom filter"
                                                                 );
     LOCAL (itKmers);
@@ -287,7 +299,9 @@ void Leon::createBloom (){
     //cout << "ESTIMATED:" << estimatedBloomSize << endl;
     //_bloomSize = estimatedBloomSize;
 	
-	printf("will use cutoff %i   total solids %lli\n",_auto_cutoff,nbs);
+	if(_auto_cutoff)
+		printf("will use auto cutoff %i   total solids %lli\n",_auto_cutoff,nbs);
+	
 	//modif ici pour virer les kmers < auto cutoff
     BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers);
@@ -350,7 +364,7 @@ void Leon::createBloom (){
 	cout << "Bloom size: " << _bloom->getSize() << endl;
 	cout << "Compressed Bloom size: " << outstring.size() << endl; */
 	
-	
+
 }
 
 void Leon::createKmerAbundanceHash(){
@@ -471,7 +485,6 @@ void Leon::executeCompression(){
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
         System::file().getBaseName (prefix) + ".h5";
 
-	cout << _dskOutputFilename << endl;
 	
 
 
@@ -881,6 +894,8 @@ void Leon::endDnaCompression(){
 		//cout << endl;
 	//#endif
 	_anchorKmers.clear();
+	System::file().remove(_dskOutputFilename);
+
 }
 
 void Leon::writeBloom(){

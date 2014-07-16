@@ -41,6 +41,20 @@ int main (int argc, char* argv[])
         misc::impl::ToolComposite tool;
 		
 		
+		
+		if(argc < 2)
+		{
+			printf("Usage for Leon :\n");
+			printf("    -file       (1 arg) :    input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)  \n");
+			printf("    -c                  :    compress  \n");
+			printf("    -d                  :    decompress  \n");
+			printf("Examples : \n");
+			printf("leon -file read.fasta -c \n");
+			printf("leon -file read.leon  -d \n");
+
+			return EXIT_FAILURE;
+		}
+		
 		for (int i=1; i< argc; i++) {
 			if( strncmp("-c",argv[i],2)  == 0)
 			{
