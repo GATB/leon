@@ -1,1 +1,0 @@
-../build/leon   -file  ./test.fasta   -kmer-size 31 -nks 2
