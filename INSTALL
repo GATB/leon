@@ -1,3 +1,4 @@
+#you can install leon by executing this file:  sh INSTALL
 # Prepare directories:
 mkdir bin build
 # Go in the 'build' directory

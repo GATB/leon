@@ -324,6 +324,8 @@ void HeaderEncoder::writeBlock(){
 	
 	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
 
+	//printf("\nheader coder writeblock   bid %i   tid %i \n",blockId, _thread_id);
+	
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
 	_rangeEncoder.clear();
 }

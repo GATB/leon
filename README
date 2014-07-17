@@ -23,7 +23,8 @@ MANUAL
 								
 1/ Description
 	Leon is a fasta read compressor using a probabilistic de Bruijn Graph, without the need of any reference genome.
-		
+It currently does not compress qualities, if a fastq is compressed, it will decompress as a fasta.		
+
 2/ Usage
 
 Usage for Leon :
