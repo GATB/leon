@@ -14,8 +14,9 @@ LICENSE
 	see the LICENSE file
 	
 INSTALL
-	see the INSTALL file
-	# NOTE: If you retrieved a source archive, you can compile the project with 'sh INSTALL’
+	CMake is required to compile leon (http://www.cmake.org/cmake/resources/software.html)
+	See the INSTALL file.
+	NOTE: If you retrieved a source archive, you can compile the project with 'sh INSTALL’
 
 	compilation was tested with gcc and g++ version>=4.5 and clang version>=4.1
 	

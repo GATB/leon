@@ -1,3 +1,4 @@
+#CMake is required to compile leon (http://www.cmake.org/cmake/resources/software.html)
 #you can install leon by executing this file:  sh INSTALL
 # Prepare directories:
 mkdir bin build
