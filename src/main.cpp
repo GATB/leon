@@ -44,14 +44,27 @@ int main (int argc, char* argv[])
 		
 		if(argc < 2)
 		{
-			printf("Usage for Leon :\n");
-			printf("    -file       (1 arg) :    input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)  \n");
-			printf("    -c                  :    compress  \n");
-			printf("    -d                  :    decompress  \n");
+			printf("Usage for leon\n");
+			printf("    ./leon [-c|-d] -file filename [options] \n");
+			printf("Options  \n");
+			printf("    -file               :    input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)  \n");
+			printf("    -c                  :    compression  \n");
+			printf("    -d                  :    decompression  \n");
+			printf("    -nb-cores           :    number of cores (default is the available number of cores)  \n");
+			//printf("    -verbose                  :    verbosity level  \n");
+			//printf("    -help                  :    display help about possible options  \n");
+			printf("Compression options  \n");
+			printf("    -kmer-size          :    size of a kmer  (default 31)\n");
+			printf("    -abundance          :    abundance threshold for solid kmers  (default inferred)\n");
+			//printf("    -max-disk                  :    display help about possible options  \n");
+			//printf("    -max-memory                  :    max memory in MBytes (default 1000)  \n");
+			//printf("    -out                  :    output file (if not set basename of the input file)  \n");
 			printf("Examples : \n");
-			printf("leon -file read.fasta -c \n");
-			printf("leon -file read.leon  -d \n");
+			printf("    ./leon -file read.fasta -c \n");
+			printf("    ./leon -file read.leon  -d \n");
 
+    
+    
 			return EXIT_FAILURE;
 		}
 		
