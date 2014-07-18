@@ -29,9 +29,22 @@ It currently does not compress qualities, if a fastq is compressed, it will deco
 2/ Usage
 
 Usage for Leon :
+
+Mandatory options
     -file       (1 arg) :    input file (e.g. FASTA/FASTQ for compression or .leon file for decompression)  
     -c                  :    compress  
     -d                  :    decompress  
+
+
+Optional parameters 
+    -nb-cores           :    number of cores (default is the maximum available number of cores)  
+
+
+Optional Compression parameters  
+    -kmer-size          :    size of a kmer  (default 31)
+    -abundance          :    abundance threshold for solid kmers  (default: automatic)
+
+
 
 Examples : 
 
