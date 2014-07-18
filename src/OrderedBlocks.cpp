@@ -170,12 +170,12 @@ void  OrderedBlocks::waitForWriter ()
 //guaranteed by design only one thread at the end will call this
 void  OrderedBlocks::FlushWriter ()
 {
-	
+	pthread_mutex_lock(&writer_mutex);
+
     if( _idx)
     {
-		//  printf("\n flushing %zd base = %zd ++ \n",_idx,_base);
+		  DEBUG(("\n flushing %zd base = %zd ++ \n",_idx,_base));
         ///// wait for writer to be free
-        pthread_mutex_lock(&writer_mutex);
         while (_writer_available==0) {
             pthread_cond_wait(&writer_available_cond, &writer_mutex);
         }
@@ -187,10 +187,12 @@ void  OrderedBlocks::FlushWriter ()
         //signal writer he should write buffer
         _buffer_full = 1;
         pthread_cond_broadcast(&buffer_full_cond);
-        pthread_mutex_unlock(&writer_mutex);
 		
     }
     
+	pthread_mutex_unlock(&writer_mutex);
+
+	
     //wait again for writer to finish flushing
     pthread_mutex_lock(&writer_mutex);
     while (_buffer_full==1) {
@@ -255,7 +257,7 @@ void * writer(void * args)
         obw->_buffer_full=0;
         obw->_writer_available=1;
 		//  printf(" writer thread  setting  _buffer_full to 0 .. %i  tobewrit %i \n",obw->_buffer_full,*to_be_written);
-        pthread_cond_signal(&(obw->writer_available_cond));
+        pthread_cond_broadcast(&(obw->writer_available_cond));
 		DEBUG((" **** writer thread  finished !!            **** \n"));
 
         pthread_mutex_unlock(&(obw->writer_mutex));

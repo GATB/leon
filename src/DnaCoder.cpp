@@ -167,7 +167,7 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _M
 
 DnaEncoder::~DnaEncoder(){
 
-	if((_seqId+1) % Leon::READ_PER_BLOCK != 0){
+	if(_thread_id!=0 && (_seqId+1) % Leon::READ_PER_BLOCK != 0){
 		writeBlock();
 	}
 	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
