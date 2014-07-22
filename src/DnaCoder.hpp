@@ -13,7 +13,6 @@
 
 
 
-
 using namespace std;
 class Leon;
 
@@ -102,6 +101,14 @@ class DnaEncoder : AbstractDnaCoder
 	private:
 		
 		RangeEncoder _rangeEncoder;
+		
+		#ifdef LEON_PRINT_STAT
+			RangeEncoder _rangeEncoder1;
+			RangeEncoder _rangeEncoder2;
+			RangeEncoder _rangeEncoder3;
+			RangeEncoder _rangeEncoder4;
+			RangeEncoder _rangeEncoder5;			
+		#endif
 		
 		//static void encodeFirstHeader();
 		void writeBlock();

@@ -75,6 +75,7 @@ AbstractRangeCoder::AbstractRangeCoder(){
 //====================================================================================
 RangeEncoder::RangeEncoder()//(ofstream& outputFile)
 {	
+	updateModel = true;
 	//_outputFile = new OutputFile(outputFile);
 }
 
@@ -105,7 +106,11 @@ void RangeEncoder::encode(Order0Model& model, uint8_t c){
 		_low <<= 8;
 	}
 	
-	model.update(c);
+	#ifdef LEON_PRINT_STAT
+		if(updateModel) model.update(c);
+	#else
+		model.update(c);
+	#endif
 
 }
 

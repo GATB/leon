@@ -75,7 +75,9 @@ class RangeEncoder : AbstractRangeCoder
 		void clearBuffer();
 		u_int8_t* getBuffer(bool reversed=false);
 		u_int64_t getBufferSize();
-	
+		
+		bool updateModel; //Used by leon when PRINT_STAT macro is defined
+		
 	private:
 		vector<u_int8_t> _buffer;
 		vector<u_int8_t> _reversedBuffer;

@@ -10,6 +10,8 @@
 #define __leon__Leon__
 
 
+//#define LEON_PRINT_STAT
+
 #include <iostream>
 #include <gatb/gatb_core.hpp>
 #include <sys/time.h>
@@ -90,6 +92,13 @@ class Leon : public misc::impl::Tool
 		int findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorAdress);
 		
 		u_int64_t _totalDnaSize;
+		u_int64_t _anchorDictSize;
+		u_int64_t _anchorAdressSize;
+		u_int64_t _anchorPosSize;
+		u_int64_t _readSizeSize;
+		u_int64_t _bifurcationSize;
+		u_int64_t _noAnchorSize;
+		
 		//u_int64_t _totalDnaCompressedSize;
 		//u_int64_t _realDnaCompressedSize;
 		u_int64_t _compressedSize;

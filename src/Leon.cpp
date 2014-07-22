@@ -839,7 +839,16 @@ void Leon::endDnaCompression(){
 	cout << "\t\tReads size: " << _totalDnaSize << endl;
 	cout << "\t\tReads compressed size: " << _compressedSize << endl;
 	cout << "\t\tCompression rate: " << (float)_dnaCompRate << endl;
-	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "%" << endl;
+	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\tReads: " << (((_anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize)*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\t\tAnchor adress: " << ((_anchorAdressSize*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\t\tAnchor pos: " << ((_anchorPosSize*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\t\tRead size: " << ((_readSizeSize*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\t\tBifurcation: " << ((_bifurcationSize*100) / (double)_compressedSize) << endl;
+	cout << "\t\t\tRead without anchor: " << ((_noAnchorSize*100) / (double)_compressedSize) << endl;
+		
+		
 		
 	//cout << "\t\tReads stats" << endl;
 	//cout << System::file().getBaseName(getInput()->getStr(STR_URI_FILE)) << endl;
@@ -929,6 +938,7 @@ void Leon::writeAnchorDict(){
 	//cout << "lololol: " << _outputFile->tell() << endl;
 	
 	u_int64_t size = System::file().getSize(_outputFilename + ".adtemp");
+	_anchorDictSize = size;
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
 	_compressedSize += size;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, size);
