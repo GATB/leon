@@ -1,7 +1,7 @@
 #CMake is required to compile leon (http://www.cmake.org/cmake/resources/software.html)
 #you can install leon by executing this file:  sh INSTALL
 # Prepare directories:
-mkdir bin build
+mkdir  build
 # Go in the 'build' directory
 cd build
 # Prepare the makefile
@@ -14,7 +14,7 @@ cp leon ../
 cd ..
 #toy example
 ./leon -file data/toy.fasta -c
-#decompress and check file
+#decompress and check file, option -test-file to check decompressed file against original
 ./leon -file data/toy.leon -d -test-file
 
  

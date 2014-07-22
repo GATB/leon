@@ -470,23 +470,27 @@ void Leon::executeCompression(){
     
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
-    _outputFilename = dir + "/" + prefix + ".leon";
+    _outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
 	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	
-	#ifdef PRINT_DEBUG
-		cout << "\tOutput filename: " << _outputFilename << endl;
-	#endif
+
 	
 	//Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
-        System::file().getBaseName (prefix) + ".h5";
+        System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
 
 	
+#ifdef PRINT_DEBUG
+	cout << "\tOutput filename: " << _outputFilename << endl;
+	cout << "prefix " << prefix << endl;
+	cout << "dir " << dir << endl;
+	cout << "dskout  " << _dskOutputFilename << endl;
 
+#endif
 
 	
 	
@@ -661,11 +665,14 @@ void Leon::startHeaderCompression(){
     #endif
     
     //write first header to file and store it in _firstHeader variable
-	ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE).c_str(), ios::in);
-	getline(inputFileTemp, _firstHeader);   //should be get comment from itseq
-	inputFileTemp.close();
+	//ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE).c_str(), ios::in);
+	//getline(inputFileTemp, _firstHeader);   //should be get comment from itseq
+	//inputFileTemp.close();
+	itSeq->first();
+	_firstHeader = itSeq->item().getComment();
 	_firstHeader.erase(_firstHeader.begin());
-	
+	itSeq->reset();
+
 	#ifdef PRINT_DEBUG
 		cout << "\tFirst Header: " << _firstHeader << endl;
 		cout << "\tSize: " << _firstHeader.size() << endl;
