@@ -102,6 +102,9 @@ _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0)
 
 {
+	
+	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
+
     //_kmerSize(27)
 	_compress = compress;
 	_decompress = decompress;
@@ -599,6 +602,7 @@ void Leon::endCompression(){
 	cout << "\tOutput: " << endl;
 	cout << "\t\tFilename: " << _outputFilename << endl;
 	cout << "\t\tSize: " << outputFileSize << endl;
+	std::cout.precision(4);
 	cout << "\tCompression rate: " << (float)((double)outputFileSize / (double)inputFileSize) << endl;
 	cout << "\t\tHeader: " << (float)_headerCompRate << endl;
 	cout << "\t\tDna: " << (float)_dnaCompRate << endl << endl;
@@ -609,6 +613,7 @@ void Leon::endCompression(){
 	
 	gettimeofday(&_tim, NULL);
 	_wfin_leon  = _tim.tv_sec +(_tim.tv_usec/1000000.0);
+	std::cout.precision(2);
 	printf("\tTime: %.2fs\n", (  _wfin_leon - _wdebut_leon) );
 	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
 
@@ -738,6 +743,7 @@ void Leon::endHeaderCompression(){
 	//cout << "\tBlock data size: " << _rangeEncoder.getBufferSize() << endl;
 	cout << "\t\tHeaders size: " << _totalHeaderSize << endl;
 	cout << "\t\tHeaders compressed size: " << _compressedSize << endl;
+	std::cout.precision(4);
 	cout << "\t\tCompression rate: " << (float)(_headerCompRate) << endl;
 	//#endif
 	//_rangeEncoder.clear();
@@ -844,16 +850,18 @@ void Leon::endDnaCompression(){
 	cout << "\tEnd reads compression" << endl;
 	cout << "\t\tReads count: " << _readCount << endl;
 	cout << "\t\tReads size: " << _totalDnaSize << endl;
-	cout << "\t\tReads compressed size: " << _compressedSize << endl;
-	cout << "\t\tCompression rate: " << (float)_dnaCompRate << endl;
-	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\tReads: " << (((_anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize)*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\t\tAnchor adress: " << ((_anchorAdressSize*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\t\tAnchor pos: " << ((_anchorPosSize*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\t\tRead size: " << ((_readSizeSize*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\t\tBifurcation: " << ((_bifurcationSize*100) / (double)_compressedSize) << endl;
-	cout << "\t\t\tRead without anchor: " << ((_noAnchorSize*100) / (double)_compressedSize) << endl;
+	std::cout.precision(4);
+	cout << "\t\tCompression rate: " << (float)_dnaCompRate << "  (" << _compressedSize << ")"<< endl;
+	std::cout.precision(2);
+	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "  (" << _bloom->getSize() << ")"<< endl;
+	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << "  (" << _anchorDictSize << ")"<< endl;
+	u_int64_t readsSize = _anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize;
+	cout << "\t\t\tReads: " << ((readsSize*100) / (double)_compressedSize) << "  (" << readsSize<< ")"<< endl;
+	cout << "\t\t\t\tAnchor adress: " << ((_anchorAdressSize*100) / (double)_compressedSize) << "  (" << _anchorAdressSize << ")" << endl;
+	cout << "\t\t\t\tAnchor pos: " << ((_anchorPosSize*100) / (double)_compressedSize) << "  (" << _anchorPosSize << ") "<< endl;
+	cout << "\t\t\t\tRead size: " << ((_readSizeSize*100) / (double)_compressedSize) << "  (" << _readSizeSize << ")"<< endl;
+	cout << "\t\t\t\tBifurcation: " << ((_bifurcationSize*100) / (double)_compressedSize) << "  (" << _bifurcationSize << ")"<< endl;
+	cout << "\t\t\tRead without anchor: " << ((_noAnchorSize*100) / (double)_compressedSize) << "  (" << _noAnchorSize << ")"<< endl;
 		
 		
 		
@@ -863,7 +871,7 @@ void Leon::endDnaCompression(){
 	//cout << "\tBit per anchor: " << log2(_anchorKmerCount) << endl;
 	//cout << "\tAnchor count: " << _anchorKmerCount << endl;
 	//cout << endl;
-	cout << "\t\tRead without anchor: " << ((double)_readWithoutAnchorCount*100) / _readCount << "%" << endl;
+	cout << "\t\tRead without anchor: " << ((double)_readWithoutAnchorCount*100) / _readCount << endl;
 	cout << "\t\tDe Bruijn graph" << endl;
 	
 	//cout << "\t\t\t\tTotal encoded nt: " << _MCtotal << endl;
