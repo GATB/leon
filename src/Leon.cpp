@@ -18,6 +18,8 @@ TODO
 * 
 * Optimisation:
 * 	methode anchorExist: 2 acces a la map (key exist, puis operator [])
+* 	Si les reads on tous la même taille, stocker un bit d'info qui contiendrais l'information et ne pas le stocker à chaque fois	
+* 	Compresser le dictionnaire des ancre (codage par dictionnaire, minimizer?)
 * 
 * Remarque API
 * 	Les paramètre du compresseur et decompresseur ne sont pas les même (+ pas besoin de DSK pour le decompresseur)

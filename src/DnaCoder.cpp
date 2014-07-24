@@ -402,37 +402,35 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	
 	//Encode read size
 	deltaType = CompressionUtils::getDeltaValue(_readSize, _prevReadSize, &deltaValue);
-	_rangeEncoder.encode(_readSizeDeltaTypeModel, deltaType);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeModel, _readSizeValueModel, deltaValue);
-	_prevReadSize = _readSize;
-	
-
 	#ifdef LEON_PRINT_STAT
 		_rangeEncoder1.encode(_readSizeDeltaTypeModel, deltaType);
 		CompressionUtils::encodeNumeric(_rangeEncoder1, _readSizeModel, _readSizeValueModel, deltaValue);
 	#endif
+	_rangeEncoder.encode(_readSizeDeltaTypeModel, deltaType);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeModel, _readSizeValueModel, deltaValue);
+	_prevReadSize = _readSize;
 	
 	//Encode anchor pos
 	deltaType = CompressionUtils::getDeltaValue(anchorPos, _prevAnchorPos, &deltaValue);
-	_rangeEncoder.encode(_anchorPosDeltaTypeModel, deltaType);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, deltaValue);
-	_prevAnchorPos = anchorPos;
-	
 	#ifdef LEON_PRINT_STAT
 		_rangeEncoder2.encode(_anchorPosDeltaTypeModel, deltaType);
 		CompressionUtils::encodeNumeric(_rangeEncoder2, _anchorPosSizeModel, _anchorPosModel, deltaValue);
 	#endif
+	_rangeEncoder.encode(_anchorPosDeltaTypeModel, deltaType);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, deltaValue);
+	_prevAnchorPos = anchorPos;
 	
 	//Encode anchor address
 	deltaType = CompressionUtils::getDeltaValue(anchorAddress, _prevAnchorAddress, &deltaValue);
-	_rangeEncoder.encode(_anchorAddressDeltaTypeModel, deltaType);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressSizeModel, _anchorAddressModel, deltaValue);
-	_prevAnchorAddress = anchorAddress;
-	
 	#ifdef LEON_PRINT_STAT
 		_rangeEncoder3.encode(_anchorAddressDeltaTypeModel, deltaType);
 		CompressionUtils::encodeNumeric(_rangeEncoder3, _anchorAddressSizeModel, _anchorAddressModel, deltaValue);
 	#endif
+	_rangeEncoder.encode(_anchorAddressDeltaTypeModel, deltaType);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressSizeModel, _anchorAddressModel, deltaValue);
+	_prevAnchorAddress = anchorAddress;
+	
+
 	
 	kmer_type anchor = _kmers[anchorPos];
 	
@@ -478,26 +476,27 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	}
 	
 	//Encode the positions of sequencing errors
+	#ifdef LEON_PRINT_STAT
+		CompressionUtils::encodeNumeric(_rangeEncoder4, _numericSizeModel, _numericModel, _errorPos.size());
+	#endif
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _errorPos.size());
 	for(int i=0; i<_errorPos.size(); i++){
 		deltaType = CompressionUtils::getDeltaValue(_errorPos[i], _prevErrorPos, &deltaValue);
-		_rangeEncoder.encode(_errorPosDeltaTypeModel, deltaType);
-		CompressionUtils::encodeNumeric(_rangeEncoder, _errorPosSizeModel, _errorPosModel, deltaValue);
-		_prevErrorPos = _errorPos[i];
-		
 		#ifdef LEON_PRINT_STAT
 			_rangeEncoder4.encode(_errorPosDeltaTypeModel, deltaType);
 			CompressionUtils::encodeNumeric(_rangeEncoder4, _errorPosSizeModel, _errorPosModel, deltaValue);
 		#endif
+		_rangeEncoder.encode(_errorPosDeltaTypeModel, deltaType);
+		CompressionUtils::encodeNumeric(_rangeEncoder, _errorPosSizeModel, _errorPosModel, deltaValue);
+		_prevErrorPos = _errorPos[i];
 	}
 	
 	for(int i=0; i<_bifurcations.size(); i++){
-		//cout << Leon::nt2bin(_bifurcations[i]) << " ";
-		_rangeEncoder.encode(_mutationModel, Leon::nt2bin(_bifurcations[i]));
-		
 		#ifdef LEON_PRINT_STAT
 			_rangeEncoder4.encode(_mutationModel, Leon::nt2bin(_bifurcations[i]));
 		#endif
+		//cout << Leon::nt2bin(_bifurcations[i]) << " ";
+		_rangeEncoder.encode(_mutationModel, Leon::nt2bin(_bifurcations[i]));
 	}
 	//cout << endl;
 	
@@ -913,18 +912,21 @@ void DnaEncoder::encodeNoAnchorRead(){
 		_leon->_noAnchor_full_N_kmer_count += 1;
 	}*/
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeModel, _noAnchorReadSizeValueModel, _readSize);
-	
 	#ifdef LEON_PRINT_STAT
 		CompressionUtils::encodeNumeric(_rangeEncoder5, _noAnchorReadSizeModel, _noAnchorReadSizeValueModel, _readSize);
 	#endif
-		
+	
+	CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeModel, _noAnchorReadSizeValueModel, _readSize);
+	
+			
 	for(int i=0; i<_readSize; i++){
-		_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(_readseq[i]));
 		
 		#ifdef LEON_PRINT_STAT
 			_rangeEncoder5.encode(_noAnchorReadModel, Leon::nt2bin(_readseq[i]));
 		#endif
+		
+		_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(_readseq[i]));
+		
 	}
 	
 }
