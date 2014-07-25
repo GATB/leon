@@ -102,7 +102,7 @@ class Leon : public misc::impl::Tool
 		//u_int64_t _totalDnaCompressedSize;
 		//u_int64_t _realDnaCompressedSize;
 		u_int64_t _compressedSize;
-		Bloom<kmer_type>* _bloom;
+		IBloom<kmer_type>* _bloom;
 		
 		//test dna compression			
 		u_int64_t _MCtotal;
