@@ -309,7 +309,7 @@ void Leon::createBloom (){
 		printf("\tauto cutoff: %i   (total solids %lli)\n",_auto_cutoff,nbs);
 	
 	//modif ici pour virer les kmers < auto cutoff
-    BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
+    BloomBuilder<> builder (estimatedBloomSize, 7,tools::misc::BLOOM_CACHE,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers);
     
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
@@ -470,7 +470,7 @@ void Leon::executeCompression(){
 	_rangeEncoder.encode(_generalModel, infoByte);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _kmerSize);
 	
-    _inputBank = BankRegistery::singleton().getFactory()->createBank(_inputFilename);
+    _inputBank = BankRegistery::singleton().createBank(_inputFilename);
 
 
     /*************************************************/
@@ -1777,10 +1777,10 @@ void Leon::endDecompression(){
 		cout << "\t\tOriginal file: " << originalFilename << endl;
 		cout << "\t\tNew file: " << _outputFile->getPath() << endl;
 	
-		originalBank = BankRegistery::singleton().getFactory()->createBank(originalFilename);
+		originalBank = BankRegistery::singleton().createBank(originalFilename);
 		originalBankIt = originalBank->iterator();
 		originalBankIt->first();
-		newBank = BankRegistery::singleton().getFactory()->createBank(_outputFile->getPath());
+		newBank = BankRegistery::singleton().createBank(_outputFile->getPath());
 		newBankIt = newBank->iterator();
 		newBankIt->first();
 		
