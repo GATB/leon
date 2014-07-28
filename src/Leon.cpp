@@ -243,13 +243,25 @@ void Leon::createBloom (){
 	u_int64_t nbs = 0 ;
 	u_int64_t nb_kmers_infile;
 	
-	nb_kmers_infile = (System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
+	
+	
+	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
+	LOCAL (storage);
+	
+	Collection<kmer_count>& solidCollection = storage->root().getGroup("dsk").getCollection<kmer_count> ("solid");
+	
+	/** We get the number of solid kmers. */
+    u_int64_t solidFileSize = solidCollection.getNbItems();
+	
+	nb_kmers_infile = solidCollection.getNbItems();
+	//(System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
+
+	
 	
 	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
 		
 		//retrieve cutoff
-		Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
-		LOCAL (storage);
+
 		
 		Collection<NativeInt64>& cutoff  = storage->getGroup("dsk").getCollection<NativeInt64> ("cutoff");
 		Iterator<NativeInt64>* iter = cutoff.iterator();
@@ -279,6 +291,11 @@ void Leon::createBloom (){
 	}
 	
 	
+	
+
+
+	
+	
     double lg2 = log(2);
     float NBITS_PER_KMER = log (16*_kmerSize*(lg2*lg2))/(lg2*lg2);
     NBITS_PER_KMER = 12;
@@ -291,13 +308,22 @@ void Leon::createBloom (){
     //printf("raw solidFileSize %llu fsize %llu    %lu %lu \n",System::file().getSize(_solidFile), solidFileSize,sizeof (kmer_type),sizeof (kmer_count));
     
     /** We create the kmers iterator from the solid file. */
+//    Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
+//                                                                new IteratorFile<kmer_count>(_dskOutputFilename),
+//                                                                nb_kmers_infile,
+//                                                                "fill bloom filter"
+//                                                                );
+	
+	/** We create the kmers iterator from the solid file. */
     Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
-                                                                new IteratorFile<kmer_count>(_dskOutputFilename),
-                                                                nb_kmers_infile,
-                                                                "fill bloom filter"
-                                                                );
+																solidCollection.iterator(),
+																nb_kmers_infile,
+																"fill bloom filter"
+																);
     LOCAL (itKmers);
-    
+
+	
+	
 
 	
     /** We instantiate the bloom object. */
@@ -934,6 +960,7 @@ void Leon::endDnaCompression(){
 	
 	delete _anchorKmers;
 	System::file().remove(_dskOutputFilename);
+
 
 }
 
