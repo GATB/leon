@@ -101,7 +101,8 @@ Tool("leon"),
 _generalModel(256), _numericSizeModel(8),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
 _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
-_MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0)
+_MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0),
+_anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0)
 
 {
 	
@@ -383,7 +384,11 @@ void Leon::createKmerAbundanceHash(){
 	u_int64_t maxSize = 500000000;
 	u_int64_t absoluteMaxSize = (maxSize*3)/4;
     _kmerAbundance = new OAHash<kmer_type>(maxSize);
-    
+
+
+
+	
+	
     KmerModel model(_kmerSize);
     
     IteratorFile<kmer_count> it(_dskOutputFilename);
@@ -792,14 +797,18 @@ void Leon::startDnaCompression(){
 		cout << endl << "Start reads compression" << endl;
     #endif
     
+	
 
 	//Create and fill bloom
     createBloom ();
     LOCAL (_bloom);
     
+	int64_t nbestimated = _inputBank->estimateNbItems();
+	_anchorKmers = new Hash16<kmer_type, u_int32_t > (nbestimated *0.1 *  sizeof(u_int32_t)  *10LL /1024LL / 1024LL ); // hmm  Hash16 would need a constructor with sizeof main entry
+	
     Iterator<Sequence>* itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
-                                                          _inputBank->estimateNbItems(),
+                                                          nbestimated,
                                                           "Compressing dna"
                                                           );
     LOCAL(itSeq);
@@ -884,6 +893,7 @@ void Leon::endDnaCompression(){
 	cout << "\t\t\tBreak: " << ((_MCnoAternative*100)/(double)_MCtotal) << endl;
 	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/(double)_MCtotal) << endl;
 	cout << "\t\t\tOther: " << ((_MCmultipleNoSolid*100)/(double)_MCtotal) << endl;
+	
 	//cout << "\t\tWith N: " << (_noAnchor_with_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
 	//cout << "\t\tFull N: " << (_noAnchor_full_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
 	//cout << "\tAnchor hash size: " << _anchorKmerCount*(sizeof(kmer_type)+sizeof(int)) << endl;
@@ -919,7 +929,10 @@ void Leon::endDnaCompression(){
 		//cout << "\t\tRead without anchor: " << ((_readWithoutAnchorSize*100) / (double)_totalDnaCompressedSize) << "%" << endl;
 		//cout << endl;
 	//#endif
-	_anchorKmers.clear();
+	//_anchorKmers.clear();
+	//_anchorKmers->clear();
+	
+	delete _anchorKmers;
 	System::file().remove(_dskOutputFilename);
 
 }
@@ -987,10 +1000,17 @@ void Leon::writeAnchorDict(){
 }
 
 bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
-	if(_anchorKmers.find( kmer ) != _anchorKmers.end()){ 
-		*anchorAdress = _anchorKmers[kmer];
+	
+	if (_anchorKmers->get(kmer,anchorAdress)) //avec Hash16
+	{
 		return true;
 	}
+	
+//	if(_anchorKmers.find( kmer ) != _anchorKmers.end()){ //avec std map
+//		*anchorAdress = _anchorKmers[kmer];
+//		return true;
+//	}
+	
 	return false;
 	//return _anchorKmers.get(kmer, (int*)anchorAdress); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!changer OAHash in to u_int32_t
 	//u_int32_t anchorAdress;
@@ -1070,9 +1090,9 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 	encodeInsertedAnchor(bestKmer);
 	
-	_anchorKmers[bestKmer] = _anchorAdress;
+	_anchorKmers->insert(bestKmer,_anchorAdress); //with Hash16
+	//_anchorKmers[bestKmer] = _anchorAdress;
 	//_anchorKmers.insert(bestKmer, _anchorAdress);
-	
 		
 	
 	*anchorAdress = _anchorAdress;

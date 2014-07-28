@@ -210,9 +210,10 @@ class Leon : public misc::impl::Tool
 		RangeEncoder _anchorRangeEncoder;
 		Order0Model _anchorDictModel;
 		
-		map<kmer_type, u_int32_t> _anchorKmers;
+		//map<kmer_type, u_int32_t> _anchorKmers; //uses 46 B per elem inserted
 		//OAHash<kmer_type> _anchorKmers;
-		
+		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
+
 		//Header decompression
 		void startHeaderDecompression();
 		
