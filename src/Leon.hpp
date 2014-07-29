@@ -1,10 +1,22 @@
-//
-//  Leon.hpp
-//  leon
-//
-//  Created by Guillaume Rizk on 17/01/2014.
-//  Copyright (c) 2014 G.Rizk, R.Uricaru. All rights reserved.
-//
+/*****************************************************************************
+ *   Leon: reference free compression for NGS reads
+ *   A tool from the GATB (Genome Assembly Tool Box)
+ *   Copyright (C) 2014  INRIA
+ *   Authors: G.Benoit, G.Rizk, C.Lemaitre
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
 
 #ifndef __leon__Leon__
 #define __leon__Leon__

@@ -1,7 +1,8 @@
 /*****************************************************************************
- *   GATB : Genome Assembly Tool Box
+ *   Leon: reference free compression for NGS reads
+ *   A tool from the GATB (Genome Assembly Tool Box)
  *   Copyright (C) 2014  INRIA
- *   Authors: G.Rizk, G.Benoit
+ *   Authors: G.Benoit, G.Rizk, C.Lemaitre
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as
