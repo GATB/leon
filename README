@@ -24,7 +24,7 @@ MANUAL
 								
 1/ Description
 	Leon is a fasta read compressor using a probabilistic de Bruijn Graph, without the need of any reference genome.
-It currently does not compress qualities, if a fastq is compressed, it will decompress as a fasta.		
+It currently does not compress qualities, if a fastq is compressed, it will be decompressed as a fasta.		
 
 2/ Usage
 
@@ -41,14 +41,17 @@ Optional parameters
 
 
 Optional Compression parameters  
-    -kmer-size          :    size of a kmer  (default 31)
-    -abundance          :    abundance threshold for solid kmers  (default: automatic)
+    -kmer-size          :    kmer size  (default 31), currently should be <32
+    -abundance          :    minimal abundance threshold for solid kmers  (default: automatic)
 
 
 
 Examples : 
 
 leon -file read.fasta -c 
+ -> generates the file read.leon
+ 
 leon -file read.leon  -d 
+ -> generates the file read_d.fasta
 
  
