@@ -41,7 +41,7 @@ Optional parameters
 
 
 Optional Compression parameters  
-    -kmer-size          :    kmer size  (default 31), currently should be <32
+    -kmer-size          :    kmer size  (default 31), currently should be <32 (or need to recompile, see below)
     -abundance          :    minimal abundance threshold for solid kmers  (default: automatic)
 
 
@@ -55,3 +55,12 @@ leon -file read.leon  -d
  -> generates the file read_d.fasta
 
  
+
+Note : 
+In order to use k values larger than 31, recompilation is necessary (for the moment, this will be improved in next versions).
+In the sequence of commands given in the INSTALL file, change the command: 
+   cmake ..
+by 
+   cmake -Dk1=64 -Dk2=96 -Dk3=128 -Dk4=162 ..
+this will allow to use k<63
+for larger k, change the values such that they are multiple of 32 and k1<k2<k3<k4
