@@ -842,7 +842,13 @@ void Leon::startDnaCompression(){
     LOCAL (_bloom);
     
 	int64_t nbestimated = _inputBank->estimateNbItems();
-	_anchorKmers = new Hash16<kmer_type, u_int32_t > (nbestimated *0.1 *  sizeof(u_int32_t)  *10LL /1024LL / 1024LL ); // hmm  Hash16 would need a constructor with sizeof main entry //maybe *2 for low coverage dataset
+	
+
+
+//	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( (nbestimated/10) *  sizeof(u_int32_t)  *10LL /1024LL / 1024LL ); // hmm  Hash16 would need a constructor with sizeof main entry //maybe *2 for low coverage dataset
+	u_int64_t nbcreated ;
+	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated ); //creator with nb entries given
+//	printf("asked %lli entries, got %llu \n",nbestimated/10 ,nbcreated);
 	
     Iterator<Sequence>* itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
