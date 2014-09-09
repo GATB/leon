@@ -38,9 +38,9 @@ using namespace gatb::core::system;
 using namespace gatb::core::system::impl;
 
 
-typedef kmer::impl::Kmer<>::Model KmerModel;
-typedef kmer::impl::Kmer<>::Type  kmer_type;
-typedef kmer::impl::Kmer<>::Count kmer_count;
+typedef kmer::impl::Kmer<>::ModelDirect KmerModel;
+typedef kmer::impl::Kmer<>::Type        kmer_type;
+typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 
 

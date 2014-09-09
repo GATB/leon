@@ -41,7 +41,7 @@ GACGCGCCGATATAACGCGCTTTCCCGGCTTTTACCACGTCGTTGAGGGCTTCCAGCGTCTCTTCGATCGGCGTGTTGTA
 // ** AbstractDnaCoder
 //====================================================================================
 AbstractDnaCoder::AbstractDnaCoder(Leon* leon) :
-_kmerModel(leon->_kmerSize, KMER_DIRECT),
+_kmerModel(leon->_kmerSize),
 _anchorPosSizeModel(8),
 _readTypeModel(2), //only 2 value in this model: read with anchor or without anchor
 _noAnchorReadModel(5), _mutationModel(5), //5value: A, C, G, T, N
@@ -145,12 +145,19 @@ void AbstractDnaCoder::codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bo
 	//kmer_type kmer2 = model->codeSeed(kmerStr.c_str(), Data::ASCII);
 	//cout << kmer2->toString(_kmerSize) << endl;
 	
-	if(right){
-		*kmer = model->codeSeedRight(*kmer, nt, Data::INTEGER);
+	if(right)
+	{
+        /** We initialize the kmer. */
+        KmerModel::Kmer tmp;  tmp.set (*kmer);
+
+		*kmer = model->codeSeedRight (tmp, nt, Data::INTEGER).value();
 	}
-	else{
-		kmer_type kmer_end_rev = revcomp(*kmer, _kmerSize);
-		*kmer = model->codeSeedRight (kmer_end_rev, binrev[nt], Data::INTEGER);
+	else
+	{
+        /** We initialize the canonical kmer. */
+        KmerModel::Kmer tmp;  tmp.set (revcomp(*kmer, _kmerSize));
+
+		*kmer = model->codeSeedRight (tmp, binrev[nt], Data::INTEGER).value();
 		*kmer = revcomp(*kmer, _kmerSize);
 	}
 }
@@ -380,7 +387,7 @@ void DnaEncoder::buildKmers(){
 	_kmers.clear();
 	for (_itKmer.first(); !_itKmer.isDone(); _itKmer.next()){
 		//cout << (*_itKmer).toString(_kmerSize) << endl;
-		_kmers.push_back(*_itKmer);
+		_kmers.push_back(_itKmer->value());
 	}
 	
 	//if(_sequence->getIndex() == 53445) cout << _Npos.size() << endl;

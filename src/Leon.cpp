@@ -1426,7 +1426,7 @@ void Leon::startDnaDecompression(){
 
 	
 
-	_kmerModel = new KmerModel(_kmerSize, KMER_DIRECT);
+	_kmerModel = new KmerModel(_kmerSize);
 	
 	decodeBloom();
 	decodeAnchorDict();
@@ -1688,7 +1688,7 @@ void Leon::decodeAnchorDict(){
 			//if(i<=10) cout << anchorKmer << endl;
 			//cout << "1: " << anchorKmer << endl;
 			
-			kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII); //then convert to bin
+			kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ; //then convert to bin
 			//could be optimized if needed
 			//cout << "2: " << model.toString(kmer) << endl;
 			//lala += 1;
