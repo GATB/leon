@@ -347,8 +347,8 @@ void Leon::createBloom (){
 		printf("\tauto cutoff: %i   (total solids %lli)\n",_auto_cutoff,nbs);
 	
 	//modif ici pour virer les kmers < auto cutoff
-    BloomBuilder<> builder (estimatedBloomSize, 7,tools::misc::BLOOM_CACHE,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
-    _bloom = builder.build (itKmers);
+    BloomBuilder<> builder (estimatedBloomSize, 7,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff,_kmerSize);
+    _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
     
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
     //Bloom<kmer_type>* bloom = builder.build (itKmers);

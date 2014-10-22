@@ -565,11 +565,38 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 
 	int indexedKmerCount = 0;
 	
+	bool res4[4];
+	
+	
+	_bloom->contains4(kmer ,res4,rightExtend);
+	for(int nt=0; nt<4; nt++){
+		
+		//mutatedKmer.printASCII(_kmerSize);
+		
+		if(res4[nt]){
+			kmer_type mutatedKmer = kmer;
+			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+			
+			indexedKmerCount += 1;
+			uniqNt = nt;
+			uniqKmer = mutatedKmer;
+			
+			
+			if(Leon::bin2nt(nt) == nextNt){
+				isKmerSolid = true;
+			}
+		}
+		
+	}
+	
+	
+	/*
 	for(int nt=0; nt<4; nt++){
 		
 		kmer_type mutatedKmer = kmer;
 		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
-		kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+		//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+		kmer_type mutatedKmerMin = mutatedKmer;
 		
 		//mutatedKmer.printASCII(_kmerSize);
 		
@@ -584,7 +611,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 			}
 		}
 		
-	}
+	}*/
 	
 	_MCtotal +=1;
 	
