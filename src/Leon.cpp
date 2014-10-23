@@ -347,7 +347,7 @@ void Leon::createBloom (){
 		printf("\tauto cutoff: %i   (total solids %lli)\n",_auto_cutoff,nbs);
 	
 	//modif ici pour virer les kmers < auto cutoff
-    BloomBuilder<> builder (estimatedBloomSize, 7,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff,_kmerSize);
+    BloomBuilder<> builder (estimatedBloomSize, 7,tools::misc::BLOOM_CACHE,getInput()->getInt(STR_NB_CORES),_auto_cutoff);//,_kmerSize
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
     
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
@@ -1021,6 +1021,7 @@ void Leon::writeAnchorDict(){
 	//Encode anchors count
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _anchorAdress);
 	
+	//printf("should encode %u anchors \n",_anchorAdress);
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
 	//cout << "\t pos: " << _outputFile->tell() << endl;
 	//cout << "count: " << _anchorKmerCount << endl;
@@ -1636,6 +1637,8 @@ void Leon::decodeBloom(){
 	//_bloom->contains("lala");
 	//nchar  = (1+tai/8LL);
 	_bloom = new BloomCacheCoherent<kmer_type>(bloomBitSize, bloomHashCount);
+	//_bloom   =  new BloomNeighborCoherent<kmer_type> (bloomBitSize,_kmerSize,bloomHashCount);
+	
 	_inputFile->read((char*)_bloom->getArray(), _bloom->getSize());
 	//fread(_bloom->getArray(), sizeof(unsigned char), result->getSize(), file);
 	
@@ -1666,6 +1669,7 @@ void Leon::decodeAnchorDict(){
 	
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 
+	////printf("should read %lli anchors \n",anchorCount);
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";
 	//int lala =0;
@@ -1703,9 +1707,9 @@ void Leon::decodeAnchorDict(){
 		}
 	}
 	
-	#ifdef PRINT_DEBUG_DECODER
+//	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tAnchor count: " << _vecAnchorKmers.size() << endl;
-	#endif
+//	#endif
 	
 	//anchorDictFile.flush();
 	//anchorDictFile.close();
@@ -1716,7 +1720,7 @@ void Leon::decodeAnchorDict(){
 
 kmer_type Leon::getAnchor(ifstream* anchorDictFile, u_int32_t adress){
 	
-	return _vecAnchorKmers[adress];
+	return _vecAnchorKmers[adress];  //icii
 	
 	//anchorDictFile->seekg(_kmerSize*adress);
 	

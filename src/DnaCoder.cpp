@@ -419,7 +419,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\t\tEncode anchor read" << endl;
 	#endif
-	
+	//printf("encode  anchor read \n");
+
 	//encode read type (0: read with anchor, 1: read without anchor)
 	_rangeEncoder.encode(_readTypeModel, 0);
 	
@@ -435,7 +436,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	_rangeEncoder.encode(_readSizeDeltaTypeModel, deltaType);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeModel, _readSizeValueModel, deltaValue);
 	_prevReadSize = _readSize;
-	
+	//printf("read size %i  deltaValue %i\n",_readSize,deltaValue);
+
 	//Encode anchor pos
 	deltaType = CompressionUtils::getDeltaValue(anchorPos, _prevAnchorPos, &deltaValue);
 	#ifdef LEON_PRINT_STAT
@@ -445,7 +447,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	_rangeEncoder.encode(_anchorPosDeltaTypeModel, deltaType);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosSizeModel, _anchorPosModel, deltaValue);
 	_prevAnchorPos = anchorPos;
-	
+	//printf("anchor pos %i \n",anchorPos);
+
 	//Encode anchor address
 	deltaType = CompressionUtils::getDeltaValue(anchorAddress, _prevAnchorAddress, &deltaValue);
 	#ifdef LEON_PRINT_STAT
@@ -455,7 +458,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	_rangeEncoder.encode(_anchorAddressDeltaTypeModel, deltaType);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressSizeModel, _anchorAddressModel, deltaValue);
 	_prevAnchorAddress = anchorAddress;
-	
+	//printf("anchor adress %i \n",anchorAddress);
+
 
 	
 	kmer_type anchor = _kmers[anchorPos];
@@ -565,6 +569,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 
 	int indexedKmerCount = 0;
 	
+	/*
 	bool res4[4];
 	
 	
@@ -588,9 +593,9 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		}
 		
 	}
+	*/
 	
 	
-	/*
 	for(int nt=0; nt<4; nt++){
 		
 		kmer_type mutatedKmer = kmer;
@@ -611,7 +616,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 			}
 		}
 		
-	}*/
+	}
 	
 	_MCtotal +=1;
 	
@@ -936,6 +941,7 @@ void DnaEncoder::encodeNoAnchorRead(){
 		cout << "\t\tEncode no anchor read" << endl;
 	#endif
 
+	//printf("encode no anchor read \n");
 	//Reinsert N because they can be encoded by the coder
 	for(int i=0; i<_Npos.size(); i++){
 		_readseq[_Npos[i]] = 'N';
@@ -1047,7 +1053,7 @@ void DnaDecoder::execute(){
 		//cout << "Read type: " << (int)readType << endl;
 
 		if(readType == 0)
-			decodeAnchorRead();
+			decodeAnchorRead(); //ici
 		else if(readType == 1)
 			decodeNoAnchorRead();
 			
@@ -1094,18 +1100,25 @@ void DnaDecoder::decodeAnchorRead(){
 	u_int8_t deltaType;
 	u_int64_t deltaValue;
 	
+	//printf("Decode anchor read \n");
+
 	//Decode read size
 	deltaType = _rangeDecoder.nextByte(_readSizeDeltaTypeModel);
 	deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeModel, _readSizeValueModel);
+//	printf("read deltaValue %llu \n",deltaValue);
+	
 	_readSize = CompressionUtils::getValueFromDelta(deltaType, _prevReadSize, deltaValue);
 	_prevReadSize = _readSize;
+	
+//	printf("read size %i \n",_readSize);
 	
 	//Decode anchor pos
 	deltaType = _rangeDecoder.nextByte(_anchorPosDeltaTypeModel);
 	deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel);
 	int anchorPos = CompressionUtils::getValueFromDelta(deltaType, _prevAnchorPos, deltaValue);
 	_prevAnchorPos = anchorPos;
-	
+//	printf("anchor pos %i \n",anchorPos);
+
 	
 	//Decode anchor address
 	deltaType = _rangeDecoder.nextByte(_anchorAddressDeltaTypeModel);
@@ -1113,7 +1126,7 @@ void DnaDecoder::decodeAnchorRead(){
 	u_int64_t anchorAddress = CompressionUtils::getValueFromDelta(deltaType, _prevAnchorAddress, deltaValue);
 	_prevAnchorAddress = anchorAddress;
 	
-	kmer_type anchor = _leon->getAnchor(_anchorDictFile, anchorAddress);
+	kmer_type anchor = _leon->getAnchor(_anchorDictFile, anchorAddress); //laa
 	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tRead size: " << _readSize << endl;
