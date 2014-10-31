@@ -20,6 +20,15 @@ INSTALL
 
 	compilation was tested with gcc and g++ version>=4.5 and clang version>=4.1
 	
+CHANGELOG
+
+-version 0.1.2  Aug 10, 2014  
+ initial public release
+
+-version 0.2     Oct 31, 2014
+ major performance improvement (about ~ 2 times faster)
+
+
 MANUAL	 
 								
 1/ Description
