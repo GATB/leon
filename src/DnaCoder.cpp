@@ -569,7 +569,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 
 	int indexedKmerCount = 0;
 	
-	/*
+	
 	bool res4[4];
 	
 	
@@ -593,9 +593,9 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		}
 		
 	}
-	*/
 	
 	
+	/*
 	for(int nt=0; nt<4; nt++){
 		
 		kmer_type mutatedKmer = kmer;
@@ -616,7 +616,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 			}
 		}
 		
-	}
+	}*/
 	
 	_MCtotal +=1;
 	
