@@ -1257,6 +1257,25 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	int indexedKmerCount = 0;
 	
 	//cout << kmer.toString(_kmerSize) << endl;
+	
+	
+	
+	bool res4[4];
+	_bloom->contains4(kmer,res4,rightExtend);
+	for(int nt=0; nt<4; nt++){
+		if(res4[nt]){
+			kmer_type mutatedKmer = kmer;
+			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+			
+			indexedKmerCount += 1;
+			uniqNt = nt;
+			uniqKmer = mutatedKmer;
+			}
+		}
+		
+
+	
+	/*
 	for(int nt=0; nt<4; nt++){
 		//if(nt == original_nt){
 		//	continue;
@@ -1275,6 +1294,7 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		}
 		
 	}
+ */
 	
 	if(indexedKmerCount == 1){
 		nextNt = Leon::bin2nt(uniqNt);
