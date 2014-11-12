@@ -508,7 +508,7 @@ void Leon::executeCompression(){
 	_rangeEncoder.encode(_generalModel, infoByte);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _kmerSize);
 	
-    _inputBank = BankRegistery::singleton().createBank(_inputFilename);
+    _inputBank = Bank::singleton().createBank(_inputFilename);
 
 
     /*************************************************/
@@ -1826,10 +1826,10 @@ void Leon::endDecompression(){
 		cout << "\t\tOriginal file: " << originalFilename << endl;
 		cout << "\t\tNew file: " << _outputFile->getPath() << endl;
 	
-		originalBank = BankRegistery::singleton().createBank(originalFilename);
+		originalBank = Bank::singleton().createBank(originalFilename);
 		originalBankIt = originalBank->iterator();
 		originalBankIt->first();
-		newBank = BankRegistery::singleton().createBank(_outputFile->getPath());
+		newBank = Bank::singleton().createBank(_outputFile->getPath());
 		newBankIt = newBank->iterator();
 		newBankIt->first();
 		
