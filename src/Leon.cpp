@@ -260,7 +260,13 @@ void Leon::createBloom (){
 	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	LOCAL (storage);
 	
-	Collection<kmer_count>& solidCollection = storage->root().getGroup("dsk").getCollection<kmer_count> ("solid");
+	
+	/** We retrieve the number of partitions. */
+	string nbPartStr = storage->root().getGroup("dsk").getProperty ("nb_partitions");
+	int nb_partitions = atoi (nbPartStr.c_str());
+	
+	
+	Partition<gatb::core::kmer::impl::Kmer<32>::Count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid",nb_partitions);
 	
 	/** We get the number of solid kmers. */
     u_int64_t solidFileSize = solidCollection.getNbItems();
@@ -347,7 +353,7 @@ void Leon::createBloom (){
 		printf("\tauto cutoff: %i   (total solids %lli)\n",_auto_cutoff,nbs);
 	
 	//modif ici pour virer les kmers < auto cutoff
-    BloomBuilder<> builder (estimatedBloomSize, 7,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff,_kmerSize);
+    BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
     
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
@@ -508,7 +514,8 @@ void Leon::executeCompression(){
 	_rangeEncoder.encode(_generalModel, infoByte);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _kmerSize);
 	
-    _inputBank = Bank::singleton().createBank(_inputFilename);
+   // _inputBank = Bank::singleton().createBank(_inputFilename);
+	_inputBank = Bank::open(_inputFilename);
 
 
     /*************************************************/
@@ -1826,10 +1833,10 @@ void Leon::endDecompression(){
 		cout << "\t\tOriginal file: " << originalFilename << endl;
 		cout << "\t\tNew file: " << _outputFile->getPath() << endl;
 	
-		originalBank = Bank::singleton().createBank(originalFilename);
+		originalBank = Bank::open(originalFilename);
 		originalBankIt = originalBank->iterator();
 		originalBankIt->first();
-		newBank = Bank::singleton().createBank(_outputFile->getPath());
+		newBank = Bank::open(_outputFile->getPath());
 		newBankIt = newBank->iterator();
 		newBankIt->first();
 		

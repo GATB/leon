@@ -88,7 +88,7 @@ int main (int argc, char* argv[])
 		
         tool.add (new Leon    (compress, decompress));
         
-        tool.run (argc, argv);
+        tool.run (argc-1, argv);
     }
     
     catch (misc::impl::OptionFailure& e)
