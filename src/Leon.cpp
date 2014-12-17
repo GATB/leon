@@ -929,7 +929,8 @@ void Leon::endDnaCompression(){
 		
 	//cout << "\t\tReads stats" << endl;
 	//cout << System::file().getBaseName(getInput()->getStr(STR_URI_FILE)) << endl;
-	cout << "\t\tReads per anchor: " << _readCount / _anchorAdress << endl;
+	if(_anchorAdress!=0)
+		cout << "\t\tReads per anchor: " << _readCount / _anchorAdress << endl;
 	//cout << "\tBit per anchor: " << log2(_anchorKmerCount) << endl;
 	//cout << "\tAnchor count: " << _anchorKmerCount << endl;
 	//cout << endl;
@@ -1619,12 +1620,13 @@ void Leon::decodeBloom(){
 	#endif
 	
 	u_int64_t bloomPos = _inputFile->tellg();
+
 	for(int i=0; i<_blockSizes.size(); i++){
 		bloomPos += _blockSizes[i];
 		i += 1;
 	}
+
 	//cout << "Anchor dict pos: " << dictPos << endl;
-	
 	_inputFile->seekg(bloomPos, _inputFile->beg);
 	
 	//u_int64_t bloomSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
@@ -1646,6 +1648,7 @@ void Leon::decodeBloom(){
 	//_bloom = new BloomCacheCoherent<kmer_type>(bloomBitSize, bloomHashCount);
 	_bloom   =  new BloomNeighborCoherent<kmer_type> (bloomBitSize,_kmerSize,bloomHashCount);
 	
+
 	_inputFile->read((char*)_bloom->getArray(), _bloom->getSize());
 	//fread(_bloom->getArray(), sizeof(unsigned char), result->getSize(), file);
 	
@@ -1676,7 +1679,6 @@ void Leon::decodeAnchorDict(){
 	
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
 
-	////printf("should read %lli anchors \n",anchorCount);
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";
 	//int lala =0;

@@ -90,7 +90,7 @@ class CompressionUtils
 			for(int i=0; i<byteCount; i++){
 				u_int8_t byteValue = rangeDecoder.nextByte(numericModels[i]);
 				//cout << "Utils: " << (byteValue << i*8) << endl;
-				value |= (byteValue << i*8);
+				value |= ((u_int64_t)byteValue << i*8);
 			}
 			
 			return value;
