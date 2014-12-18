@@ -1716,9 +1716,9 @@ void Leon::decodeAnchorDict(){
 		}
 	}
 	
-//	#ifdef PRINT_DEBUG_DECODER
+	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tAnchor count: " << _vecAnchorKmers.size() << endl;
-//	#endif
+	#endif
 	
 	//anchorDictFile.flush();
 	//anchorDictFile.close();
