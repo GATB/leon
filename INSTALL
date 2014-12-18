@@ -5,7 +5,7 @@ mkdir  build
 # Go in the 'build' directory
 cd build
 # Prepare the makefile
-cmake ..
+cmake -DMAJOR=0 -DMINOR=2 -DPATCH=1 ..
 # Run the newly created makefile:
 make
 # Copy the created binaries in directory:
