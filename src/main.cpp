@@ -87,8 +87,11 @@ int main (int argc, char* argv[])
 		}
 		
         tool.add (new Leon    (compress, decompress));
-        
-        tool.run (argc-1, argv);
+		
+		tool.run (argc, argv);
+		
+		
+
     }
     
     catch (misc::impl::OptionFailure& e)
@@ -100,6 +103,7 @@ int main (int argc, char* argv[])
     
     catch (gatb::core::system::Exception& e)
     {
+
         cerr << "EXCEPTION: " << e.getMessage() << endl;
         return EXIT_FAILURE;
     }
