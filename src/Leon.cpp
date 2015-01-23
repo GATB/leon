@@ -114,82 +114,54 @@ _generalModel(256), _numericSizeModel(8),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE)
 _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0),
-_anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0)
+_anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0),
+_progress_decode(0), _inputBank(0)
 
 {
-	
 	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
 
     //_kmerSize(27)
 	_compress = compress;
 	_decompress = decompress;
-	
-    /** We get an OptionsParser for DSK. */
 
-	OptionsParser parserDSK = DSK::getOptionsParser();
-	getParser()->add (parserDSK);
+	/** We don't want default options of Tool (or we want to put them at a specific location). */
+	setParser (new OptionsParser ("leon"));
 
-	//getParser()->push_back (new OptionNoParam (Leon::STR_COMPRESS, "compression mode", false));
-	//getParser()->push_back (new OptionNoParam (Leon::STR_DECOMPRESS, "decompression mode", false));
-    
-   
-	if((compress && decompress) || (!compress && !decompress)){
-		//cout << "Choose one option among -c (compress) or -d (decompress)" << endl;
+    getParser()->push_back (new OptionOneParam (STR_URI_FILE, "input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)",   true));
+    getParser()->push_back (new OptionNoParam  ("-c", "compression",   false));
+    getParser()->push_back (new OptionNoParam  ("-d", "decompression", false));
+    getParser()->push_back (new OptionOneParam (STR_NB_CORES, "number of cores (default is the available number of cores)", false, "0"));
+    getParser()->push_back (new OptionOneParam (STR_VERBOSE,  "verbosity level",                                            false, "1", false));
 
-		
-		/*
-		 getParser()->remove("-file");
-		 getParser()->remove("-max-memory");
-		 getParser()->remove("-verbose");
-		 getParser()->remove("-kmer-size");
-		 getParser()->remove("-abundance");
-		 getParser()->remove("-out");
-		 getParser()->remove("-max-disk");
+    IOptionsParser* compressionParser = new OptionsParser ("compression");
 
+    /** We add the sorting count options and hide all of them by default and display one some of them. */
+    compressionParser->push_back (SortingCountAlgorithm<>::getOptionsParser(), 1, false);
 
-		*/
-		
-		//getParser()->remove("-nb-cores");
-		//getParser()->remove("-c");
-		//getParser()->remove("-d");
-	}
-	else if(compress){
-		//getParser()->remove("-c");
-		//getParser()->remove("-d");
-	}
-	else if(decompress){
-		getParser()->remove("-kmer-size");
-		getParser()->remove("-abundance");
-		getParser()->remove("-max-memory");
-		getParser()->remove("-out");
-		getParser()->remove("-max-disk");
-		//getParser()->remove("-c");
-		//getParser()->remove("-d");
-		getParser()->remove("-file");
-		getParser()->push_front (new OptionOneParam(STR_URI_FILE, "compressed leon file (.leon)", true));
-		getParser()->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
-	}
-	
-	
+    if (IOptionsParser* input = compressionParser->getParser (STR_URI_INPUT))  {  input->setName (STR_URI_FILE);  }
+    if (IOptionsParser* input = compressionParser->getParser (STR_KMER_SIZE))  {  input->setVisible (true);  }
 
-    /** We add options specific to this tool. */
+    compressionParser->push_back (new OptionOneParam(STR_KMER_ABUNDANCE, "abundance threshold for solid kmers (default inferred)", false));
+
+    IOptionsParser* decompressionParser = new OptionsParser ("decompression");
+    decompressionParser->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
+
+    getParser()->push_back (compressionParser);
+    getParser()->push_back (decompressionParser, 0, false);
 
 	pthread_mutex_init(&findAndInsert_mutex, NULL);
 	pthread_mutex_init(&writeblock_mutex, NULL);
-
-
-    
 }
 
 Leon::~Leon ()
 {
 	setBlockWriter(0);
-	delete _progress_decode;
+	setInputBank (0);
+	if (_progress_decode)  { delete _progress_decode; }
 }
 
 void Leon::execute()
 {
-       
 	_time = clock(); //Used to calculate time taken by decompression
 	
 	gettimeofday(&_tim, NULL);
@@ -256,17 +228,11 @@ void Leon::createBloom (){
 	u_int64_t nb_kmers_infile;
 	
 	
-	
+
 	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	LOCAL (storage);
 	
-	
-	/** We retrieve the number of partitions. */
-	string nbPartStr = storage->root().getGroup("dsk").getProperty ("nb_partitions");
-	int nb_partitions = atoi (nbPartStr.c_str());
-	
-	
-	Partition<gatb::core::kmer::impl::Kmer<32>::Count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid",nb_partitions);
+	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
 	
 	/** We get the number of solid kmers. */
     u_int64_t solidFileSize = solidCollection.getNbItems();
@@ -480,11 +446,9 @@ void Leon::executeCompression(){
 		cout << "Start compression" << endl;
 	#endif
 	
-    _kmerSize = getInput()->getInt (STR_KMER_SIZE);
-    //_solidFile = getInput()->getStr (STR_KMER_SOLID); !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	_nks = getInput()->getInt("-abundance");
-    
-    _inputFilename = getInput()->getStr(STR_URI_FILE);
+    _kmerSize      = getInput()->getInt (STR_KMER_SIZE);
+	_nks           = getInput()->getInt (STR_KMER_ABUNDANCE_MIN);
+    _inputFilename = getInput()->getStr (STR_URI_FILE);
     
 	#ifdef PRINT_DEBUG
 		cout << "\tInput filename: " << _inputFilename << endl;
@@ -515,13 +479,45 @@ void Leon::executeCompression(){
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _kmerSize);
 	
    // _inputBank = Bank::singleton().createBank(_inputFilename);
-	_inputBank = Bank::open(_inputFilename);
+	setInputBank (Bank::open(_inputFilename));
 
+    //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
+        getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
+        System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
+
+#if 1
+
+    /*************************************************/
+    // Sorting count part
+    /*************************************************/
+
+    {
+        Storage* product = StorageFactory(STORAGE_HDF5).create (_dskOutputFilename, true, false);
+        LOCAL (product);
+
+        /** We create a DSK instance and execute it. */
+        SortingCountAlgorithm<> sortingCount (
+            product,
+            _inputBank,
+            _kmerSize,
+            make_pair(_nks,~0),
+            getInput()->getInt(STR_MAX_MEMORY),
+            getInput()->getInt(STR_MAX_DISK),
+            getInput()->getInt(STR_NB_CORES),
+            gatb::core::tools::misc::KMER_SOLIDITY_DEFAULT
+        );
+
+        sortingCount.getInput()->add (0, STR_VERBOSE, getInput()->getStr(STR_VERBOSE));
+
+        sortingCount.execute();
+    }
+
+#endif
 
     /*************************************************/
     // We create the modified file
     /*************************************************/
-    
     
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
@@ -531,12 +527,6 @@ void Leon::executeCompression(){
 	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	
-
-	
-	//Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
-        getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
-        System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
 
 	
 #ifdef PRINT_DEBUG

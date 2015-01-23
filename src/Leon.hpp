@@ -190,7 +190,10 @@ class Leon : public misc::impl::Tool
 		vector<Order0Model> _numericModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
+
 		IBank* _inputBank;
+		void setInputBank (IBank* inputBank) { SP_SETATTR(inputBank); }
+
 		//u_int64_t _bloomSize;
 		
 		void executeCompression();

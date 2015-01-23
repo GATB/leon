@@ -40,10 +40,6 @@ int main (int argc, char* argv[])
     // We define a try/catch block in case some method fails
     try
     {
-        misc::impl::ToolComposite tool;
-		
-		
-		
 		if(argc < 2)
 		{
 			printf("Usage for leon\n");
@@ -70,35 +66,18 @@ int main (int argc, char* argv[])
 			return EXIT_FAILURE;
 		}
 		
-		for (int i=1; i< argc; i++) {
-			if( strncmp("-c",argv[i],2)  == 0)
-			{
-				tool.add (new DSK  () );
-				compress = true;
-			}
+		for (int i=1; i< argc; i++)
+		{
+			if (strncmp("-c",argv[i],2)  == 0)  {  compress   = true;  }
+            if (strncmp("-d",argv[i],2)  == 0)  {  decompress = true;  }
 		}
 		
-		for (int i=1; i< argc; i++) {
-			if( strncmp("-d",argv[i],2)  == 0)
-			{
-				//tool.add (new DSK  () );
-				decompress = true;
-			}
-		}
-		
-        tool.add (new Leon    (compress, decompress));
-		
-		tool.run (argc, argv);
-		
-		
-
+        Leon (compress, decompress).run (argc, argv);
     }
     
     catch (misc::impl::OptionFailure& e)
     {
-        e.getParser().displayErrors (stdout);
-        e.getParser().displayHelp   (stdout);
-        return EXIT_FAILURE;
+        return e.displayErrors (cout);
     }
     
     catch (gatb::core::system::Exception& e)
