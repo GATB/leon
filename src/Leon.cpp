@@ -110,7 +110,7 @@ const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 
 Leon::Leon ( bool compress, bool decompress) :
 Tool("leon"),
-_generalModel(256), _numericSizeModel(8),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
+_generalModel(256),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
 _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0),
@@ -228,7 +228,7 @@ void Leon::createBloom (){
 	u_int64_t nb_kmers_infile;
 	
 	
-
+	cout << _dskOutputFilename << endl;
 	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	LOCAL (storage);
 	
@@ -476,7 +476,7 @@ void Leon::executeCompression(){
 	}
 	
 	_rangeEncoder.encode(_generalModel, infoByte);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _kmerSize);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
 	
    // _inputBank = Bank::singleton().createBank(_inputFilename);
 	setInputBank (Bank::open(_inputFilename));
@@ -728,7 +728,7 @@ void Leon::startHeaderCompression(){
 	_totalHeaderSize += _firstHeader.size();
 	
 	//encode the size of the first header on 2 byte and the header itself
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _firstHeader.size());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
 	for(int i=0; i < _firstHeader.size(); i++){
 		_rangeEncoder.encode(_generalModel, _firstHeader[i]);
 	}
@@ -759,10 +759,10 @@ void Leon::endHeaderCompression(){
 	//u_int64_t descriptionStartPos = _outputFile->tell();
 	//cout << "Description start pos: " << descriptionStartPos << endl;
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes.size());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
 	for(int i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
-		CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes[i]);
+		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
 	}
 	
 	//Encode description start position in the output file
@@ -884,10 +884,10 @@ void Leon::startDnaCompression(){
 
 void Leon::endDnaCompression(){
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes.size());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
 	for(int i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
-		CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _blockSizes[i]);
+		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
 	}
 	_blockSizes.clear();
 	
@@ -989,8 +989,8 @@ void Leon::writeBloom(){
 
 	//u_int64_t size = _bloom->getSize();
 	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, size);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _bloom->getBitSize());
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _bloom->getNbHash());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _bloom->getBitSize());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _bloom->getNbHash());
 	
 	//u_int8_t*& bloomData = _bloom->getArray();
 	_outputFile->fwrite(_bloom->getArray(), _bloom->getSize(), 1);
@@ -1014,10 +1014,10 @@ void Leon::writeAnchorDict(){
 	_anchorDictSize = size;
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
 	_compressedSize += size;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, size);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
 	
 	//Encode anchors count
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, _anchorAdress);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
 	
 	//printf("should encode %u anchors \n",_anchorAdress);
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
@@ -1238,7 +1238,7 @@ void Leon::executeDecompression(){
 	_outputFile = System::file().newFile(_outputFilename, "wb"); 
 	
 	//Get kmer size
-	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
 	cout << endl;
 	
@@ -1252,7 +1252,7 @@ void Leon::startHeaderDecompression(){
 	//cout << "\tDecompressing headers" << endl;
 	
 	//Decode the first header
-	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	//cout << firstHeaderSize << endl;
 	for(int i=0; i<firstHeaderSize; i++){
 		_firstHeader += _rangeDecoder.nextByte(_generalModel);
@@ -1583,9 +1583,9 @@ void Leon::setupNextComponent(){
 	_blockSizes.clear();
 	//u_int64_t size = 0;
 	
-	_blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	_blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	for(int i=0; i<_blockCount; i++){
-		u_int64_t blockSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+		u_int64_t blockSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 		_blockSizes.push_back(blockSize);
 		//size += blockSize;
 	}
@@ -1626,8 +1626,8 @@ void Leon::decodeBloom(){
     
     //cout << bloomSize << endl;
     
-	u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
-	u_int64_t bloomHashCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	u_int64_t bloomHashCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	//u_int64_t tai = (bloomSize) * 8LL;
 	
 	
@@ -1664,10 +1664,10 @@ void Leon::decodeAnchorDict(){
 	//_anchorDictFilename = _outputFilename + ".temp.dict";
 	//ofstream anchorDictFile(_anchorDictFilename.c_str(), ios::out);
 	
-	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	//cout << anchorDictSize << endl;
 	
-	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
+	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";

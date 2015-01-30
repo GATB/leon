@@ -64,15 +64,34 @@ class CompressionUtils
 		//Encode a numeric value
 		//First encode the byte count of the value
 		//Then encode the value of each byte
-		static void encodeNumeric(RangeEncoder& rangeEncoder, Order0Model& byteCountModel, vector<Order0Model>& numericModels, u_int64_t value){
-			int valueByteCount = getByteCount(value);
-			//cout << "Utils: " << (int)valueByteCount << endl;
-			rangeEncoder.encode(byteCountModel, valueByteCount);
-				
-			for(int i=0; i<valueByteCount; i++){
-				//cout << "Utils: " << ((value >> i*8) & 0xff) << endl;
-				rangeEncoder.encode(numericModels[i], (value >> i*8) & 0xff);
+		static void encodeNumeric(RangeEncoder& rangeEncoder, vector<Order0Model>& numericModels, u_int64_t value){
+
+			int i=0;
+			do
+			{
+				u_int8_t byteCode = (u_int8_t) (value & 127);
+				value = value >> 7;
+				if (value != 0)
+				{
+					byteCode |= 128;
+					rangeEncoder.encode(numericModels[i], byteCode);
+				}
+				else
+					rangeEncoder.encode(numericModels[i], byteCode);
+
+				i += 1;
 			}
+			while (value != 0);
+
+
+			//int valueByteCount = getByteCount(value);
+			//cout << "Utils: " << (int)valueByteCount << endl;
+			//rangeEncoder.encode(byteCountModel, valueByteCount);
+				
+			//for(int i=0; i<valueByteCount; i++){
+				//cout << "Utils: " << ((value >> i*8) & 0xff) << endl;
+				//rangeEncoder.encode(numericModels[i], (value >> i*8) & 0xff);
+			//}
 		}
 
 		static void encodeFixedNumeric(RangeEncoder& rangeEncoder, vector<Order0Model>& numericModels, u_int64_t value, int byteCount){
@@ -83,15 +102,27 @@ class CompressionUtils
 			}
 		}
 		
-		static u_int64_t decodeNumeric(RangeDecoder& rangeDecoder, Order0Model& byteCountModel, vector<Order0Model>& numericModels){
-			u_int8_t byteCount = rangeDecoder.nextByte(byteCountModel);
+		static u_int64_t decodeNumeric(RangeDecoder& rangeDecoder, vector<Order0Model>& numericModels){
+			//u_int8_t byteCount = rangeDecoder.nextByte(byteCountModel);
 			//cout << (int)byteCount << endl;
-			u_int64_t value = 0;
-			for(int i=0; i<byteCount; i++){
-				u_int8_t byteValue = rangeDecoder.nextByte(numericModels[i]);
+			//u_int64_t value = 0;
+			//for(int i=0; i<byteCount; i++){
+			//	u_int8_t byteValue = rangeDecoder.nextByte(numericModels[i]);
 				//cout << "Utils: " << (byteValue << i*8) << endl;
-				value |= ((u_int64_t)byteValue << i*8);
+			//	value |= ((u_int64_t)byteValue << i*8);
+			//}
+			int i = 0;
+			u_int64_t value = 0;
+			u_int64_t byteCode = 0;
+			int shift = 0;
+			do
+			{
+				byteCode = rangeDecoder.nextByte(numericModels[i]);
+				value += (byteCode & 127) << shift;
+				shift += 7;
+				i += 1;
 			}
+			while (byteCode > 127);
 			
 			return value;
 		}

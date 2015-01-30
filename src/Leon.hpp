@@ -186,7 +186,6 @@ class Leon : public misc::impl::Tool
 		string _inputFilename;
 		string _outputFilename;
 		Order0Model _generalModel;
-		Order0Model _numericSizeModel;
 		vector<Order0Model> _numericModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;

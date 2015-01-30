@@ -55,27 +55,20 @@ class AbstractDnaCoder
 		
 		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
 		
-		Order0Model _anchorAddressSizeModel;
 		vector<Order0Model> _anchorAddressModel;
 		
-		Order0Model _anchorPosSizeModel;
 		vector<Order0Model> _anchorPosModel;
 		
-		Order0Model _numericSizeModel;
 		vector<Order0Model> _numericModel;
 		
-		Order0Model _NposSizeModel;
 		vector<Order0Model> _NposModel;
-		Order0Model _errorPosSizeModel;
 		vector<Order0Model> _errorPosModel;
 		
-		Order0Model _readSizeModel;
 		vector<Order0Model> _readSizeValueModel;
 		Order0Model _readAnchorRevcompModel;
 		Order0Model _mutationModel;
 		
 		Order0Model _noAnchorReadModel;
-		Order0Model _noAnchorReadSizeModel;
 		vector<Order0Model> _noAnchorReadSizeValueModel;
 		
 		size_t _kmerSize;

@@ -57,7 +57,6 @@ class AbstractHeaderCoder
 		vector<Order0Model> _fieldColumnModel;
 		vector<Order0Model> _misSizeModel;
 		vector<Order0Model> _asciiModel;
-		vector<Order0Model> _numericSizeModel;
 		vector< vector<Order0Model> > _numericModels;
 		vector<Order0Model> _zeroModel;
 		

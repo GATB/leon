@@ -70,7 +70,6 @@ void AbstractHeaderCoder::addFieldColumn(){
 	_asciiModel.push_back(Order0Model(128));
 	_zeroModel.push_back(Order0Model(256));
 	
-	_numericSizeModel.push_back(Order0Model(10));
 	_numericModels.push_back(vector<Order0Model>());
 	for(int j=0; j<8; j++)
 		_numericModels[_numericModels.size()-1].push_back( Order0Model(256) );
@@ -220,7 +219,6 @@ void AbstractHeaderCoder::startBlock(){
 		_misSizeModel[i].clear();
 		_asciiModel[i].clear();
 		_zeroModel[i].clear();
-		_numericSizeModel[i].clear();
 		
 		for(int j=0; j<8; j++)
 			_numericModels[i][j].clear();
@@ -638,7 +636,7 @@ void HeaderEncoder::encodeNumeric(){
 		
 	  
 	_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel[_misIndex], _numericModels[_misIndex], value);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModels[_misIndex], value);
 	//_rangeEncoder->encode(&_fieldColumnModel[_misIndex], 0);
 	//_prevFieldValues[_fieldIndex] = fieldValue;
 	
@@ -874,7 +872,7 @@ void HeaderDecoder::decodeNumeric(){
 		cout << "\t\tDecoding   Type: NUMERIC" << endl; //"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
+	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
 	//_currentHeader += CompressionUtils::numberToString(value);
 	
 	char temp[200];
@@ -893,7 +891,7 @@ void HeaderDecoder::decodeDelta(){
 		cout << "\t\tDecoding   Type: DELTA" << endl;//"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
+	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
 	/*
 	u_int64_t value = 0;
 	for(int i=0; i<misSize; i++){
@@ -920,7 +918,7 @@ void HeaderDecoder::decodeDelta2(){
 		cout << "\t\tDecoding   Type: DELTA 2" << endl;//"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel[_misIndex], _numericModels[_misIndex]);
+	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
 	/*
 	u_int64_t value = 0;
 	for(int i=0; i<misSize; i++){
