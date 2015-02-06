@@ -56,7 +56,7 @@ _errorPosDeltaTypeModel(3)
 	_kmerSize = _leon->_kmerSize;
 	
 	
-	for(int i=0; i<8; i++){
+	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel.push_back(Order0Model(256));
 		_anchorPosModel.push_back(Order0Model(256));
 		_noAnchorReadSizeValueModel.push_back(Order0Model(256));
@@ -70,7 +70,7 @@ _errorPosDeltaTypeModel(3)
 }
 
 void AbstractDnaCoder::startBlock(){
-	for(int i=0; i<8; i++){
+	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel[i].clear();
 		_anchorPosModel[i].clear();
 		_noAnchorReadSizeValueModel[i].clear();

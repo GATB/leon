@@ -22,10 +22,10 @@
 #define _DNACODER_HPP_
 
 
-#include "RangeCoder.hpp"
-#include "Leon.hpp"
-#include "CompressionUtils.hpp"
 #include <gatb/gatb_core.hpp>
+//#include "RangeCoder.hpp"
+#include "Leon.hpp"
+//#include "CompressionUtils.hpp"
 
 
 

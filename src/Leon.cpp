@@ -63,7 +63,6 @@ TODO
  
  
 #include "Leon.hpp"
-#include <DSK.hpp>
 
 
 using namespace std;
@@ -186,7 +185,7 @@ void Leon::execute()
     
     
 	//setup global
-	for(int i=0; i<8; i++){
+	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
 	}
 	
@@ -228,7 +227,7 @@ void Leon::createBloom (){
 	u_int64_t nb_kmers_infile;
 	
 	
-	cout << _dskOutputFilename << endl;
+	//cout << _dskOutputFilename << endl;
 	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	LOCAL (storage);
 	
@@ -858,6 +857,7 @@ void Leon::startDnaCompression(){
 	//_dictAnchorFile = System::file().newFile(_outputFilename + ".adtemp", "wb"); 
 	_dictAnchorFile = new ofstream((_outputFilename + ".adtemp").c_str(), ios::out|ios::binary);
 	
+	_lastAnchorValue = 0;
 	_anchorAdress = 0;
 	_totalDnaSize = 0;
 	//_totalDnaCompressedSize = 0;
@@ -1148,14 +1148,26 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 }
 
 void Leon::encodeInsertedAnchor(const kmer_type& kmer){
+
+	/*
+	u_int64_t kmerValue = kmer.getVal();
+	u_int64_t deltaValue = 0;
+
+	int deltaType = CompressionUtils::getDeltaValue(kmerValue, _lastAnchorValue, &deltaValue);
+	_anchorRangeEncoder.encode(_anchorDictModel, deltaType);
+	CompressionUtils::encodeNumeric(_anchorRangeEncoder, _numericModel, deltaValue);
+	_lastAnchorValue = kmerValue;
+
+	cout << deltaValue << endl;
+	*/
+
 	//static int i = 0;
 	
 	string kmerStr = kmer.toString(_kmerSize);
-	//if(i<10) cout << "\t\t" << kmerStr << endl;
+
 	for(int i=0; i<kmerStr.size(); i++){
-		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));  
+		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
 	}
-	
 	//i+= 1;
 	//cout << i << endl;
 	if(_anchorRangeEncoder.getBufferSize() >= 4096){

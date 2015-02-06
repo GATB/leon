@@ -31,10 +31,10 @@
 #include <stdlib.h>
 #include <math.h>*/
 
-#include "RangeCoder.hpp"
+//#include "RangeCoder.hpp"
 #include <gatb/gatb_core.hpp>
 #include "Leon.hpp"
-#include "CompressionUtils.hpp"
+//#include "CompressionUtils.hpp"
 
 using namespace std;
 class Leon;

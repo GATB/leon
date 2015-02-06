@@ -168,7 +168,8 @@ class Leon : public misc::impl::Tool
 		
 
 	private:
-	 
+
+		u_int64_t _lastAnchorValue;
 		
 		 struct timeval _tim;
 		double _wdebut_leon, _wfin_leon;

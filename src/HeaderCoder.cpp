@@ -71,7 +71,7 @@ void AbstractHeaderCoder::addFieldColumn(){
 	_zeroModel.push_back(Order0Model(256));
 	
 	_numericModels.push_back(vector<Order0Model>());
-	for(int j=0; j<8; j++)
+	for(int j=0; j<CompressionUtils::NB_MODELS_PER_NUMERIC; j++)
 		_numericModels[_numericModels.size()-1].push_back( Order0Model(256) );
 		
 	_prevFieldPos.push_back(0);
