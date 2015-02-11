@@ -20,6 +20,7 @@
 
 /*
 TODO
+*  ecrire directement fichier decomp, sans fichier temporatire pour dna, header, qual
 * Header coder:
 * 	Remplacer la méthode strtoul par une methode string to u_int64_t dans CompressionUtils
 * 
@@ -114,7 +115,7 @@ _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T,
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0),
 _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0),
-_progress_decode(0), _inputBank(0)
+_progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0)
 
 {
 	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
@@ -132,6 +133,10 @@ _progress_decode(0), _inputBank(0)
     getParser()->push_back (new OptionOneParam (STR_NB_CORES, "number of cores (default is the available number of cores)", false, "0"));
     getParser()->push_back (new OptionOneParam (STR_VERBOSE,  "verbosity level",                                            false, "1", false));
 
+	
+	getParser()->push_back (new OptionNoParam  ("-lossless", "switch to lossless compression for qualities (default is lossy. lossy has much higher compression rate, and the loss is in fact a gain. lossy is better)",   false));
+
+	
     IOptionsParser* compressionParser = new OptionsParser ("compression");
 
     /** We add the sorting count options and hide all of them by default and display one some of them. */
@@ -156,6 +161,10 @@ Leon::~Leon ()
 {
 	setBlockWriter(0);
 	setInputBank (0);
+	
+	if(! _isFasta)
+		free(_qualwriter);
+	
 	if (_progress_decode)  { delete _progress_decode; }
 }
 
@@ -167,6 +176,10 @@ void Leon::execute()
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
 	
+	
+	if(getParser()->saw ("-lossless"))
+		_lossless = true;
+		
 	
     //bool compress = false;
     //bool decompress = false;
@@ -455,18 +468,36 @@ void Leon::executeCompression(){
 	
 	u_int8_t infoByte = 0;
 	
+	
+	/** We look for the beginnin of the suffix. */
+	int lastindex = _inputFilename.find_last_of (".");
+	
+	/** We build the result. */
+	string extension = _inputFilename.substr(lastindex+1);
+	
 	//guess filename extension
-	if(_inputFilename.find(".fa") !=  string::npos || _inputFilename.find(".fasta") !=  string::npos){
-		#ifdef PRINT_DEBUG
+	if( extension.compare("fa")==0 || extension.compare("fasta")==0 )
+	//if(_inputFilename.find(".fa") !=  string::npos || _inputFilename.find(".fasta") !=  string::npos)
+	{
+		//#ifdef PRINT_DEBUG
 			cout << "\tInput format: Fasta" << endl;
-		#endif
+		//#endif
 		infoByte |= 0x01;
 		_isFasta = true;
 	}
-	else if(_inputFilename.find(".fq") !=  string::npos || _inputFilename.find(".fastq") !=  string::npos){
-		#ifdef PRINT_DEBUG
-			cout << "\tInput format: Fastq" << endl;
-		#endif
+	else //if(_inputFilename.find(".fq") !=  string::npos || _inputFilename.find(".fastq") !=  string::npos)
+		if( extension.compare("fq")==0 || extension.compare("fastq")==0 )
+	{
+	//	#ifdef PRINT_DEBUG
+			cout << "\tInput format: Fastq";
+		if (_lossless)
+			cout << ", compressing qualities in lossless mode" << endl;
+			else
+		cout << ", compressing qualities in lossy mode (use -lossless for lossless compression)"<< endl;
+
+		
+		
+	//	#endif
 		_isFasta = false;
 	} 
 	else{
@@ -523,6 +554,13 @@ void Leon::executeCompression(){
     _outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
+	if(! _isFasta)
+	{
+		_FileQualname = dir + "/" + System::file().getBaseName(prefix) + ".qual";
+		_FileQual = System::file().newFile(_FileQualname, "wb");
+		_qualwriter = new OrderedBlocks( _FileQual , _nb_cores ) ;
+	}
+
 	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	
@@ -541,16 +579,108 @@ void Leon::executeCompression(){
     //Compression
 	startHeaderCompression();
 	
+	
+
 	//_blockWrit
 	//setBlockWriter(0);
 	//setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	startDnaCompression();
 	
+
+	
 	
 	endCompression();
 }
+
+
+void Leon::endQualCompression(){
+	
+	
+	//append blocks info at the end
+	_FileQual->fwrite(& _qualBlockSizes[0],  sizeof(u_int64_t) , _qualBlockSizes.size());
+
+	u_int64_t val =  _qualBlockSizes.size();
+	
+	_FileQual->fwrite(& val,  sizeof(u_int64_t) , 1);
+
+	_qualCompRate = ((double)_compressed_qualSize / _input_qualSize);
+
+	
+}
+
+
+void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID){
+
+	
+	//printf("write block lena block %i  insize %i \n ",blockID,size);
+	//zlib compression for the quals
+	
+	z_stream zs;
+	memset(&zs, 0, sizeof(zs));
+	
+	//deflateinit2 to be able to gunzip it fro mterminal
+	
+	//if(deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+		//			(15+16), 8, Z_DEFAULT_STRATEGY) != Z_OK)
+	
+	
+			if (deflateInit(&zs, Z_BEST_COMPRESSION) != Z_OK)
+		throw(std::runtime_error("deflateInit failed while compressing."));
+	
+	zs.next_in = (Bytef*) data ;
+	zs.avail_in = size ;           // set the z_stream's input
+	
+	int ret;
+	char outbuffer[32768];
+	std::string outstring;
+	
+	// retrieve the compressed bytes blockwise
+	do {
+		zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+		zs.avail_out = sizeof(outbuffer);
 		
+		ret = deflate(&zs, Z_FINISH);
+		
+		if (outstring.size() < zs.total_out) {
+			// append the block to the output string
+			outstring.append(outbuffer,
+							 zs.total_out - outstring.size());
+		}
+	} while (ret == Z_OK);
+	
+	deflateEnd(&zs);
+	
+	/////////////////
+	
+	//_qualwriter->insert((u_int8_t*) data, size ,blockID);
+
+	
+	_qualwriter->insert((u_int8_t*) outstring.data(), outstring.size() ,blockID);
+	_qualwriter->incDone(1);
+	
+	
+	
+	
+	pthread_mutex_lock(&writeblock_mutex);
+	
+	_input_qualSize += size;
+	_compressed_qualSize +=  outstring.size();
+	if ((2*(blockID+1)) > _qualBlockSizes.size() )
+	{
+		_qualBlockSizes.resize(2*(blockID+1));
+	}
+	
+	_qualBlockSizes[2*blockID] =  outstring.size();
+	_qualBlockSizes[2*blockID+1] = encodedSequenceCount;
+	
+	
+	pthread_mutex_unlock(&writeblock_mutex);
+
+	
+	
+}
+
 void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID){
 	if(size <= 0) return;
 	
@@ -582,8 +712,6 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	_compressedSize += size;
 
 	//int thread_id = encoder->getId();
-
-	
 
 	if ((2*(blockID+1)) > _blockSizes.size() )
 	{
@@ -637,18 +765,35 @@ void Leon::endCompression(){
 	
 	cout << "\tInput: " << endl;
 	cout << "\t\tFilename: " << _inputFilename << endl;
-	cout << "\t\tSize: " << inputFileSize << endl;
+	cout << "\t\tSize: " << inputFileSize <<  "  (" <<  inputFileSize/1024LL/1024LL  << " MB)"<< endl;
 	
 	u_int64_t outputFileSize = System::file().getSize(_outputFilename);
+	if(! _isFasta)
+	{
+		outputFileSize += System::file().getSize(_FileQualname) ;
+	}
+	
 	cout << "\tOutput: " << endl;
 	cout << "\t\tFilename: " << _outputFilename << endl;
-	cout << "\t\tSize: " << outputFileSize << endl;
+	if(! _isFasta)
+		cout << "\t\tqualities in : " << _FileQualname << endl;
+	
+	cout << "\t\tTotal Size: " << outputFileSize <<  "  (" <<  outputFileSize/1024LL/1024LL  << " MB)"<< endl;
 	std::cout.precision(4);
 	cout << "\tCompression rate: " << (float)((double)outputFileSize / (double)inputFileSize) << endl;
 	cout << "\t\tHeader: " << (float)_headerCompRate << endl;
-	cout << "\t\tDna: " << (float)_dnaCompRate << endl << endl;
+	cout << "\t\tDna: " << (float)_dnaCompRate << endl ;
+	if( _isFasta) cout << endl;
+	else
+	{
+		cout << "\t\tQual: " << (float)_qualCompRate ;
 	
-	
+		if(_lossless)
+			cout << " (in lossless mode) " << endl  << endl;
+		else
+			cout << " (in lossy mode) " << endl  << endl;
+	}
+
 	
 	
 	
@@ -664,36 +809,10 @@ void Leon::endCompression(){
 }
 		
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+
+
+
+
 void Leon::startHeaderCompression(){
     Iterator<Sequence>* itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
@@ -753,6 +872,9 @@ void Leon::startHeaderCompression(){
 	getDispatcher()->iterate (itSeq,  HeaderEncoder(this), READ_PER_BLOCK);
 	endHeaderCompression();
 }
+
+
+
 
 void Leon::endHeaderCompression(){
 	//u_int64_t descriptionStartPos = _outputFile->tell();
@@ -835,7 +957,7 @@ void Leon::startDnaCompression(){
 
 	//Create and fill bloom
     createBloom ();
-    LOCAL (_bloom);
+   // LOCAL (_bloom); //now we need it later
     
 	int64_t nbestimated = _inputBank->estimateNbItems();
 	
@@ -878,9 +1000,15 @@ void Leon::startDnaCompression(){
 
 	//getDispatcher()->iterate (itSeq,  HeaderEncoder(this, &nb_threads_living), 10000);
 	getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
+	
 	endDnaCompression();
 	
+	if(! _isFasta)
+	{
+		endQualCompression();
+	}
 }
+
 
 void Leon::endDnaCompression(){
 	
@@ -1206,7 +1334,12 @@ void * decoder_dna_thread(void * args)
  	pthread_exit(0);
 }
 
-
+void * decoder_qual_thread(void * args)
+{
+	QualDecoder * qual_decoder = (QualDecoder*) args;
+	qual_decoder->execute();
+	pthread_exit(0);
+}
 
 void Leon::executeDecompression(){
 
@@ -1217,6 +1350,18 @@ void Leon::executeDecompression(){
     //string inputFilename = prefix + ".txt"; //".leon"
 	//_outputFile = System::file().newFile(outputFilename, "wb");
 	cout << "\tInput filename: " << _inputFilename << endl;
+	
+	
+	string dir = System::file().getDirectory(_inputFilename);
+
+	
+	if(! _isFasta)
+	{
+		
+		_FileQualname =    dir + "/" +  System::file().getBaseName(_inputFilename) + ".qual";
+		_inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
+		cout << "\tQual filename: " << _FileQualname << endl;
+	}
 	
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
@@ -1229,7 +1374,6 @@ void Leon::executeDecompression(){
 	//_rangeDecoder.setInputFile(_descInputFile);
 	
 	//Output file
-	string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
 	_outputFilename = dir + "/" + prefix;
 	
@@ -1256,7 +1400,10 @@ void Leon::executeDecompression(){
 	
 	startHeaderDecompression();
 	startDnaDecompression();
-	
+
+	if(! _isFasta){
+		startQualDecompression();
+	}
 	endDecompression();
 }
 
@@ -1420,6 +1567,104 @@ void Leon::startHeaderDecompression(){
 	_progress_decode->finish();
 
 }
+
+
+void Leon::startQualDecompression(){
+	
+	_fileQualPos =0;
+	
+	//read block sizes and _blockCount
+	_qualBlockSizes.clear();
+	_inputFileQual->seekg(- sizeof(u_int64_t),_inputFileQual->end);
+	
+
+	_inputFileQual->read((char *)&_blockCount,sizeof(u_int64_t));
+	cout << "\tBlock count: " << _blockCount/2 << endl;
+	
+	_qualBlockSizes.resize(_blockCount,0);
+	char * databuff = (char * )& _qualBlockSizes[0];
+	
+	_inputFileQual->seekg(- (sizeof(u_int64_t)*(_blockCount+1)),_inputFileQual->end);
+	_inputFileQual->read( databuff ,sizeof(u_int64_t) *  _blockCount);
+
+
+
+	
+	
+	delete _progress_decode;
+	_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing qualities"), System::thread().newSynchronizer()   );
+	_progress_decode->init();
+	
+	
+	
+	
+	//_inputFile->seekg(_filePos, _inputFile->beg);
+	
+	_qualOutputFilename = _outputFilename + ".temp.qual";
+	_qualOutputFile = new ofstream(_qualOutputFilename.c_str());
+	
+	vector<QualDecoder*> decoders;
+	for(int i=0; i<_nb_cores; i++){
+		
+		QualDecoder* hd = new QualDecoder(this, _FileQualname);
+		decoders.push_back(hd);
+		
+	}
+
+	pthread_t * tab_threads = new pthread_t [_nb_cores];
+	
+	int i = 0;
+	int livingThreadCount = 0;
+	
+	while(i < _qualBlockSizes.size()){
+
+		for(int j=0; j<_nb_cores; j++){
+			
+			if(i >= _qualBlockSizes.size()) break;
+			
+			livingThreadCount = j+1;
+			
+			u_int64_t blockSize = _qualBlockSizes[i];
+			int sequenceCount = _qualBlockSizes[i+1];
+			QualDecoder* decoder = decoders[j];
+			decoder->setup(_fileQualPos, blockSize, sequenceCount);
+			
+			pthread_create(&tab_threads[j], NULL, decoder_qual_thread, decoder);
+				_fileQualPos += blockSize;
+			i += 2;
+		}
+		
+		
+		for(int j=0; j < livingThreadCount; j++){
+
+			pthread_join(tab_threads[j], NULL);
+			
+			QualDecoder* decoder = decoders[j];
+			
+			_qualOutputFile->write(decoder->_buffer.c_str(), decoder->_buffer.size());
+			decoder->_buffer.clear();
+
+		}
+		
+		livingThreadCount = 0;
+	}
+	
+	
+	for(int i=0; i<decoders.size(); i++){
+		delete decoders[i];
+	}
+	decoders.clear();
+	delete [] tab_threads;
+	
+	cout << endl;
+	
+	
+	_qualOutputFile->flush();
+	
+	_progress_decode->finish();
+	
+}
+
 
 void Leon::startDnaDecompression(){
 	//cout << "\tDecompressing dna" << endl;
@@ -1757,9 +2002,14 @@ void Leon::endDecompression(){
 	ifstream headerInputFile(_headerOutputFilename.c_str());
 	ifstream dnaInputFile(_dnaOutputFilename.c_str());
 	
+	//if(! _isFasta)
+	ifstream qualInputFile(_qualOutputFilename.c_str());
+	
 	//int maxBufferSize = 4096*16;
 	//int realBufferSize = 0;
 	//string buffer;
+	
+	//todo remove this
 	
 	while(reading){
 		
@@ -1783,7 +2033,21 @@ void Leon::endDecompression(){
 		}
 		else
 			reading = false;
+		
+		if( ! _isFasta)
+		{
 			
+		if(getline(qualInputFile, line)){
+			line.insert(0, "+\n");
+			line += '\n';
+			_outputFile->fwrite(line.c_str(), line.size(), 1);
+		}
+		else
+			reading = false;
+			
+		}
+		
+		
 		//if(buffer.size() > maxBufferSize){
 		//	_outputFile->fwrite(buffer.c_str(), buffer.size(), 1);
 		//	buffer.clear();
@@ -1801,7 +2065,9 @@ void Leon::endDecompression(){
 	//Remove temp files
 	System::file().remove(_headerOutputFilename);
 	System::file().remove(_dnaOutputFilename);
-	
+	if(! _isFasta)
+		System::file().remove(_qualOutputFilename);
+
 	cout << "\tOutput filename: " << _outputFile->getPath() << endl;
 //	printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
 //	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_outputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));

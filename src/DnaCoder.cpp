@@ -163,6 +163,20 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _M
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
+	//pour quals
+	if(! leon->_isFasta)
+	{
+	_max_read_size = 10000;
+	_nb_solids = (int *) malloc(_max_read_size * sizeof(int) );
+	_qualseq = (char *) malloc(_max_read_size*sizeof(char ));
+	_bufferQuals_size = Leon::READ_PER_BLOCK* 200;
+	_bufferQuals = (char *) malloc(_bufferQuals_size * sizeof(char ));
+	_bufferQuals_idx=0;
+	
+	_trunc_mode = true;
+	_smoothing_threshold = 2;
+		
+	}
 }
 
 DnaEncoder::DnaEncoder(const DnaEncoder& copy) :
@@ -173,8 +187,24 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _M
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
 	startBlock();
-	//_leon = copy._leon;
-	//_bloom = copy._bloom;
+
+	
+	//for quals
+	if(! _leon->_isFasta)
+	{
+	_nb_solids = (int *) malloc(_max_read_size * sizeof(int) );
+	_qualseq = (char *) malloc(_max_read_size*sizeof(char ));
+	_bufferQuals_size = Leon::READ_PER_BLOCK* 200;
+	_bufferQuals = (char *) malloc(_bufferQuals_size * sizeof(char ));
+	//printf("initial buffer qual size %i \n",_bufferQuals_size );
+
+	_bufferQuals_idx =0;
+	
+	_trunc_mode = true;
+	_smoothing_threshold = 2;
+	}
+	
+	///
 	
 	#ifdef LEON_PRINT_STAT
 		_rangeEncoder1.updateModel = false;
@@ -183,6 +213,7 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _M
 		_rangeEncoder4.updateModel = false;
 		_rangeEncoder5.updateModel = false;
 	#endif
+	
 }
 
 DnaEncoder::~DnaEncoder(){
@@ -225,10 +256,26 @@ DnaEncoder::~DnaEncoder(){
 	{
 		_leon->_blockwriter->FlushWriter();
 	}
+	
+	
+	if(! _leon->_isFasta)
+	{
+		//pour quals
+		_leon->_qualwriter->waitForWriter();
+		if(nb_remaining==1)
+		{
+			_leon->_qualwriter->FlushWriter();
+		}
+	}
 #endif
 
-	
-	
+	//pour quals
+	if(! _leon->_isFasta)
+	{
+		free(_nb_solids);
+		free(_qualseq);
+		free(_bufferQuals);
+	}
 }
 
 void DnaEncoder::operator()(Sequence& sequence){
@@ -265,6 +312,12 @@ void DnaEncoder::writeBlock(){
 	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
 	_rangeEncoder.clear();
+	
+	if(! _leon->_isFasta)
+	{
+		_leon->writeBlockLena((u_int8_t*) _bufferQuals, _bufferQuals_idx ,_processedSequenceCount, blockId);
+		_bufferQuals_idx = 0;
+	}
 	
 	/*
 	cout << "------------------------" << endl;
@@ -309,7 +362,14 @@ void DnaEncoder::execute(){
 	//kmer_type anchorKmer = 0;
 	u_int32_t anchorAddress;
 	
-	buildKmers();
+	buildKmers(); // en profiter ici pour faire la compression des qual ?
+	
+	if(! _leon->_isFasta)
+	{
+		storeSolidCoverageInfo();
+		smoothQuals();
+	}
+	
 	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
 	
 	if(anchorPos == -1)
@@ -326,6 +386,118 @@ void DnaEncoder::execute(){
 	endRead();
 
 }
+
+
+
+
+double DnaEncoder::char2proba(char c)
+{
+	int phred = c -33;
+	
+	double proba =  exp(-phred* log(10)/10);
+	return proba;
+	//Q 10 : 10% err
+	//Q 20 : 1% err
+	//Q 30  0.1% err ..
+}
+
+
+char DnaEncoder::char2phred(char c)
+{
+	return c -33;
+}
+
+
+void DnaEncoder::smoothQuals()
+{
+	strcpy (_qualseq, _sequence->getQuality().c_str());  // copy the qual sequence of this read in _qualseq
+
+	if(! _leon->_lossless)
+	{
+		for (int ii=0; ii< _readSize; ii++)
+		{
+			if ((_nb_solids[ii]>= _smoothing_threshold) || (((int) _qualseq[ii] > (int) '@') && _trunc_mode ))
+			{
+				apply_smoothing_at_pos (ii);
+			}
+		}
+	}
+	
+	_qualseq[_readSize]='\n';
+	_qualseq[_readSize+1]='\0';
+	
+	if( (_bufferQuals_idx+ _readSize+1 ) >= _bufferQuals_size)
+	{
+		//printf("_bufferQuals_size %i  _bufferQuals_idx %i  seqid %zu \n",_bufferQuals_size,_bufferQuals_idx,_sequence->getIndex()  );
+		_bufferQuals_size = _bufferQuals_size * 2;
+		_bufferQuals = (char *) realloc(_bufferQuals,_bufferQuals_size * sizeof(char) );
+	}
+	
+	strcpy(_bufferQuals + _bufferQuals_idx, _qualseq);
+
+	_bufferQuals_idx += _readSize+1 ; // with last '\n'
+
+	//fprintf(_leon->_testQual,"%s",_qualseq); //st_qualseq.c_str()
+
+}
+
+
+
+bool DnaEncoder::apply_smoothing_at_pos(int pos)
+{
+	if(char2phred(_qualseq[pos])==0 || char2phred(_qualseq[pos])==2 )
+		return false;
+	
+	bool ok_to_smooth= true;
+	
+	int diff = ('@' -  _qualseq[pos]);
+	if(  diff > 10   )
+	{
+		if(_nb_solids[pos]>(diff-5))
+			ok_to_smooth =true;
+		else
+			ok_to_smooth = false;
+	}
+	
+	if(ok_to_smooth)
+	{
+		_qualseq[pos] = '@'; //smooth qual
+		return true;
+	}
+	else return false;
+	
+}
+
+
+
+void DnaEncoder::storeSolidCoverageInfo()
+{
+	kmer_type kmer, kmerMin;
+	
+	if(_readSize >= _max_read_size)
+	{
+		_max_read_size = _readSize + 1000;
+		_nb_solids = (int *) realloc(_nb_solids,_max_read_size * sizeof(int) );
+		_qualseq = (char *) realloc(_qualseq,_max_read_size*sizeof(char ));
+
+	}
+	memset(_nb_solids,0,_max_read_size * sizeof(int) );
+
+	for(int ii=0; ii<_kmers.size(); ii++){
+		kmer = _kmers[ii];
+		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+
+		if(_bloom->contains(kmerMin))
+		{
+			//increments all pos covered by the solid kmer
+			for (int jj=0; jj< _kmerSize ; jj++)
+			{
+				_nb_solids[ii+jj] ++ ;
+			}
+		}
+	}
+}
+
 
 void DnaEncoder::buildKmers(){
 
@@ -976,9 +1148,100 @@ void DnaEncoder::encodeNoAnchorRead(){
 }
 
 
+QualDecoder::QualDecoder(Leon* leon, const string& inputFilename)
+{
+	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
+	_finished = false;
+	
+	//cout << " qualdecoder will read from " << inputFilename  << endl;
+	_leon = leon;
+
+	_inbuffer = NULL;
+}
+
+
+QualDecoder::~QualDecoder(){
+
+	free(_inbuffer);
+	delete _inputFile;
+}
+
+
+void QualDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
+	
+	_processedSequenceCount = 0;
+	
+	_inputFile->seekg(blockStartPos, _inputFile->beg);
+	
+	
+	_blockStartPos = blockStartPos;
+	_blockSize = blockSize;
+
+	
+	_leon->_progress_decode->inc(1);
+
+	_inbuffer = (char * ) realloc(_inbuffer, blockSize* sizeof(char));
+	
+	_sequenceCount = sequenceCount;
+}
 
 
 
+void QualDecoder::execute(){
+	
+
+//	printf("execute qual decoder _blockStartPos %llu  _blockSize %llu \n",_blockStartPos,_blockSize);
+
+	
+	_inputFile->read(_inbuffer,_blockSize );
+	
+	//printf("----Begin decomp of Block     ----\n");
+
+	z_stream zs;
+	memset(&zs, 0, sizeof(zs));
+	
+	//deflateinit2 to be able to gunzip it fro mterminal
+	
+	//if (inflateInit2(&zs, (15+32)) != Z_OK)
+	if (inflateInit (&zs) != Z_OK)
+		throw(std::runtime_error("inflate Init failed while decompressing."));
+	
+	zs.next_in = (Bytef*) _inbuffer ;
+	zs.avail_in = _blockSize ;    // set the z_stream's input
+	
+	int ret;
+	char outbuffer[32768];
+	
+	// retrieve the compressed bytes blockwise
+	do {
+		zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+		zs.avail_out = sizeof(outbuffer);
+		
+		ret = inflate (&zs, Z_SYNC_FLUSH); //ou Z_FINISH ? Z_SYNC_FLUSH
+		
+		if (_buffer.size() < zs.total_out) {
+			// append the block to the output string
+			_buffer.append(outbuffer,
+							 zs.total_out - _buffer.size());
+		}
+		if (ret != Z_OK)
+		{
+			//printf("ret val %i  _blockStartPos %llu \n",ret,_blockStartPos);
+			break;
+		}
+		else
+		{
+			//printf("-----block ret ok  _blockStartPos %llu  ----\n",_blockStartPos);
+		}
+	} while (ret == Z_OK);
+	
+	inflateEnd(&zs);
+
+	_finished = true;
+	
+	//printf("Should be done decompressing block, in size   %llu   out size    %lu  \n",_blockSize,_buffer.size() );
+
+}
 
 
 //====================================================================================

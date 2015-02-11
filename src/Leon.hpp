@@ -52,6 +52,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 #include <sstream>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
+
 #include "OrderedBlocks.h"
 
 //#include "RangeCoder.hpp"
@@ -91,7 +92,9 @@ class Leon : public misc::impl::Tool
 		
 		//Global compression
 		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
-		
+	
+		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
+
 		//Header compression
 		string _firstHeader;
 		u_int64_t _totalHeaderSize;
@@ -115,8 +118,16 @@ class Leon : public misc::impl::Tool
 		//u_int64_t _realDnaCompressedSize;
 		u_int64_t _compressedSize;
 		IBloom<kmer_type>* _bloom;
-		
-		//test dna compression			
+	
+		bool _isFasta;
+	bool _lossless;
+	//for qual compression
+		u_int64_t _total_nb_quals_smoothed ;
+		u_int64_t _input_qualSize;
+		u_int64_t _compressed_qualSize;
+	
+	
+		//test dna compression
 		u_int64_t _MCtotal;
 	
 		u_int64_t _MCnoAternative;
@@ -142,6 +153,8 @@ class Leon : public misc::impl::Tool
 		int   _nb_thread_living;
 		OrderedBlocks * _blockwriter;
 
+		OrderedBlocks * _qualwriter;
+
 		 ProgressSynchro * _progress_decode;
 	
 		void setBlockWriter (OrderedBlocks* blockwriter) { SP_SETATTR(blockwriter); }
@@ -166,7 +179,7 @@ class Leon : public misc::impl::Tool
 			return bin2ntTab[nt];
 		}
 		
-
+	
 	private:
 
 		u_int64_t _lastAnchorValue;
@@ -183,13 +196,22 @@ class Leon : public misc::impl::Tool
 		void createKmerAbundanceHash();
 		
 		//Global compression
-		bool _isFasta;
 		string _inputFilename;
 		string _outputFilename;
+	
+	
+	//quals
+	string _FileQualname;
+	IFile* _FileQual;
+	string _qualOutputFilename; //temp file
+	ofstream* _qualOutputFile;
+
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
+	
+		vector<u_int64_t> _qualBlockSizes;
 
 		IBank* _inputBank;
 		void setInputBank (IBank* inputBank) { SP_SETATTR(inputBank); }
@@ -199,22 +221,30 @@ class Leon : public misc::impl::Tool
 		void executeCompression();
 		void executeDecompression();
 		void endCompression();
-		
+		void endQualCompression();
+	
 		//Global decompression
 		void setupNextComponent();
 		
 		RangeDecoder _rangeDecoder;
 		//ifstream* _inputFile;
 		ifstream* _inputFile;
+		ifstream* _inputFileQual;
+
 		ifstream* _descInputFile;
 		u_int64_t _filePos;
-		double _headerCompRate, _dnaCompRate;
+		double _headerCompRate, _dnaCompRate, _qualCompRate;
 		
-		
+		//Quals
+		void startQualDecompression();
+		u_int64_t _fileQualPos;
+
+	
 		//Header compression
 		void startHeaderCompression();
 		void endHeaderCompression();
-		
+	
+
 		//DNA Compression
 		void startDnaCompression();
 		void endDnaCompression();

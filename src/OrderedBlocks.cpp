@@ -113,7 +113,8 @@ void  OrderedBlocks::incDone (int nbdone)
 {
     
     size_t old_val;
-	
+	if(nbdone==0)
+		return;
 	
     old_val = __sync_fetch_and_add (& _idx, nbdone);
 	 DEBUG(("\n ++ ninc oldval  %i base = %i ++ \n",old_val,_base));

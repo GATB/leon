@@ -53,6 +53,8 @@ int main (int argc, char* argv[])
 			printf("Compression options  \n");
 			printf("    -kmer-size          :    size of a kmer  (default 31)\n");
 			printf("    -abundance          :    abundance threshold for solid kmers  (default inferred)\n");
+			printf("    -lossless           :    switch to lossless compression for qualities (default is lossy. lossy has much higher compression rate, and the loss is in fact a gain. lossy is better)\n");
+			
 			//printf("    -max-disk                  :    display help about possible options  \n");
 			//printf("    -max-memory                  :    max memory in MBytes (default 1000)  \n");
 			//printf("    -out                  :    output file (if not set basename of the input file)  \n");

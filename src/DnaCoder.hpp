@@ -28,6 +28,7 @@
 //#include "CompressionUtils.hpp"
 
 
+#include "OrderedBlocks.h"
 
 
 
@@ -111,7 +112,30 @@ class DnaEncoder : AbstractDnaCoder
 		void operator()(Sequence& sequence);
 		
 	private:
-		
+	
+	
+	//pour quals
+	char * _qualseq;
+	int * _nb_solids;
+	int _smoothing_threshold;
+	int _max_read_size;
+	bool _trunc_mode;
+	
+	void storeSolidCoverageInfo();
+	void smoothQuals();
+	bool apply_smoothing_at_pos(int pos);
+
+	double char2proba(char c);
+	char char2phred(char c);
+
+	char * _bufferQuals;
+	int _bufferQuals_idx;
+	int _bufferQuals_size;
+	
+	
+	
+	
+	
 		RangeEncoder _rangeEncoder;
 		
 		#ifdef LEON_PRINT_STAT
@@ -185,7 +209,10 @@ class DnaDecoder : AbstractDnaCoder
 		bool _finished;
 		
 	private:
-		
+	
+
+	
+	
 		RangeDecoder _rangeDecoder;
 		ifstream* _inputFile;
 		ofstream* _outputFile;
@@ -204,5 +231,32 @@ class DnaDecoder : AbstractDnaCoder
 		int _sequenceCount;
 };
 
+class QualDecoder
+{
+public:
+	QualDecoder(Leon* leon, const string& inputFilename);
+	~QualDecoder();
+	
+	void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
+	void execute();
+	
+	string _buffer;
+	bool _finished;
+	
+	
+private:
+	Leon* _leon;
+
+	char * _inbuffer;
+	ifstream* _inputFile;
+	ofstream* _outputFile;
+	u_int64_t _blockStartPos;
+	u_int64_t _blockSize;
+	int _decodedSequenceCount;
+	string _currentSeq;
+	int _sequenceCount;
+	int _processedSequenceCount;
+
+};
 #endif /* _DNACODER_HPP_ */
 
