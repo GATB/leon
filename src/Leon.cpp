@@ -118,6 +118,7 @@ _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _
 _progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0)
 
 {
+_isFasta = true;
 	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
 
     //_kmerSize(27)
@@ -162,7 +163,7 @@ Leon::~Leon ()
 	setBlockWriter(0);
 	setInputBank (0);
 	
-	if(! _isFasta)
+	if(! _isFasta && _compress)
 		free(_qualwriter);
 	
 	if (_progress_decode)  { delete _progress_decode; }
@@ -626,7 +627,7 @@ void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCou
 	
 	
 			if (deflateInit(&zs, Z_BEST_COMPRESSION) != Z_OK)
-		throw(std::runtime_error("deflateInit failed while compressing."));
+		throw Exception ("deflateInit failed while compressing.");
 	
 	zs.next_in = (Bytef*) data ;
 	zs.avail_in = size ;           // set the z_stream's input
@@ -1355,14 +1356,6 @@ void Leon::executeDecompression(){
 	string dir = System::file().getDirectory(_inputFilename);
 
 	
-	if(! _isFasta)
-	{
-		
-		_FileQualname =    dir + "/" +  System::file().getBaseName(_inputFilename) + ".qual";
-		_inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
-		cout << "\tQual filename: " << _FileQualname << endl;
-	}
-	
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 		
@@ -1382,7 +1375,18 @@ void Leon::executeDecompression(){
 	
 	//the first bit holds the file format. 0: fastq, 1: fasta
 	_isFasta = ((infoByte & 0x01) == 0x01);
-	if(_isFasta){
+    if(! _isFasta)
+        {
+
+                _FileQualname =    dir + "/" +  System::file().getBaseName(_inputFilename) + ".qual";
+                _inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
+                cout << "\tQual filename: " << _FileQualname << endl;
+        }
+
+	
+
+
+if(_isFasta){
 		cout << "\tOutput format: Fasta" << endl;
 		_outputFilename += "_d.fasta";
 	}
@@ -1570,7 +1574,7 @@ void Leon::startHeaderDecompression(){
 
 
 void Leon::startQualDecompression(){
-	
+	printf("start qual decomp");
 	_fileQualPos =0;
 	
 	//read block sizes and _blockCount

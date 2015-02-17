@@ -1204,7 +1204,7 @@ void QualDecoder::execute(){
 	
 	//if (inflateInit2(&zs, (15+32)) != Z_OK)
 	if (inflateInit (&zs) != Z_OK)
-		throw(std::runtime_error("inflate Init failed while decompressing."));
+		throw    Exception ("inflate Init failed while decompressing.");
 	
 	zs.next_in = (Bytef*) _inbuffer ;
 	zs.avail_in = _blockSize ;    // set the z_stream's input
