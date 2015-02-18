@@ -170,7 +170,7 @@ Leon::~Leon ()
 	setInputBank (0);
 	
 	if(! _isFasta && _compress)
-		free(_qualwriter);
+		delete(_qualwriter);
 	
 	if (_progress_decode)  { delete _progress_decode; }
 }
@@ -365,7 +365,7 @@ void Leon::createBloom (){
 	//for(int i=0; i<_bloom->getSize(); i++){
 	//	_rangeEncoder.encode(_generalModel, _bloom->getArray()[i]);
 	//}
-	
+
 	/*
 	z_stream zs;                        // z_stream is zlib's control structure
     memset(&zs, 0, sizeof(zs));
@@ -482,6 +482,7 @@ void Leon::executeCompression(){
 	/** We build the result. */
 	string extension = _inputFilename.substr(lastindex+1);
 	
+	_noHeader =false;
 
 	if(getParser()->saw (Leon::STR_DNA_ONLY))
 	{
@@ -1195,7 +1196,7 @@ void Leon::writeAnchorDict(){
     
 	tempFile.close();
 	remove((_outputFilename + ".adtemp").c_str());
-	delete buffer;
+	delete [] buffer;
 }
 
 bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
@@ -1481,6 +1482,7 @@ void Leon::startDecompressionAllStreams(){
 	
 	
 	_filePosHeader = 0;
+	_filePosDna = 0;
 	
 	if(! _noHeader)
 	{

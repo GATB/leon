@@ -192,6 +192,7 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _M
 	//for quals
 	if(! _leon->_isFasta)
 	{
+	_max_read_size = 10000;
 	_nb_solids = (int *) malloc(_max_read_size * sizeof(int) );
 	_qualseq = (char *) malloc(_max_read_size*sizeof(char ));
 	_bufferQuals_size = Leon::READ_PER_BLOCK* 200;
