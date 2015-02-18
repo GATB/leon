@@ -712,7 +712,7 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequ
 		cout << "\t-----------------------" << endl;
 		cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
 	#else
-		_leon->_progress_decode->inc(1);
+		//_leon->_progress_decode->inc(1);
 
 	#endif
 	

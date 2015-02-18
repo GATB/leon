@@ -1178,8 +1178,11 @@ void QualDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequen
 	_blockSize = blockSize;
 
 	
-	_leon->_progress_decode->inc(1);
+	//_leon->_progress_decode->inc(1);
 
+	//cout << "\t-----------------------" << endl;
+	//cout << "\tDecoding Qual block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+	
 	_inbuffer = (char * ) realloc(_inbuffer, blockSize* sizeof(char));
 	
 	_sequenceCount = sequenceCount;
@@ -1276,9 +1279,9 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t-----------------------" << endl;
-		cout << "\tDecoding block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+		cout << "\tDecoding Dna block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
 	#else
-		_leon->_progress_decode->inc(1);
+		;//_leon->_progress_decode->inc(1);
 	#endif
 	
 	_sequenceCount = sequenceCount;

@@ -80,7 +80,8 @@ class Leon : public misc::impl::Tool
 		static const char* STR_COMPRESS;
 		static const char* STR_DECOMPRESS;
 		static const char* STR_TEST_DECOMPRESSED_FILE;
-		
+		static const char* STR_DNA_ONLY;
+	
 		size_t          _kmerSize;
 		string     _dskOutputFilename;
 		static const int READ_PER_BLOCK = 50000;
@@ -120,6 +121,8 @@ class Leon : public misc::impl::Tool
 		IBloom<kmer_type>* _bloom;
 	
 		bool _isFasta;
+		bool _noHeader;
+
 	bool _lossless;
 	//for qual compression
 		u_int64_t _total_nb_quals_smoothed ;
@@ -199,7 +202,8 @@ class Leon : public misc::impl::Tool
 		string _inputFilename;
 		string _outputFilename;
 	
-	
+	void startDnaDeb();
+
 	//quals
 	string _FileQualname;
 	IFile* _FileQual;
@@ -212,6 +216,8 @@ class Leon : public misc::impl::Tool
 		vector<u_int64_t> _blockSizes;
 	
 		vector<u_int64_t> _qualBlockSizes;
+		vector<u_int64_t> _headerBlockSizes;
+		vector<u_int64_t> _dnaBlockSizes;
 
 		IBank* _inputBank;
 		void setInputBank (IBank* inputBank) { SP_SETATTR(inputBank); }
@@ -224,7 +230,7 @@ class Leon : public misc::impl::Tool
 		void endQualCompression();
 	
 		//Global decompression
-		void setupNextComponent();
+		void setupNextComponent(vector<u_int64_t>   & blockSizes  );
 		
 		RangeDecoder _rangeDecoder;
 		//ifstream* _inputFile;
@@ -233,12 +239,20 @@ class Leon : public misc::impl::Tool
 
 		ifstream* _descInputFile;
 		u_int64_t _filePos;
+	
+	u_int64_t _filePosHeader;
+	u_int64_t _filePosDna;
+
 		double _headerCompRate, _dnaCompRate, _qualCompRate;
 		
 		//Quals
 		void startQualDecompression();
-		u_int64_t _fileQualPos;
+		u_int64_t _filePosQual;
 
+	
+		void startDecompressionAllStreams();
+
+		
 	
 		//Header compression
 		void startHeaderCompression();
