@@ -43,7 +43,8 @@ GACGCGCCGATATAACGCGCTTTCCCGGCTTTTACCACGTCGTTGAGGGCTTCCAGCGTCTCTTCGATCGGCGTGTTGTA
 AbstractDnaCoder::AbstractDnaCoder(Leon* leon) :
 _kmerModel(leon->_kmerSize),
 _readTypeModel(2), //only 2 value in this model: read with anchor or without anchor
-_noAnchorReadModel(5), _mutationModel(5), //5value: A, C, G, T, N
+_noAnchorReadModel(5), _bifurcationModel(5), //5value: A, C, G, T, N
+_bifurcationBinaryModel(2), //0 or 1 (lowest or highest bifurcation by alphabetical order)
 _readAnchorRevcompModel(2),
 _readSizeDeltaTypeModel(3),
 _anchorPosDeltaTypeModel(3),
@@ -81,7 +82,8 @@ void AbstractDnaCoder::startBlock(){
 	}
 	_readTypeModel.clear();
 	_noAnchorReadModel.clear();
-	_mutationModel.clear();
+	_bifurcationModel.clear();
+	_bifurcationBinaryModel.clear();
 	_readAnchorRevcompModel.clear();
 	_readSizeDeltaTypeModel.clear();
 	_anchorPosDeltaTypeModel.clear();
@@ -371,18 +373,25 @@ void DnaEncoder::execute(){
 		smoothQuals();
 	}
 	
+	//bool isRandAnchorable = isReadAnchorable();
+	//if(!isRandAnchorable){
+	//	encodeNoAnchorRead();
+	//}
+	//else{
+
 	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
-	
+
 	if(anchorPos == -1)
 		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);  //unsynch
-	
+
 	//cout << anchorPos << endl;
-	
+
 	if(anchorPos == -1)
 		encodeNoAnchorRead();
 	else{
 		encodeAnchorRead(anchorPos, anchorAddress);
 	}
+	//}
 	
 	endRead();
 
@@ -573,6 +582,26 @@ int DnaEncoder::findExistingAnchor(u_int32_t* anchorAddress){
 	return -1;
 }
 
+bool DnaEncoder::isReadAnchorable(){
+	int nbKmerSolid = 0;
+	kmer_type kmer, kmerMin;
+
+	for(int i=0; i<_kmers.size(); i++){
+
+		kmer = _kmers[i];
+		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+
+		if(_bloom->contains(kmerMin)){
+			nbKmerSolid += 1;
+			i += _kmerSize;
+		}
+
+		if(nbKmerSolid >= 2) return true;
+	}
+
+	return nbKmerSolid >= 2;
+
+}
 
 void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef PRINT_DEBUG_ENCODER
@@ -633,8 +662,10 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		cout << "\t\t\tAnchor pos: " << anchorPos << endl;
 		cout << "\t\t\tAnchor: " << _kmers[anchorPos].toString(_kmerSize) << endl;
 	#endif
-	
+
 	_bifurcations.clear();
+	_binaryBifurcations.clear();
+	_bifurcationTypes.clear();
 	_errorPos.clear();
 
 	
@@ -644,7 +675,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		//i = buildBifurcationList(i, false);
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
-	
+
 	kmer = anchor;
 	for(int i=anchorPos+_kmerSize; i<_readSize; i++){
 		//cout << "Pos: " << i << endl;
@@ -680,14 +711,28 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		_prevErrorPos = _errorPos[i];
 	}
 	
-	for(int i=0; i<_bifurcations.size(); i++){
-		#ifdef LEON_PRINT_STAT
-			_rangeEncoder4.encode(_mutationModel, Leon::nt2bin(_bifurcations[i]));
-		#endif
-		//cout << Leon::nt2bin(_bifurcations[i]) << " ";
-		_rangeEncoder.encode(_mutationModel, Leon::nt2bin(_bifurcations[i]));
+	u_int64_t bifType0 = 0;
+	u_int64_t bifType1 = 0;
+	//cout << _bifurcationTypes.size() << " " << _bifurcations.size() << " " << _binaryBifurcations.size() << endl;
+	for(u_int8_t type : _bifurcationTypes){
+		if(type == 0){
+			#ifdef LEON_PRINT_STAT
+				_rangeEncoder4.encode(_bifurcationModel, _bifurcations[bifType0]);
+			#endif
+			//cout << Leon::nt2bin(_bifurcations[i]) << " ";
+			_rangeEncoder.encode(_bifurcationModel, _bifurcations[bifType0]);
+			bifType0 += 1;
+		}
+		else{
+			#ifdef LEON_PRINT_STAT
+				_rangeEncoder4.encode(_bifurcationBinaryModel, _binaryBifurcations[bifType1]);
+			#endif
+			//cout << Leon::nt2bin(_bifurcations[i]) << " ";
+			_rangeEncoder.encode(_bifurcationBinaryModel, _binaryBifurcations[bifType1]);
+			bifType1 += 1;
+		}
 	}
-	//cout << endl;
+
 	
 	
 }
@@ -695,7 +740,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightExtend){
 		
 	char nextNt = _readseq[pos];
-		
+	int nextNtBin = Leon::nt2bin(nextNt);
+
 	if(std::find(_Npos.begin(), _Npos.end(), pos) != _Npos.end()){
 		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
 		return kmer;
@@ -704,6 +750,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	
 	kmer_type kmerMin, uniqKmer;
 	int uniqNt;
+	//u_int8_t binNt2;
 	bool isKmerSolid = false;
 	
 	//kmer_type kmer;
@@ -737,6 +784,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		//mutatedKmer.printASCII(_kmerSize);
 		
 		if(res4[nt]){
+
 			kmer_type mutatedKmer = kmer;
 			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
 			
@@ -785,11 +833,84 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		else{
 			_MCuniqNoSolid += 1;
 			//_leon->_readWithAnchorMutationChoicesSize += 0.25;
-			_bifurcations.push_back(nextNt);
+			_bifurcations.push_back(nextNtBin);
 			_errorPos.push_back(pos);
+			_bifurcationTypes.push_back(0);
 		}
 		//codeSeedNT(&_kmerModel, &kmer, uniqNt, rightExtend);
 		return uniqKmer;
+	}
+	else if(indexedKmerCount == 2){
+
+		//_bifurcations.push_back(nextNtBin);
+
+		//cout << "Bin bifurc " << (int)nextNtBin << endl;
+
+		char nt1 = -1;
+		char nt2 = -1;
+
+		for(int nt=0; nt<4; nt++){
+			if(res4[nt]){
+				//cout << "\t" << nt << endl;
+				if(nt1 == -1)
+					nt1 = nt;
+				else if(nt2 == -1)
+					nt2 = nt;
+				else break;
+			}
+		}
+
+
+		if(nt1 == nextNtBin){
+			//cout << "\t0" << endl;
+			_binaryBifurcations.push_back(0);
+			_bifurcationTypes.push_back(1);
+			_MCmultipleSolid += 1;
+		}
+		else if(nt2 == nextNtBin){
+			//cout << "\t1" << endl;
+			_binaryBifurcations.push_back(1);
+			_bifurcationTypes.push_back(1);
+			_MCmultipleSolid += 1;
+		}
+		else{
+
+
+			//if(_sequence->getIndex() < 20)
+			//	cout << "\tallo" << endl;
+			_MCuniqNoSolid += 1;
+			nextNt = Leon::bin2nt(nt1);
+			_bifurcations.push_back(nextNtBin);
+			_errorPos.push_back(pos);
+			_bifurcationTypes.push_back(0);
+			//return uniqKmer;
+
+			/*
+			_MCuniqNoSolid += 1;
+			//nextNt = Leon::bin2nt(nt1);
+
+			_bifurcationTypes.push_back(0);
+			_bifurcations.push_back(nextNtBin);
+			_errorPos.push_back(pos);
+
+			nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
+			//cout << (int)nextNtBin << endl;
+			if(nextNtBin == -1){
+				nextNtBin = nt1;
+			}
+			nextNt = Leon::bin2nt(nextNtBin);
+			_bifurcations.push_back(nextNtBin);
+			_bifurcationTypes.push_back(0);*/
+
+		}
+		//cout << "PROBLEME IN BUILD BINARY BIFURCATION (DnaEncoder - buildBifurcationList)" << endl;
+
+		//if(_sequence->getIndex() < 10)
+		//	cout << (char) Leon::bin2nt(nextNtBin) << endl;;
+
+		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
+		return kmer;
+
 	}
 	else{
 		if(indexedKmerCount == 0){
@@ -845,11 +966,24 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 			}
 			else{
 				_MCmultipleNoSolid += 1;
+
+				/*
+				int memo = nextNtBin;
+				nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
+				if(nextNtBin == -1){
+					nextNtBin = memo;
+					nextNt = Leon::bin2nt(nextNtBin);
+				}
+				else{
+					nextNt = Leon::bin2nt(nextNtBin);
+				}*/
+
 			}
 		}
 		
 		//_leon->_readWithAnchorMutationChoicesSize += 0.25;
-		_bifurcations.push_back(nextNt);
+		_bifurcations.push_back(nextNtBin);
+		_bifurcationTypes.push_back(0);
 		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
 		return kmer;
 	}
@@ -858,166 +992,99 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	
 }
 
-bool DnaEncoder::extendMutaChain(kmer_type kmer, int pos, bool rightExtend){
-	return false;
-	
-	#ifdef PRINT_DEBUG_EXTMUTA
-		//if(_lala == 2) return false;
-	#endif
-	
-	_solidMutaChainStartPos = pos;
-			
-	#ifdef PRINT_DEBUG_EXTMUTA
-		cout << "Extend muta chain !!!" << endl;
-		cout << "\t" << _readseq << endl;
-		cout << "\tStart kmer: " << kmer.toString(_kmerSize) << endl;
-	#endif
-	
-	vector< vector< vector<kmer_type> > > mutaChains;
-	vector< vector<kmer_type> > mutas;
-	for(int i=0; i<4; i++) mutas.push_back(vector<kmer_type>());
-	
-	for(int nt=0; nt<4; nt++){
-		
-		kmer_type mutatedKmer = kmer;
-		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
-		kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-		
-		
-		if(_bloom->contains(mutatedKmerMin)){
-			
-			#ifdef PRINT_DEBUG_EXTMUTA
-				cout << "\t\tAlternatives: " << mutatedKmer.toString(_kmerSize) << endl;
-			#endif
-			
-			mutas[nt].push_back(mutatedKmer);
-			
-			//extendMutaChainRec(mutatedKmer, pos, rightExtend);
-		}
-	}
-	
-	mutaChains.push_back(mutas);
-	
-	return extendMutaChainRec(mutaChains, rightExtend);
-}
 
-bool DnaEncoder::extendMutaChainRec(vector< vector< vector<kmer_type> > >& mutaChains, bool rightExtend){
-	int pos = mutaChains.size();
-	_solidMutaChainSize = mutaChains.size();
-	
-	if(_solidMutaChainStartPos+pos >= _readSize || _solidMutaChainStartPos-pos < 0){
-		#ifdef PRINT_DEBUG_EXTMUTA
-			cout << "\t\t\t\t\tRead overflow" << endl;
-		#endif
-		_solidMutaChainSize += 1 ;
-		return false;
-	}
-		
-		
-	vector< vector<kmer_type> > mutas;
-	for(int i=0; i<4; i++) mutas.push_back(vector<kmer_type>());
-	
-	vector< vector<kmer_type> > mutatedKmers = mutaChains[pos-1];
-	
-	for(int NT=0; NT<4; NT++){
-		
-		for(int i=0; i < mutatedKmers[NT].size(); i++){
-			kmer_type kmer = mutatedKmers[NT][i];
-			
-			for(int nt=0; nt<4; nt++){
-				
-				kmer_type mutatedKmer = kmer;
-				codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
-				kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-				
-				if(_bloom->contains(mutatedKmerMin)){
-					mutas[nt].push_back(mutatedKmer);
-					
-					#ifdef PRINT_DEBUG_EXTMUTA
-						cout << "\t\t\tSuper alternatives: " << mutatedKmer.toString(_kmerSize) << endl;
-					#endif
-				}
-			}
-			
-			
-		}
-	}
-	mutaChains.push_back(mutas);
-	
-	_solidMutaChainSize = mutaChains.size();
+int DnaEncoder::getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend){
 
-	char originalNt;
-	int originalNtBin;
-	
-	if(rightExtend)
-		originalNt = _readseq[_solidMutaChainStartPos + pos];
-	else
-		originalNt = _readseq[_solidMutaChainStartPos - pos];
-	
-	originalNtBin = Leon::nt2bin(originalNt);
-	
-	#ifdef PRINT_DEBUG_EXTMUTA
-		cout << "\t\t\t\tOriginal nt at: " << originalNt << endl;
-	#endif
-	
-	
-	if(mutaChains[pos][originalNtBin].size() == 0){
-		#ifdef PRINT_DEBUG_EXTMUTA
-			cout << "\t\t\t\t\tOriginal nt is not solid" << endl;
-		#endif
-		return false;
-	}
-		
-	
-	bool fullUniq = true;
-	bool uniq = false;
-	//mutas = mutaChains[mutaChains.size()-1];
-	
-	for(int nt=0; nt<4; nt++){
-		
-		if(mutas[nt].size() == 1){
-			if(nt == originalNtBin){
-				uniq = true;
-			}
-			else{
-				fullUniq = false;
-			}
-		}
-		
-	}
-		
-	//cout << _sequence->getIndex() <<  "  Pos: " << _solidMutaChainStartPos + pos << endl;
 
-	
-	//cout << uniq << " " <<  fullUniq << endl;
-	if(uniq && fullUniq){
-		_solidMutaChainSize = pos;
-		#ifdef PRINT_DEBUG_EXTMUTA
-			cout << "\t\t\t\t\tMuta chain success" << endl;
-			_lala += 1;
-		#endif
-		return true;
+	char ntInRead = 0;
+	if(rightExtend){
+		if(pos+1 < _readSize){
+			ntInRead = _readseq[pos+1];
+		}
 	}
 	else{
-		if(pos > 10){
-			#ifdef PRINT_DEBUG_EXTMUTA
-				cout << "\t\t\t\t\tToo much extend" << endl;
-			#endif
-			return false;
+		if(pos-1 >= 0){
+			ntInRead = _readseq[pos-1];
 		}
-		return extendMutaChainRec(mutaChains, rightExtend);
 	}
-	
-	
-	
+
+	int ntInReadBin = Leon::nt2bin(ntInRead);
+
+
+	/*
+	//if(pos == 31){
+		cout << string(_readseq) << endl;
+		cout  << kmer.toString(_kmerSize) << endl;
+		cout << "\t" << pos << "   " << rightExtend << endl;
+		cout << "\t" << _readseq[pos] << "  " << ntInRead << endl;
+	//}*/
+
+	//int depth = 2;
+	int bestNt = -1;
+	bool isValid[4];
+	for(int i=0; i<4; i++){
+		isValid[i] = true;
+	}
+
+	//for(int j=0; j<depth; j++){
+
+	for(int nt=0; nt<4; nt++){
+
+		if(initRes4[nt]){
+
+			kmer_type mutatedKmer = kmer;
+			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+
+			bitset<4> res4  = _bloom->contains4(mutatedKmer, rightExtend);
+			int nbSolidKmer = 0;
+
+			for(int nt2=0; nt2<4; nt2++){
+
+				if(res4[nt2]){
+					nbSolidKmer += 1;
+
+					if(nt2 == ntInReadBin){
+						bestNt = nt;
+					}
+				}
+
+			}
+
+			if(nbSolidKmer != 1){
+				isValid[nt] = false;
+			}
+		}
+		else{
+			isValid[nt] = false;
+		}
+	}
+
+	//}
+
+	int nbAlternative = 0;
+	int uniqAlternative = -1;
+
+	for(int nt=0; nt<4; nt++){
+		if(isValid[nt]){
+			nbAlternative += 1;
+			uniqAlternative = nt;
+		}
+	}
+
+	if(nbAlternative == 1){
+		return uniqAlternative;
+	}
+
+	return bestNt;
 }
 
-int DnaEncoder::voteMutations(int pos, bool rightExtend){
+int DnaEncoder::voteMutations(int pos, int depth, bool rightExtend){
 	kmer_type kmer;
 	int maxScore = 0;
 	int votes[4];
 	
 	int bestNt;
+	bool isValid[4];
 	
 	//kmer_type mutatedKmers[4];
 	//vector<int> mutations;
@@ -1044,43 +1111,70 @@ int DnaEncoder::voteMutations(int pos, bool rightExtend){
 	//cout << _readseq << endl;
 	//cout << pos << ": " << kmer.toString(_kmerSize) << endl;
 	
+	/*
 	for(int nt=0; nt<4; nt++){
+
+		//mutatedKmer.printASCII(_kmerSize);
+
+		if(res4[nt]){
+
+			kmer_type mutatedKmer = kmer;
+			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+
+			indexedKmerCount += 1;
+			uniqNt = nt;
+			uniqKmer = mutatedKmer;
+
+
+			if(Leon::bin2nt(nt) == nextNt){
+				isKmerSolid = true;
+			}
+		}
+
+	}
+
+
+	//for(int nt=0; nt<4; nt++){
 		
 		kmer_type mutatedKmer = kmer;
 		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
 		kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
 		
-		for(int j=0; j<4; j++){
-			char nextNt;
-			//int kmerPos;
-			if(rightExtend){
-				if(pos+1+_kmerSize+j >= _readSize) break;
-				nextNt = _readseq[pos+1+_kmerSize+j];
+	for(int j=0; j<depth; j++){
+		//char nextNt;
+		//int kmerPos;
+		if(rightExtend){
+			if(pos+1+_kmerSize+j >= _readSize) break;
+			nextNt = _readseq[pos+1+_kmerSize+j];
+		}
+		else{
+			if(pos-2-j < 0) break;
+			nextNt = _readseq[pos-2-j];
+		}
+
+		std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+
+		for(int nt=0; nt<4; nt++){
+
+			if(res4[nt]){
+
 			}
-			else{
-				if(pos-2-j < 0) break;
-				nextNt = _readseq[pos-2-j];
-			}
-			//cout << j << ": " << nextNt << endl;
-			codeSeedNT(&_kmerModel, &mutatedKmer, nextNt, rightExtend);
-			kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-			
-			if(_bloom->contains(mutatedKmerMin)){
-				votes[nt] += 1;
-				if(votes[nt] > maxScore){
-					maxScore = votes[nt];
-					bestNt = nt;
-				}
+		}
+
+		//cout << j << ": " << nextNt << endl;
+		codeSeedNT(&_kmerModel, &mutatedKmer, nextNt, rightExtend);
+		kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+
+		if(_bloom->contains(mutatedKmerMin)){
+			votes[nt] += 1;
+			if(votes[nt] > maxScore){
+				maxScore = votes[nt];
+				bestNt = nt;
 			}
 		}
 	}
+	//}
 	
-	/*
-	cout << "---------------------" << endl;
-	for(int i=0; i<mutations.size(); i++){
-		int nt = mutations[i];
-		cout << bin2NT[nt] << " " << votes[nt] << endl;
-	}*/
 	
 	if(maxScore == 0){
 		//cout << "No best NT" << endl;
@@ -1088,7 +1182,7 @@ int DnaEncoder::voteMutations(int pos, bool rightExtend){
 	}
 	//else
 		//cout << "Best nt: " << bin2NT[bestNt] << endl;
-	
+	*/
 	return bestNt;
 	
 	
@@ -1463,7 +1557,7 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	}
 	
 	if(std::find(_errorPos.begin(), _errorPos.end(), pos) != _errorPos.end()){
-		nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_mutationModel));
+		nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_bifurcationModel));
 		//cout << "tap 0     " << nextNt << endl;
 		//_errorPos.erase(_errorPos.begin());
 		if(rightExtend){
@@ -1476,6 +1570,21 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		//if(nextNt == 'N') nextN
 		//resultKmer = kmer;
 		
+		/*
+		std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+		for(int nt=0; nt<4; nt++){
+			if(res4[nt]){
+				kmer_type mutatedKmer = kmer;
+				codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+
+				indexedKmerCount += 1;
+				uniqNt = nt;
+				uniqKmer = mutatedKmer;
+			}
+		}*/
+
+
+
 		for(int nt=0; nt<4; nt++){
 			//if(nt == original_nt){
 			//	continue;
@@ -1521,8 +1630,8 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 			indexedKmerCount += 1;
 			uniqNt = nt;
 			uniqKmer = mutatedKmer;
-			}
 		}
+	}
 		
 
 	
@@ -1552,8 +1661,37 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		//cout << "case 1         " << nextNt << endl;
 		resultKmer = uniqKmer;
 	}
+	else if(indexedKmerCount == 2){
+
+		char nt1 = -1;
+		char nt2 = -1;
+
+		for(int nt=0; nt<4; nt++){
+			if(res4[nt]){
+				if(nt1 == -1)
+					nt1 = nt;
+				else if(nt2 == -1)
+					nt2 = nt;
+				else break;
+			}
+		}
+
+		u_int8_t nextBinaryNt = _rangeDecoder.nextByte(_bifurcationBinaryModel);
+
+		//cout << (int)nextBinaryNt << endl;
+		if(nextBinaryNt == 0)
+			nextNt = Leon::bin2nt(nt1);
+		else
+			nextNt = Leon::bin2nt(nt2);
+
+		//cout << nextNt << endl;
+		resultKmer = kmer;
+		codeSeedNT(&_kmerModel, &resultKmer, nextNt, rightExtend);
+
+
+	}
 	else{
-		nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_mutationModel));
+		nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_bifurcationModel));
 		//cout << "case 2          "<< nextNt << endl;
 		resultKmer = kmer;
 		codeSeedNT(&_kmerModel, &resultKmer, nextNt, rightExtend);

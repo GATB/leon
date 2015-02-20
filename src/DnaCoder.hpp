@@ -67,7 +67,8 @@ class AbstractDnaCoder
 		
 		vector<Order0Model> _readSizeValueModel;
 		Order0Model _readAnchorRevcompModel;
-		Order0Model _mutationModel;
+		Order0Model _bifurcationModel;
+		Order0Model _bifurcationBinaryModel;
 		
 		Order0Model _noAnchorReadModel;
 		vector<Order0Model> _noAnchorReadSizeValueModel;
@@ -151,21 +152,25 @@ class DnaEncoder : AbstractDnaCoder
 		void execute();
 		
 		void buildKmers();
+		bool isReadAnchorable();
 		int findExistingAnchor(u_int32_t* anchorAddress);
 		
 		void encodeAnchorRead(int anchorPos, u_int32_t anchorAddress);
 		kmer_type buildBifurcationList(int pos, kmer_type kmer, bool rightExtend);
 		//int buildBifurcationList(int pos, bool rightExtend);
-		int voteMutations(int pos, bool rightExtend);
+		int voteMutations(int pos, int depth, bool rightExtend);
 		
 		void encodeNoAnchorRead();
-		
+
+		int getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend);
 		
 		Sequence* _sequence;
 		char* _readseq;
 		vector<kmer_type> _kmers;
 		KmerModel::Iterator _itKmer;
-		vector<int> _bifurcations;
+		vector<u_int8_t> _bifurcations;
+		vector<u_int8_t> _binaryBifurcations;
+		vector<u_int8_t> _bifurcationTypes;
 		
 		vector<int> _solidMutaChain;
 		int _solidMutaChainPos;
@@ -179,10 +184,6 @@ class DnaEncoder : AbstractDnaCoder
 		u_int64_t _MCmultipleSolid;
 		u_int64_t _MCmultipleNoSolid;
 	
-		
-		bool extendMutaChain(kmer_type kmer, int pos, bool rightExtend);
-		bool extendMutaChainRec(vector< vector< vector<kmer_type> > >& mutaChains, bool rightExtend);
-		
 		int _thread_id;
 
 		int _lala;
