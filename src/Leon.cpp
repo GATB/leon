@@ -116,7 +116,7 @@ _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T,
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0),
 _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0),
-_progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0)
+_progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0), _qualwriter(NULL)
 
 {
 _isFasta = true;
@@ -169,7 +169,7 @@ Leon::~Leon ()
 	setBlockWriter(0);
 	setInputBank (0);
 	
-	if(! _isFasta && _compress)
+	if(_qualwriter != NULL)
 		delete(_qualwriter);
 	
 	if (_progress_decode)  { delete _progress_decode; }
@@ -340,7 +340,8 @@ void Leon::createBloom (){
 	//modif ici pour virer les kmers < auto cutoff
     BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
-    
+	
+	printf ("bloom size %lli  bits per k %f  nbkemrs infile %lli \n",estimatedBloomSize,NBITS_PER_KMER,nbs);
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
     //Bloom<kmer_type>* bloom = builder.build (itKmers);
     
