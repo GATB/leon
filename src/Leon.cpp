@@ -576,7 +576,8 @@ void Leon::executeCompression(){
     
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
-    _outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
+    //_outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
+    _outputFilename = _inputFilename + ".leon";
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
 	if(! _isFasta)
@@ -808,16 +809,16 @@ void Leon::endCompression(){
 	
 	cout << "\t\tTotal Size: " << outputFileSize <<  "  (" <<  outputFileSize/1024LL/1024LL  << " MB)"<< endl;
 	std::cout.precision(4);
-	cout << "\tOverall Compression rate: " << (float)((double)outputFileSize / (double)inputFileSize) << endl;
+	cout << "\tOverall Compression rate: " << (float)((double)outputFileSize / (double)inputFileSize) << " (" << (float)((double)inputFileSize / (double)outputFileSize ) << ")"<< endl;
 	if(! _noHeader)
 	{
-		cout << "\t\tHeader: " << (float)_headerCompRate << endl;
+		cout << "\t\tHeader: " << (float)_headerCompRate << " (" << (float) (1/_headerCompRate) << ")" << endl;
 	}
 	else
 	{
 		cout << "\t\tHeader completely discarded, in '-seq-only' mode "  << endl;
 	}
-	cout << "\t\tDna: " << (float)_dnaCompRate << endl ;
+	cout << "\t\tDna: " << (float)_dnaCompRate << " (" << (float)(1/_dnaCompRate) << ")" << endl ;
 	if( _isFasta) cout << endl;
 	else
 	{
@@ -1416,7 +1417,13 @@ void Leon::executeDecompression(){
 	//_rangeDecoder.setInputFile(_descInputFile);
 	
 	//Output file
-    string prefix = System::file().getBaseName(_inputFilename);
+	string prefix = System::file().getBaseName(_inputFilename);;
+	while(prefix.find('.') != string::npos){
+		int lastindex = prefix.find_last_of(".");
+		prefix = prefix.substr(0, lastindex);
+	}
+
+    //string prefix = System::file().getBaseName(_inputFilename);
 	_outputFilename = dir + "/" + prefix;
 	
 	//Decode the first byte of the compressed file which is an info byte
@@ -1456,7 +1463,7 @@ if(_noHeader)
 	}
 	
 	_outputFile = System::file().newFile(_outputFilename, "wb"); 
-	
+
 	//Get kmer size
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -2539,7 +2546,13 @@ void Leon::endDecompression(){
 		cout << endl << "\tChecking decompressed file" << endl;
 		
 		string dir = System::file().getDirectory(_inputFilename);
-		string prefix = System::file().getBaseName(_inputFilename);
+
+		string prefix = System::file().getBaseName(_inputFilename);;
+		while(prefix.find('.') != string::npos){
+			int lastindex = prefix.find_last_of(".");
+			prefix = prefix.substr(0, lastindex);
+		}
+		//string prefix = System::file().getBaseName(_inputFilename);
 		
 		string originalFilename;
 		IBank* originalBank;
