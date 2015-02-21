@@ -61,9 +61,12 @@ class AbstractDnaCoder
 		vector<Order0Model> _anchorPosModel;
 		
 		vector<Order0Model> _numericModel;
+		vector<Order0Model> _leftErrorModel;
+		vector<Order0Model> _rightErrorModel;
 		
 		vector<Order0Model> _NposModel;
-		vector<Order0Model> _errorPosModel;
+		vector<Order0Model> _leftErrorPosModel;
+		vector<Order0Model> _rightErrorPosModel;
 		
 		vector<Order0Model> _readSizeValueModel;
 		Order0Model _readAnchorRevcompModel;
@@ -77,13 +80,16 @@ class AbstractDnaCoder
 		int _readSize;
 		KmerModel _kmerModel;
 		
-		vector<int> _errorPos;
+		vector<int> _leftErrorPos;
+		vector<int> _rightErrorPos;
 		vector<int> _Npos;
 		
 		void startBlock();
 		void endRead();
 		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
 		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
+
+		void addErrorPos(int pos, bool rightExtend);
 		
 		u_int64_t _seqId;
 		
@@ -182,7 +188,7 @@ class DnaEncoder : AbstractDnaCoder
 		u_int64_t _MCuniqNoSolid;
 		u_int64_t _MCnoAternative;
 		u_int64_t _MCmultipleSolid;
-		u_int64_t _MCmultipleNoSolid;
+		//u_int64_t _MCmultipleNoSolid;
 	
 		int _thread_id;
 

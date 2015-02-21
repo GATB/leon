@@ -63,8 +63,11 @@ _errorPosDeltaTypeModel(3)
 		_noAnchorReadSizeValueModel.push_back(Order0Model(256));
 		_readSizeValueModel.push_back(Order0Model(256));
 		_NposModel.push_back(Order0Model(256));
-		_errorPosModel.push_back(Order0Model(256));
+		_leftErrorPosModel.push_back(Order0Model(256));
+		_rightErrorPosModel.push_back(Order0Model(256));
 		_numericModel.push_back(Order0Model(256));
+		_leftErrorModel.push_back(Order0Model(256));
+		_rightErrorModel.push_back(Order0Model(256));
 	}
 	
 	
@@ -77,8 +80,11 @@ void AbstractDnaCoder::startBlock(){
 		_noAnchorReadSizeValueModel[i].clear();
 		_readSizeValueModel[i].clear();
 		_NposModel[i].clear();
-		_errorPosModel[i].clear();
+		_leftErrorPosModel[i].clear();
+		_rightErrorPosModel[i].clear();
 		_numericModel[i].clear();
+		_leftErrorModel[i].clear();
+		_rightErrorModel[i].clear();
 	}
 	_readTypeModel.clear();
 	_noAnchorReadModel.clear();
@@ -156,12 +162,19 @@ void AbstractDnaCoder::codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bo
 }
 
 
+void AbstractDnaCoder::addErrorPos(int pos, bool rightExtend){
+	if(rightExtend)
+		_rightErrorPos.push_back(pos);
+	else
+		_leftErrorPos.push_back(pos);
+}
+
 //====================================================================================
 // ** DnaEncoder
 //====================================================================================
 DnaEncoder::DnaEncoder(Leon* leon) :
 AbstractDnaCoder(leon), _itKmer(_kmerModel), _totalDnaSize(0), _readCount(0), _MCtotal(0), _readWithoutAnchorCount(0),
-_MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _MCmultipleNoSolid(0)
+_MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, _MCmultipleNoSolid(0)
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
@@ -184,7 +197,7 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _M
 DnaEncoder::DnaEncoder(const DnaEncoder& copy) :
 AbstractDnaCoder(copy._leon), _itKmer(_kmerModel),
  _totalDnaSize(0), _readCount(0), _MCtotal(0), _readWithoutAnchorCount(0),
-_MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0), _MCmultipleNoSolid(0)
+_MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, _MCmultipleNoSolid(0)
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
@@ -235,7 +248,7 @@ DnaEncoder::~DnaEncoder(){
 	__sync_fetch_and_add(&_leon->_MCuniqNoSolid, _MCuniqNoSolid);
 	__sync_fetch_and_add(&_leon->_MCnoAternative, _MCnoAternative);
 	__sync_fetch_and_add(&_leon->_MCmultipleSolid, _MCmultipleSolid);
-	__sync_fetch_and_add(&_leon->_MCmultipleNoSolid, _MCmultipleNoSolid);
+	//__sync_fetch_and_add(&_leon->_MCmultipleNoSolid, _MCmultipleNoSolid);
 	
 	#ifdef LEON_PRINT_STAT
 		__sync_fetch_and_add(&_leon->_anchorAdressSize, _rangeEncoder3.getBufferSize());
@@ -666,7 +679,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	_bifurcations.clear();
 	_binaryBifurcations.clear();
 	_bifurcationTypes.clear();
-	_errorPos.clear();
+	_leftErrorPos.clear();
+	_rightErrorPos.clear();
 
 	
 	kmer_type kmer = anchor;
@@ -696,10 +710,24 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	}
 	
 	//Encode the positions of sequencing errors
+	CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorModel, _leftErrorPos.size());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _rightErrorModel, _rightErrorPos.size());
+	_prevErrorPos = anchorPos-1;
+	for(int errorPos : _leftErrorPos){
+		CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, _prevErrorPos-errorPos);
+		_prevErrorPos = errorPos;
+	}
+	_prevErrorPos = anchorPos+_kmerSize;
+	for(int errorPos : _rightErrorPos){
+		CompressionUtils::encodeNumeric(_rangeEncoder, _rightErrorPosModel, errorPos-_prevErrorPos);
+		_prevErrorPos = errorPos;
+	}
+
+	/*
 	#ifdef LEON_PRINT_STAT
-		CompressionUtils::encodeNumeric(_rangeEncoder4, _numericSizeModel, _numericModel, _errorPos.size());
+		CompressionUtils::encodeNumeric(_rangeEncoder4, _numericSizeModel, _numericModel, _leftErrorPos.size()+_rightErrorPos.size());
 	#endif
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _errorPos.size());
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _leftErrorPos.size()+_rightErrorPos.size());
 	for(int i=0; i<_errorPos.size(); i++){
 		deltaType = CompressionUtils::getDeltaValue(_errorPos[i], _prevErrorPos, &deltaValue);
 		#ifdef LEON_PRINT_STAT
@@ -709,7 +737,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		_rangeEncoder.encode(_errorPosDeltaTypeModel, deltaType);
 		CompressionUtils::encodeNumeric(_rangeEncoder, _errorPosModel, deltaValue);
 		_prevErrorPos = _errorPos[i];
-	}
+	}*/
 	
 	u_int64_t bifType0 = 0;
 	u_int64_t bifType1 = 0;
@@ -748,8 +776,10 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		//return pos;
 	}
 	
-	kmer_type kmerMin, uniqKmer;
-	int uniqNt;
+	//kmer_type kmerMin;
+	kmer_type uniqKmer;
+	bool firstSolidKmer = false;
+	//int uniqNt;
 	//u_int8_t binNt2;
 	bool isKmerSolid = false;
 	
@@ -785,15 +815,20 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		
 		if(res4[nt]){
 
-			kmer_type mutatedKmer = kmer;
-			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
-			
 			indexedKmerCount += 1;
-			uniqNt = nt;
+
+			if(!firstSolidKmer){
+				firstSolidKmer = true;
+				uniqKmer = kmer;
+				codeSeedBin(&_kmerModel, &uniqKmer, nt, rightExtend);
+			}
+			/*
+			
+			//uniqNt = nt;
 			uniqKmer = mutatedKmer;
+			*/
 			
-			
-			if(Leon::bin2nt(nt) == nextNt){
+			if(nt == nextNtBin){
 				isKmerSolid = true;
 			}
 		}
@@ -826,90 +861,206 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	
 	_MCtotal +=1;
 	
-	if(indexedKmerCount == 1){
-		if(isKmerSolid){
+
+	if(isKmerSolid){
+
+		if(indexedKmerCount == 1){
 			_MCuniqSolid += 1;
+			return uniqKmer;
+		}
+		else if(indexedKmerCount == 2){
+
+			char nt1 = -1;
+			char nt2 = -1;
+
+			for(int nt=0; nt<4; nt++){
+				if(res4[nt]){
+					//cout << "\t" << nt << endl;
+					if(nt1 == -1)
+						nt1 = nt;
+					else if(nt2 == -1)
+						nt2 = nt;
+					else break;
+				}
+			}
+
+
+			if(nt1 == nextNtBin){
+				//cout << "\t0" << endl;
+				_binaryBifurcations.push_back(0);
+				_bifurcationTypes.push_back(1);
+				_MCmultipleSolid += 1;
+			}
+			else if(nt2 == nextNtBin){
+				//cout << "\t1" << endl;
+				_binaryBifurcations.push_back(1);
+				_bifurcationTypes.push_back(1);
+				_MCmultipleSolid += 1;
+			}
+			else{
+
+				//if(_sequence->getIndex() < 20)
+				//	cout << "\tallo" << endl;
+				//_MCuniqNoSolid += 1;
+				//nextNt = Leon::bin2nt(nt1);
+				//_bifurcations.push_back(nextNtBin);
+				//_errorPos.push_back(pos);
+				//_bifurcationTypes.push_back(0);
+				//return uniqKmer;
+
+				/*
+				_MCuniqNoSolid += 1;
+				//nextNt = Leon::bin2nt(nt1);
+
+				_bifurcationTypes.push_back(0);
+				_bifurcations.push_back(nextNtBin);
+				_errorPos.push_back(pos);
+
+				nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
+				//cout << (int)nextNtBin << endl;
+				if(nextNtBin == -1){
+					nextNtBin = nt1;
+				}
+				nextNt = Leon::bin2nt(nextNtBin);
+				_bifurcations.push_back(nextNtBin);
+				_bifurcationTypes.push_back(0);*/
+
+			}
+			//cout << "PROBLEME IN BUILD BINARY BIFURCATION (DnaEncoder - buildBifurcationList)" << endl;
+
+			//if(_sequence->getIndex() < 10)
+			//	cout << (char) Leon::bin2nt(nextNtBin) << endl;;
+
+			codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
+			return kmer;
+
+
+
+		}
+		else{
+
+			_bifurcations.push_back(nextNtBin);
+			_bifurcationTypes.push_back(0);
+			codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
+			return kmer;
+		}
+
+	}
+	else{
+
+
+		if(indexedKmerCount == 0){
+			//cout << "PAF_BREAK    " << pos << endl;
+			_MCnoAternative += 1;
+		}
+		else if(indexedKmerCount == 1){
+			//cout << "PAF_UNIQ    " << pos << endl;
+			_MCuniqNoSolid += 1;
+
+			//_leon->_readWithAnchorMutationChoicesSize += 0.25;
+
+			_bifurcations.push_back(nextNtBin);
+			_bifurcationTypes.push_back(0);
+			addErrorPos(pos, rightExtend);
+			//_errorPos.push_back(pos);
+			return uniqKmer;
+		}
+		else if(indexedKmerCount == 2){
+			//cout << "PAF_MULTIPLE    " << pos << endl;
+			_MCuniqNoSolid += 1;
+
+			//nextNt = Leon::bin2nt(nt1);
+			//_bifurcations.push_back(nextNtBin);
+			/*
+			int memo = nextNtBin;
+			nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
+			if(nextNtBin == -1){
+				nextNtBin = memo;
+				nextNt = Leon::bin2nt(nextNtBin);
+			}
+			else{
+				//_errorPos.push_back(pos);
+				//_bifurcations.push_back(nextNtBin);
+				//_bifurcationTypes.push_back(0);
+				nextNt = Leon::bin2nt(nextNtBin);
+			}*/
+
+			//encode error
+			_bifurcations.push_back(nextNtBin);
+			_bifurcationTypes.push_back(0);
+			addErrorPos(pos, rightExtend);
+
+			//get the first path in bufurcation
+			for(int nt=0; nt<4; nt++){
+				if(res4[nt]){
+					nextNtBin = nt;
+					nextNt = Leon::bin2nt(nt);
+					break;
+				}
+			}
+
+			codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
+			return kmer;
+			//return uniqKmer;
+			//_bifurcationTypes.push_back(0);
+
+			/*_bifurcations.push_back(nextNtBin);
+			_bifurcationTypes.push_back(0);
+
+			return uniqKmer;*/
 		}
 		else{
 			_MCuniqNoSolid += 1;
-			//_leon->_readWithAnchorMutationChoicesSize += 0.25;
-			_bifurcations.push_back(nextNtBin);
+			//cout << "PAF_MULTIPLE    " << pos << endl;
+			/*
 			_errorPos.push_back(pos);
+			_bifurcations.push_back(nextNtBin);
 			_bifurcationTypes.push_back(0);
+			_errorPos.push_back(pos);
+			return uniqKmer;*/
+
 		}
-		//codeSeedNT(&_kmerModel, &kmer, uniqNt, rightExtend);
-		return uniqKmer;
+
+		/*
+		if(indexedKmerCount != 0){
+			int memo = nextNtBin;
+			nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
+			if(nextNtBin == -1){
+				nextNtBin = memo;
+				nextNt = Leon::bin2nt(nextNtBin);
+			}
+			else{
+				_errorPos.push_back(pos);
+				_bifurcations.push_back(nextNtBin);
+				_bifurcationTypes.push_back(0);
+				nextNt = Leon::bin2nt(nextNtBin);
+			}
+
+			//if(indexedKmerCount == 1 && memo != nextNtBin){
+			//	cout << "ALLO" << endl;
+			//}
+		}*/
+
+
+		//_leon->_readWithAnchorMutationChoicesSize += 0.25;
+		_bifurcations.push_back(nextNtBin);
+		_bifurcationTypes.push_back(0);
+		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
+		return kmer;
+
 	}
-	else if(indexedKmerCount == 2){
+
+
+
+	/*
+
+	if(indexedKmerCount == 2){
 
 		//_bifurcations.push_back(nextNtBin);
 
 		//cout << "Bin bifurc " << (int)nextNtBin << endl;
 
-		char nt1 = -1;
-		char nt2 = -1;
 
-		for(int nt=0; nt<4; nt++){
-			if(res4[nt]){
-				//cout << "\t" << nt << endl;
-				if(nt1 == -1)
-					nt1 = nt;
-				else if(nt2 == -1)
-					nt2 = nt;
-				else break;
-			}
-		}
-
-
-		if(nt1 == nextNtBin){
-			//cout << "\t0" << endl;
-			_binaryBifurcations.push_back(0);
-			_bifurcationTypes.push_back(1);
-			_MCmultipleSolid += 1;
-		}
-		else if(nt2 == nextNtBin){
-			//cout << "\t1" << endl;
-			_binaryBifurcations.push_back(1);
-			_bifurcationTypes.push_back(1);
-			_MCmultipleSolid += 1;
-		}
-		else{
-
-
-			//if(_sequence->getIndex() < 20)
-			//	cout << "\tallo" << endl;
-			_MCuniqNoSolid += 1;
-			nextNt = Leon::bin2nt(nt1);
-			_bifurcations.push_back(nextNtBin);
-			_errorPos.push_back(pos);
-			_bifurcationTypes.push_back(0);
-			//return uniqKmer;
-
-			/*
-			_MCuniqNoSolid += 1;
-			//nextNt = Leon::bin2nt(nt1);
-
-			_bifurcationTypes.push_back(0);
-			_bifurcations.push_back(nextNtBin);
-			_errorPos.push_back(pos);
-
-			nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
-			//cout << (int)nextNtBin << endl;
-			if(nextNtBin == -1){
-				nextNtBin = nt1;
-			}
-			nextNt = Leon::bin2nt(nextNtBin);
-			_bifurcations.push_back(nextNtBin);
-			_bifurcationTypes.push_back(0);*/
-
-		}
-		//cout << "PROBLEME IN BUILD BINARY BIFURCATION (DnaEncoder - buildBifurcationList)" << endl;
-
-		//if(_sequence->getIndex() < 10)
-		//	cout << (char) Leon::bin2nt(nextNtBin) << endl;;
-
-		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
-		return kmer;
 
 	}
 	else{
@@ -920,54 +1071,11 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 			if(isKmerSolid){
 				_MCmultipleSolid += 1;
 				
-				/*
-				if(_solidMutaChainLockTime <= 0){
-					
-					if(extendMutaChain(kmer, pos, rightExtend)){
-						#ifdef PRINT_DEBUG_EXTMUTA
-							cout << "\t\t" << _solidMutaChainStartPos << " " << _solidMutaChainSize << endl;
-						#endif
-						if(rightExtend)
-							return pos + _solidMutaChainSize;
-						else
-							return pos - _solidMutaChainSize;
-					}
-					else{
-						_solidMutaChainLockTime = 1;
-						//cout << _solidMutaChainLockTime << endl;
-						//return pos;*/
-						/*
-						//cout << _solidMutaChainSize << endl;
-						if(rightExtend){
-							for(int i=_solidMutaChainStartPos; i<_solidMutaChainStartPos+_solidMutaChainSize-1; i++){
-								#ifdef PRINT_DEBUG_EXTMUTA
-									cout << _readseq[i] << endl;
-								#endif
-								_bifurcations.push_back(_readseq[i]);
-							}
-							return _solidMutaChainStartPos+_solidMutaChainSize-2;
-						}
-						else{
-							for(int i=_solidMutaChainStartPos; i>_solidMutaChainStartPos-_solidMutaChainSize+1; i--){
-								#ifdef PRINT_DEBUG_EXTMUTA
-									cout << _readseq[i] << endl;
-								#endif
-								_bifurcations.push_back(_readseq[i]);
-							}
-							return _solidMutaChainStartPos-_solidMutaChainSize+2;
-						}*//*
-					}
-				}
-				else{
-					if(_solidMutaChainLockTime > 0) _solidMutaChainLockTime -= 1;
-				}
-				*/
-					
 			}
 			else{
-				_MCmultipleNoSolid += 1;
+				//_MCmultipleNoSolid += 1;
 
-				/*
+
 				int memo = nextNtBin;
 				nextNtBin = getBestPath(pos, kmer, res4, rightExtend);
 				if(nextNtBin == -1){
@@ -976,17 +1084,12 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 				}
 				else{
 					nextNt = Leon::bin2nt(nextNtBin);
-				}*/
+				}
 
 			}
 		}
 		
-		//_leon->_readWithAnchorMutationChoicesSize += 0.25;
-		_bifurcations.push_back(nextNtBin);
-		_bifurcationTypes.push_back(0);
-		codeSeedNT(&_kmerModel, &kmer, nextNt, rightExtend);
-		return kmer;
-	}
+	}*/
 	
 	//return pos;
 	
@@ -1486,7 +1589,8 @@ void DnaDecoder::decodeAnchorRead(){
 		anchor = revcomp(anchor, _kmerSize);
 		
 	_currentSeq = anchor.toString(_kmerSize);	
-	_errorPos.clear();
+	_leftErrorPos.clear();
+	_rightErrorPos.clear();
 	_Npos.clear();
 	
 	//Decode N pos
@@ -1502,16 +1606,33 @@ void DnaDecoder::decodeAnchorRead(){
 	}
 	
 	//Decode error pos
-	u_int64_t errorPosCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	for(int i=0; i<errorPosCount; i++){
-		
-		deltaType = _rangeDecoder.nextByte(_errorPosDeltaTypeModel);
-		deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _errorPosModel); //reprise
-		u_int64_t errorPos = CompressionUtils::getValueFromDelta(deltaType, _prevErrorPos, deltaValue);
-		_errorPos.push_back(errorPos);
+	u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
+	u_int64_t nbRightError = CompressionUtils::decodeNumeric(_rangeDecoder, _rightErrorModel);
+	_prevErrorPos = anchorPos-1;
+	for(int i=0; i<nbLeftError; i++){
+		int deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorPosModel);
+		int errorPos = _prevErrorPos-deltaValue;
+		//deltaType = _rangeDecoder.nextByte(_errorPosDeltaTypeModel);
+		//deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _errorPosModel); //reprise
+		//u_int64_t errorPos = CompressionUtils::getValueFromDelta(deltaType, _prevErrorPos, deltaValue);
+		addErrorPos(errorPos, false);
+		//_errorPos.push_back(errorPos);
 		_prevErrorPos = errorPos;
 		//_errorPos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
 	}
+	_prevErrorPos = anchorPos+_kmerSize;
+	for(int i=0; i<nbRightError; i++){
+		int deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _rightErrorPosModel);
+		int errorPos = _prevErrorPos+deltaValue;
+		//deltaType = _rangeDecoder.nextByte(_errorPosDeltaTypeModel);
+		//deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _errorPosModel); //reprise
+		//u_int64_t errorPos = CompressionUtils::getValueFromDelta(deltaType, _prevErrorPos, deltaValue);
+		addErrorPos(errorPos, true);
+		//_errorPos.push_back(errorPos);
+		_prevErrorPos = errorPos;
+		//_errorPos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
+	}
+
 	
 	//Extend anchor to the left
 	kmer_type kmer = anchor;
@@ -1536,6 +1657,7 @@ void DnaDecoder::decodeAnchorRead(){
 kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	
 	u_int8_t nextNt;
+	//int nextNtBin;
 	kmer_type resultKmer;
 		
 	if(std::find(_Npos.begin(), _Npos.end(), pos) != _Npos.end()){
@@ -1556,55 +1678,49 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		return resultKmer;
 	}
 	
-	if(std::find(_errorPos.begin(), _errorPos.end(), pos) != _errorPos.end()){
-		nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_bifurcationModel));
-		//cout << "tap 0     " << nextNt << endl;
-		//_errorPos.erase(_errorPos.begin());
-		if(rightExtend){
-			_currentSeq += nextNt;
-		}
-		else{
-			_currentSeq.insert(_currentSeq.begin(), nextNt);
-		}
-		//cout << _currentSeq << endl;
-		//if(nextNt == 'N') nextN
-		//resultKmer = kmer;
-		
-		/*
-		std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
-		for(int nt=0; nt<4; nt++){
-			if(res4[nt]){
-				kmer_type mutatedKmer = kmer;
-				codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+	if(rightExtend){
+		if(std::find(_rightErrorPos.begin(), _rightErrorPos.end(), pos) != _rightErrorPos.end()){
+			nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_bifurcationModel));
 
-				indexedKmerCount += 1;
-				uniqNt = nt;
-				uniqKmer = mutatedKmer;
+			if(rightExtend)
+				_currentSeq += nextNt;
+			else
+				_currentSeq.insert(_currentSeq.begin(), nextNt);
+
+			std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+
+			for(int nt=0; nt<4; nt++){
+
+				if(res4[nt]){
+					kmer_type mutatedKmer = kmer;
+					codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+					return mutatedKmer;
+				}
 			}
-		}*/
-
-
-
-		for(int nt=0; nt<4; nt++){
-			//if(nt == original_nt){
-			//	continue;
-			//}
-			
-			kmer_type mutatedKmer = kmer;
-			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
-			kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-			
-			//mutatedKmer.printASCII(_kmerSize);
-			
-			if(_bloom->contains(mutatedKmerMin)){
-				return mutatedKmer;
-			}
-			
 		}
-	
-		//codeSeedNT(&_kmerModel, &resultKmer, nextNt, rightExtend);
-		//return resultKmer;
 	}
+	else{
+		if(std::find(_leftErrorPos.begin(), _leftErrorPos.end(), pos) != _leftErrorPos.end()){
+			nextNt = Leon::bin2nt(_rangeDecoder.nextByte(_bifurcationModel));
+
+			if(rightExtend)
+				_currentSeq += nextNt;
+			else
+				_currentSeq.insert(_currentSeq.begin(), nextNt);
+
+			std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+
+			for(int nt=0; nt<4; nt++){
+
+				if(res4[nt]){
+					kmer_type mutatedKmer = kmer;
+					codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+					return mutatedKmer;
+				}
+			}
+		}
+	}
+
 	
 		
 	//cout << kmer.toString(_kmerSize) << endl;

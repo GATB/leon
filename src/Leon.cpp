@@ -114,7 +114,7 @@ Tool("leon"),
 _generalModel(256),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
 _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
-_MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_MCmultipleNoSolid(0),_readWithoutAnchorCount(0),
+_MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_readWithoutAnchorCount(0),
 _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0),
 _progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0), _qualwriter(NULL)
 
@@ -495,7 +495,11 @@ void Leon::executeCompression(){
 
 	}
 
+
+    //_inputBank = Bank::singleton().createBank(_inputFilename);
+	setInputBank (Bank::open(_inputFilename));
 	
+	//cout << Bank::getType(_inputFilename) << endl;
 	
 	//guess filename extension
 	if( extension.compare("fa")==0 || extension.compare("fasta")==0 )
@@ -534,8 +538,6 @@ void Leon::executeCompression(){
 	_rangeEncoder.encode(_generalModel, infoByte);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
 	
-   // _inputBank = Bank::singleton().createBank(_inputFilename);
-	setInputBank (Bank::open(_inputFilename));
 
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
@@ -1092,7 +1094,7 @@ void Leon::endDnaCompression(){
 	cout << "\t\t\tBifurcation: " << ((_MCmultipleSolid*100)/(double)_MCtotal) << endl;
 	cout << "\t\t\tBreak: " << ((_MCnoAternative*100)/(double)_MCtotal) << endl;
 	cout << "\t\t\tError: " << ((_MCuniqNoSolid*100)/(double)_MCtotal) << endl;
-	cout << "\t\t\tOther: " << ((_MCmultipleNoSolid*100)/(double)_MCtotal) << endl;
+	//cout << "\t\t\tOther: " << ((_MCmultipleNoSolid*100)/(double)_MCtotal) << endl;
 	
 	//cout << "\t\tWith N: " << (_noAnchor_with_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;
 	//cout << "\t\tFull N: " << (_noAnchor_full_N_kmer_count*100) / _readWithoutAnchorCount << "%" << endl;

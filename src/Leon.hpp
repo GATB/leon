@@ -137,7 +137,7 @@ class Leon : public misc::impl::Tool
 		u_int64_t _MCuniqSolid;
 		u_int64_t _MCuniqNoSolid;
 		u_int64_t _MCmultipleSolid;
-		u_int64_t _MCmultipleNoSolid;
+		//u_int64_t _MCmultipleNoSolid;
 	
 		u_int64_t _blockCount;
 		//u_int64_t _noAnchor_full_N_kmer_count;
