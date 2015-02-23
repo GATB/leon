@@ -158,7 +158,8 @@ class Leon : public misc::impl::Tool
 
 		OrderedBlocks * _qualwriter;
 
-		 ProgressSynchro * _progress_decode;
+		// ProgressSynchro *
+		dp::IteratorListener * _progress_decode;
 	
 		void setBlockWriter (OrderedBlocks* blockwriter) { SP_SETATTR(blockwriter); }
 

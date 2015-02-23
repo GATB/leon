@@ -341,7 +341,7 @@ void Leon::createBloom (){
     BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
 	
-	printf ("bloom size %lli  bits per k %f  nbkemrs infile %lli \n",estimatedBloomSize,NBITS_PER_KMER,nbs);
+	//printf ("bloom size %lli  bits per k %f  nbkemrs infile %lli \n",estimatedBloomSize,NBITS_PER_KMER,nbs);
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
     //Bloom<kmer_type>* bloom = builder.build (itKmers);
     
@@ -1548,13 +1548,20 @@ void Leon::startDecompressionAllStreams(){
 	
 	///////////////
 	
+	switch (getInput()->getInt(STR_VERBOSE))
+	{
+		case 0: default:    _progress_decode =  new IteratorListener ();break;
+		case 1:             _progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );break;
+			
+		case 2:             _progress_decode = new ProgressSynchro ( new Progress ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );break;
+	}
 	
 	
 	cout << "\tBlock count: " << _blockCount/2 << endl;
 
 
-	delete _progress_decode;
-	_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );
+	//delete _progress_decode;
+	//_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );
 	_progress_decode->init();
 	
 	
