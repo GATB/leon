@@ -100,6 +100,7 @@ class AbstractDnaCoder
 		u_int64_t _prevAnchorAddress;
 		u_int64_t _prevNpos;
 		u_int64_t _prevErrorPos;
+		u_int64_t _prevNbLeftError;
 	
 		int _processedSequenceCount;
 };

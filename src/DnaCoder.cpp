@@ -710,15 +710,27 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	}
 	
 	//Encode the positions of sequencing errors
+	#ifdef LEON_PRINT_STAT
+		CompressionUtils::encodeNumeric(_rangeEncoder4, _leftErrorModel, _leftErrorPos.size());
+		CompressionUtils::encodeNumeric(_rangeEncoder4, _rightErrorModel, _rightErrorPos.size());
+	#endif
 	CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorModel, _leftErrorPos.size());
 	CompressionUtils::encodeNumeric(_rangeEncoder, _rightErrorModel, _rightErrorPos.size());
 	_prevErrorPos = anchorPos-1;
-	for(int errorPos : _leftErrorPos){
+	for(int i=0; i<_leftErrorPos.size(); i++){
+		u_int64_t errorPos = _leftErrorPos[i];
 		CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, _prevErrorPos-errorPos);
+		#ifdef LEON_PRINT_STAT
+			CompressionUtils::encodeNumeric(_rangeEncoder4, _leftErrorPosModel, _prevErrorPos-errorPos);
+		#endif
 		_prevErrorPos = errorPos;
 	}
 	_prevErrorPos = anchorPos+_kmerSize;
-	for(int errorPos : _rightErrorPos){
+	for(int i=0; i<_rightErrorPos.size(); i++){
+		u_int64_t errorPos = _rightErrorPos[i];
+		#ifdef LEON_PRINT_STAT
+			CompressionUtils::encodeNumeric(_rangeEncoder4, _rightErrorPosModel, errorPos-_prevErrorPos);
+		#endif
 		CompressionUtils::encodeNumeric(_rangeEncoder, _rightErrorPosModel, errorPos-_prevErrorPos);
 		_prevErrorPos = errorPos;
 	}
@@ -742,7 +754,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	u_int64_t bifType0 = 0;
 	u_int64_t bifType1 = 0;
 	//cout << _bifurcationTypes.size() << " " << _bifurcations.size() << " " << _binaryBifurcations.size() << endl;
-	for(u_int8_t type : _bifurcationTypes){
+	for(int i=0; i<_bifurcationTypes.size(); i++){
+		u_int8_t type = _bifurcationTypes[i];
 		if(type == 0){
 			#ifdef LEON_PRINT_STAT
 				_rangeEncoder4.encode(_bifurcationModel, _bifurcations[bifType0]);
