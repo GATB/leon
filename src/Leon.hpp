@@ -81,6 +81,8 @@ class Leon : public misc::impl::Tool
 		static const char* STR_DECOMPRESS;
 		static const char* STR_TEST_DECOMPRESSED_FILE;
 		static const char* STR_DNA_ONLY;
+		static const char* STR_NOHEADER;
+		static const char* STR_NOQUAL;
 	
 		size_t          _kmerSize;
 		string     _dskOutputFilename;
@@ -203,7 +205,6 @@ class Leon : public misc::impl::Tool
 		string _inputFilename;
 		string _outputFilename;
 	
-	void startDnaDeb();
 
 	//quals
 	string _FileQualname;
@@ -247,7 +248,6 @@ class Leon : public misc::impl::Tool
 		double _headerCompRate, _dnaCompRate, _qualCompRate;
 		
 		//Quals
-		void startQualDecompression();
 		u_int64_t _filePosQual;
 
 	
@@ -275,8 +275,7 @@ class Leon : public misc::impl::Tool
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
 
 		//Header decompression
-		void startHeaderDecompression();
-		
+	
 		string _headerOutputFilename;
 		ofstream* _headerOutputFile;
 		
@@ -285,7 +284,6 @@ class Leon : public misc::impl::Tool
 		pthread_mutex_t writeblock_mutex;
 
 		//DNA Decompression
-		void startDnaDecompression();
 		void decodeBloom();
 		void decodeAnchorDict();
 		
