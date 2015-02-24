@@ -70,7 +70,7 @@ void  OrderedBlocks::insert(u_int8_t* data, u_int64_t size, int blockId)
 {
 	DEBUG(("___ oblock insert bid %i \n",blockId));
 
-    size_t id;
+    size_t id ;
 	
     while (1)
     {

@@ -50,7 +50,7 @@ _readSizeDeltaTypeModel(3),
 _anchorPosDeltaTypeModel(3),
 _anchorAddressDeltaTypeModel(3),
 _NposDeltaTypeModel(3),
-_errorPosDeltaTypeModel(3)
+_errorPosDeltaTypeModel(3),_seqId(0)
 {
 	_leon = leon;
 	_bloom = _leon->_bloom;

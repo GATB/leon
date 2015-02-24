@@ -1411,7 +1411,13 @@ void Leon::executeDecompression(){
 
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
-		
+	
+
+if ( (_inputFile->rdstate() & std::ifstream::failbit ) != 0 )	
+{
+fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
+exit( EXIT_FAILURE);
+}
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
 	_descInputFile->seekg(0, _descInputFile->end);

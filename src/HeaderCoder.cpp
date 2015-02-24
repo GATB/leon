@@ -236,7 +236,7 @@ void AbstractHeaderCoder::startBlock(){
 // ** HeaderEncoder
 //====================================================================================
 HeaderEncoder::HeaderEncoder(Leon* leon) :
-AbstractHeaderCoder(leon) , _totalHeaderSize(0)
+AbstractHeaderCoder(leon) , _totalHeaderSize(0) ,_seqId(0)
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
@@ -246,7 +246,7 @@ AbstractHeaderCoder(leon) , _totalHeaderSize(0)
 }
 
 HeaderEncoder::HeaderEncoder(const HeaderEncoder& copy) :
-AbstractHeaderCoder(NULL), _totalHeaderSize(0)
+AbstractHeaderCoder(NULL), _totalHeaderSize(0),_seqId(0)
 {
 
 	
