@@ -604,7 +604,7 @@ void Leon::executeCompression(){
 	
 	if(! _isFasta)
 	{
-		_FileQualname = dir + "/" + System::file().getBaseName(prefix) + ".qual";
+		_FileQualname = _inputFilename + ".qual";
 		_FileQual = System::file().newFile(_FileQualname, "wb");
 		_qualwriter = new OrderedBlocks( _FileQual , _nb_cores ) ;
 	}
@@ -1446,10 +1446,10 @@ exit( EXIT_FAILURE);
 	
 	//Output file
 	string prefix = System::file().getBaseName(_inputFilename);;
-	while(prefix.find('.') != string::npos){
-		int lastindex = prefix.find_last_of(".");
-		prefix = prefix.substr(0, lastindex);
-	}
+	//while(prefix.find('.') != string::npos){
+	//	int lastindex = prefix.find_last_of(".");
+	//	prefix = prefix.substr(0, lastindex);
+	//}
 
     //string prefix = System::file().getBaseName(_inputFilename);
 	_outputFilename = dir + "/" + prefix;
@@ -1470,7 +1470,7 @@ exit( EXIT_FAILURE);
 	if(! _isFasta)
 	{
 		
-		_FileQualname =    dir + "/" +  System::file().getBaseName(_inputFilename) + ".qual";
+		_FileQualname =    dir + "/" +  System::file().getBaseName(_inputFilename) + ".fastq.qual";
 		_inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
 		cout << "\tQual filename: " << _FileQualname << endl;
 	}
@@ -1483,11 +1483,11 @@ if(_noHeader)
 	
 	if(_isFasta){
 		cout << "\tOutput format: Fasta" << endl;
-		_outputFilename += "_d.fasta";
+		_outputFilename += ".fasta.d";
 	}
 	else{
 		cout << "\tOutput format: Fastq" << endl;
-		_outputFilename += "_d.fastq";
+		_outputFilename += ".fastq.d";
 	}
 	
 	_outputFile = System::file().newFile(_outputFilename, "wb"); 
@@ -2024,10 +2024,10 @@ void Leon::endDecompression(){
 		string dir = System::file().getDirectory(_inputFilename);
 
 		string prefix = System::file().getBaseName(_inputFilename);;
-		while(prefix.find('.') != string::npos){
-			int lastindex = prefix.find_last_of(".");
-			prefix = prefix.substr(0, lastindex);
-		}
+		//while(prefix.find('.') != string::npos){
+		//	int lastindex = prefix.find_last_of(".");
+		//	prefix = prefix.substr(0, lastindex);
+		//}
 		//string prefix = System::file().getBaseName(_inputFilename);
 		
 		string originalFilename;
