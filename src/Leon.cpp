@@ -1180,6 +1180,7 @@ void Leon::writeBloom(){
 }
 
 void Leon::writeAnchorDict(){
+
 	_anchorRangeEncoder.flush();
 	
 	_dictAnchorFile->write( (const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
@@ -1220,6 +1221,7 @@ void Leon::writeAnchorDict(){
 	tempFile.close();
 	remove((_outputFilename + ".adtemp").c_str());
 	delete [] buffer;
+
 }
 
 bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
