@@ -153,7 +153,7 @@ class Leon : public misc::impl::Tool
 		//u_int64_t _readWithoutAnchorSize;
 		//u_int64_t _readWithAnchorSize;
 		//double _readWithAnchorMutationChoicesSize;
-		OAHash<kmer_type>* _kmerAbundance;
+		//Hash16<kmer_type>* _kmerAbundance;
 		
 		int   _nb_thread_living;
 		OrderedBlocks * _blockwriter;
@@ -199,7 +199,7 @@ class Leon : public misc::impl::Tool
 		
 		void execute ();
 		void createBloom ();
-		void createKmerAbundanceHash();
+		//void createKmerAbundanceHash();
 		
 		//Global compression
 		string _inputFilename;

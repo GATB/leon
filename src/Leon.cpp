@@ -304,9 +304,9 @@ void Leon::createBloom (){
 
 	
 	
-    double lg2 = log(2);
-    float NBITS_PER_KMER = log (16*_kmerSize*(lg2*lg2))/(lg2*lg2);
-    NBITS_PER_KMER = 12;
+    //double lg2 = log(2);
+    //float NBITS_PER_KMER = log (16*_kmerSize*(lg2*lg2))/(lg2*lg2);
+    int NBITS_PER_KMER = 12;
     
 	
     u_int64_t estimatedBloomSize = (u_int64_t) ((double)nbs * NBITS_PER_KMER);
@@ -406,7 +406,60 @@ void Leon::createBloom (){
 	cout << "Compressed Bloom size: " << outstring.size() << endl; */
 	
 
+    /*
+	#ifdef PRINT_DEBUG
+		cout << "\tFilling kmer abundance hash" << endl;
+	#endif
+
+	int ithresholds[4] = {200,50,20,10};
+	vector<int> thresholds(ithresholds, ithresholds + sizeof(ithresholds) / sizeof(int));
+	u_int64_t size = 0;
+	u_int64_t maxSizeMB = 500;
+	u_int64_t maxSizeB = maxSizeMB * MBYTE;
+	//u_int64_t absoluteMaxSize = (maxSize*3)/4;
+    //_kmerAbundance = new OAHash<kmer_type>(maxSize);
+    _kmerAbundance = new Hash16<kmer_type>(maxSizeMB);
+
+
+
+    //itKmers.reset();
+    //itKmers.first();
+    //KmerModel model(_kmerSize);
+
+    //IteratorFile<kmer_count> it(_dskOutputFilename);
+    itKmers = solidCollection.iterator();
+
+    for(int i=0; i<thresholds.size()-1; i++){
+		for (itKmers->first(); !itKmers->isDone(); itKmers->next()){
+			kmer_count count = itKmers->item();
+
+			if(count.abundance >= thresholds[i]){
+				if(i == 0 || count.abundance < thresholds[i-1]){
+					_kmerAbundance->insert(count.value, count.abundance);
+					//cout <<
+					//size += OAHash<kmer_type>::size_entry();
+					size += sizeof(kmer_type) + sizeof(int);
+				}
+			}
+
+			//cout << size << endl;
+			if(size > maxSizeB) break;
+			//if(size > absoluteMaxSize) break;
+		}
+
+		if(size > maxSizeB) break;
+		//if(size > absoluteMaxSize) break;
+	}
+
+	#ifdef PRINT_DEBUG
+		cout << "\t\tNeeded memory: " << size << endl;
+		cout << "\t\tAllocated memory: " << _kmerAbundance->memory_usage() << endl;
+	#endif
+
+	*/
+
 }
+/*
 
 void Leon::createKmerAbundanceHash(){
 	#ifdef PRINT_DEBUG
@@ -415,11 +468,11 @@ void Leon::createKmerAbundanceHash(){
 
 	int ithresholds[4] = {200,50,20,10};
 	vector<int> thresholds(ithresholds, ithresholds + sizeof(ithresholds) / sizeof(int));	
-	u_int64_t size = 0;
-	u_int64_t maxSize = 500000000;
-	u_int64_t absoluteMaxSize = (maxSize*3)/4;
-    _kmerAbundance = new OAHash<kmer_type>(maxSize);
-
+	//u_int64_t size = 0;
+	u_int64_t maxSizeMB = 500;
+	//u_int64_t absoluteMaxSize = (maxSize*3)/4;
+    //_kmerAbundance = new OAHash<kmer_type>(maxSize);
+    _kmerAbundance = new Hash16(maxSizeMB);
 
 
 	
@@ -441,10 +494,10 @@ void Leon::createKmerAbundanceHash(){
 			}
 	
 			//if(size > maxSize-100000) break;
-			if(size > absoluteMaxSize) break;
+			//if(size > absoluteMaxSize) break;
 		}
 		
-		if(size > absoluteMaxSize) break;
+		//if(size > absoluteMaxSize) break;
 	}
 
 	#ifdef PRINT_DEBUG
@@ -452,7 +505,7 @@ void Leon::createKmerAbundanceHash(){
 		cout << "\t\tAllocated memory: " << _kmerAbundance->memory_usage() << endl;
 	#endif
 }
-
+*/
 
 
 
@@ -1036,7 +1089,7 @@ void Leon::startDnaCompression(){
 	//_totalDnaCompressedSize = 0;
 	_compressedSize = 0;
 	
-	createKmerAbundanceHash();
+	//createKmerAbundanceHash();
     
 	//iterate on read sequences and compress headers
 	TIME_INFO (getTimeInfo(), "DNA compression");
@@ -1085,7 +1138,7 @@ void Leon::endDnaCompression(){
 	cout << "\t\tCompression rate: " << (float)_dnaCompRate << "  (" << _compressedSize << ")"<< endl;
 	std::cout.precision(2);
 	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "  (" << _bloom->getSize() << ")"<< endl;
-	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << "  (" << _anchorDictSize << ")"<< endl;
+	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << "  (" << _anchorDictSize << ")    (" << to_string(_anchorAdress) << " entries)" << endl;
 	u_int64_t readsSize = _anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize;
 	cout << "\t\t\tReads: " << ((readsSize*100) / (double)_compressedSize) << "  (" << readsSize<< ")"<< endl;
 	cout << "\t\t\t\tAnchor adress: " << ((_anchorAdressSize*100) / (double)_compressedSize) << "  (" << _anchorAdressSize << ")" << endl;
@@ -1273,39 +1326,85 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	}
 	return -1;
 	/////////////////////*/
-	
-	for(int i=0; i<kmers.size(); i++){
+
+	//int iMin = 40;
+	//int iMax = 60;
+	int iMin = kmers.size()/2;
+	int iMax = kmers.size()/2 + 10;
+	//cout << iMin << "  " << iMax << endl;
+	iMin = std::max(iMin, 0);
+	iMax = std::min(iMax, (int) kmers.size());
+
+	for(int i=iMin; i<iMax; i++){
+
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
-		
-		
-		/*
+
 		if(_bloom->contains(kmerMin)){
 			maxAbundance = 0;
 			bestPos = i;
 			bestKmer = kmerMin;
 			break;
 		}
-		*/
-		
-		int abundance;
-		if(_kmerAbundance->get(kmerMin, &abundance)){
-			if(abundance > maxAbundance){
-				maxAbundance = abundance;// + ((kmers.size()-i)*2);
+	}
+
+	if(maxAbundance == -1){
+
+		for(int i=0; i<iMin; i++){
+			kmer = kmers[i];
+			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+
+
+			if(_bloom->contains(kmerMin)){
+				maxAbundance = 0;
+				bestPos = i;
+				bestKmer = kmerMin;
+				break;
+			}
+		}
+
+
+		if(maxAbundance == -1){
+			for(int i=iMax; i<kmers.size(); i++){
+				kmer = kmers[i];
+				kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+
+				if(_bloom->contains(kmerMin)){
+					maxAbundance = 0;
+					bestPos = i;
+					bestKmer = kmerMin;
+					break;
+				}
+			}
+		}
+	}
+
+		/*
+		for(int i=0; i<kmers.size(); i++){
+
+			if(i > iMin && i < iMax) continue;
+
+
+
+			int abundance;
+			if(_kmerAbundance->get(kmerMin, &abundance)){
+				if(abundance > maxAbundance){
+					maxAbundance = abundance;// + ((kmers.size()-i)*2);
+					bestKmer = kmerMin;
+					bestPos = i;
+					//cout << maxAbundance << endl;
+					//cout << bestPos << " " << abundance << " " << kmer.toString(_kmerSize) << " " << revcomp(kmer, _kmerSize).toString(_kmerSize) << endl;
+				}
+				//cout << abundance << endl;
+			}
+			else if(maxAbundance == -1 && _bloom->contains(kmerMin)){
+				maxAbundance = _nks;
 				bestKmer = kmerMin;
 				bestPos = i;
 				//cout << maxAbundance << endl;
-				//cout << bestPos << " " << abundance << " " << kmer.toString(_kmerSize) << " " << revcomp(kmer, _kmerSize).toString(_kmerSize) << endl;
 			}
-			//cout << abundance << endl;
 		}
-		else if(maxAbundance == -1 && _bloom->contains(kmerMin)){
-			maxAbundance = _nks;
-			bestKmer = kmerMin;
-			bestPos = i;
-			//cout << maxAbundance << endl;
-		}
-	}
+	}*/
 	
 	if(maxAbundance == -1)
 	{
@@ -1324,6 +1423,14 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	//_anchorKmerCount += 1;
 	_anchorAdress += 1;
 	
+	/*
+	int val;
+	for(int i=0; i<kmers.size(); i++){
+		kmer = kmers[i];
+		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		_kmerAbundance->remove(kmerMin, &val);
+	}*/
+
 	pthread_mutex_unlock(&findAndInsert_mutex);
 	return bestPos;
 }

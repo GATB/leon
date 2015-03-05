@@ -43,6 +43,7 @@ GACGCGCCGATATAACGCGCTTTCCCGGCTTTTACCACGTCGTTGAGGGCTTCCAGCGTCTCTTCGATCGGCGTGTTGTA
 AbstractDnaCoder::AbstractDnaCoder(Leon* leon) :
 _kmerModel(leon->_kmerSize),
 _readTypeModel(2), //only 2 value in this model: read with anchor or without anchor
+//_isPrevReadAnchorableModel(2),
 _noAnchorReadModel(5), _bifurcationModel(5), //5value: A, C, G, T, N
 _bifurcationBinaryModel(2), //0 or 1 (lowest or highest bifurcation by alphabetical order)
 _readAnchorRevcompModel(2),
@@ -59,6 +60,7 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 	
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel.push_back(Order0Model(256));
+		//_isPrevReadAnchorablePosModel.push_back(Order0Model(256));
 		_anchorPosModel.push_back(Order0Model(256));
 		_noAnchorReadSizeValueModel.push_back(Order0Model(256));
 		_readSizeValueModel.push_back(Order0Model(256));
@@ -74,8 +76,11 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 }
 
 void AbstractDnaCoder::startBlock(){
+	//_prevSequences = NULL;
+
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel[i].clear();
+		//_isPrevReadAnchorablePosModel[i].clear();
 		_anchorPosModel[i].clear();
 		_noAnchorReadSizeValueModel[i].clear();
 		_readSizeValueModel[i].clear();
@@ -87,6 +92,7 @@ void AbstractDnaCoder::startBlock(){
 		//_rightErrorModel[i].clear();
 	}
 	_readTypeModel.clear();
+	//_isPrevReadAnchorableModel.clear();
 	_noAnchorReadModel.clear();
 	_bifurcationModel.clear();
 	_bifurcationBinaryModel.clear();
@@ -178,6 +184,9 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, 
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
+	//_distrib.resize(maxSequences);
+	//_outDistrib = 0;
+
 	//pour quals
 	if(! leon->_isFasta)
 	{
@@ -199,6 +208,10 @@ AbstractDnaCoder(copy._leon), _itKmer(_kmerModel),
  _totalDnaSize(0), _readCount(0), _MCtotal(0), _readWithoutAnchorCount(0),
 _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, _MCmultipleNoSolid(0)
 {
+
+	//_distrib.resize(maxSequences);
+	//_outDistrib = 0;
+
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
 	startBlock();
@@ -295,6 +308,11 @@ DnaEncoder::~DnaEncoder(){
 }
 
 void DnaEncoder::operator()(Sequence& sequence){
+
+	//if(_sequences.size() > maxSequences){
+	//	_sequences.pop_back();
+	//}
+
 	_sequence = &sequence;
 	//cout << _sequence->getIndex() << endl;
 	_seqId = _sequence->getIndex() ;
@@ -307,7 +325,9 @@ void DnaEncoder::operator()(Sequence& sequence){
 //	if(_sequence->getIndex() % Leon::READ_PER_BLOCK == 0){
 
 	execute();
-	
+
+	//_prevSequences = _sequence;
+	//_sequences.insert(_sequences.begin(), _sequence);
 
 	if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
 		
@@ -335,6 +355,12 @@ void DnaEncoder::writeBlock(){
 		_bufferQuals_idx = 0;
 	}
 	
+
+	//cout << "----------------------------------------------------" << endl;
+	//for(int i=0; i<_distrib.size(); i++){
+	//	cout << i << "    " << _distrib[i] << endl;
+	//}
+	//cout << "Adressed:    " << _outDistrib << endl;
 	/*
 	cout << "------------------------" << endl;
 	cout << "Read count:    " << _leon->_readCount << endl;
@@ -388,12 +414,8 @@ void DnaEncoder::execute(){
 		smoothQuals();
 	}
 	
-	//bool isRandAnchorable = isReadAnchorable();
-	//if(!isRandAnchorable){
-	//	encodeNoAnchorRead();
-	//}
-	//else{
 
+	//_isPrevReadAnchorable = false;
 	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
 
 	if(anchorPos == -1)
@@ -572,6 +594,30 @@ void DnaEncoder::buildKmers(){
 		_kmers.push_back(_itKmer->value());
 	}
 	
+
+	/*
+	unordered_set<u_int64_t> H;
+	for(kmer_type kmer : _kmers){
+		kmer_type kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		H.insert(kmerMin.getVal());
+	}
+
+	for(int i=0; i<_sequences.size(); i++){
+		Sequence* sequence = _sequences[i];
+
+		_itKmer.setData(sequence->getData());
+		for (_itKmer.first(); !_itKmer.isDone(); _itKmer.next()){
+			kmer_type kmerMin2 = min(_itKmer->value(), revcomp(_itKmer->value(), _kmerSize));
+			if(H.find(kmerMin2.getVal()) != H.end()){
+				_distrib[i] += 1;
+				return;
+			}
+		}
+	}
+
+	_outDistrib += 1;*/
+	//_sequences
+
 	//if(_sequence->getIndex() == 53445) cout << _Npos.size() << endl;
 	/*
 	if(_sequence->getIndex() == 29){
@@ -584,7 +630,34 @@ void DnaEncoder::buildKmers(){
 }
 
 int DnaEncoder::findExistingAnchor(u_int32_t* anchorAddress){
+
 	kmer_type kmer, kmerMin;
+
+	/*
+	if(_prevSequences != NULL){
+
+		unordered_map<u_int64_t, u_int64_t> H;
+		for(int i=0; i<_kmers.size(); i++){
+			kmer = _kmers[i];
+			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+			H[kmerMin.getVal()] = i;
+		}
+
+		_itKmer.setData(_prevSequences->getData());
+		int i = 0;
+		for (_itKmer.first(); !_itKmer.isDone(); _itKmer.next()){
+			kmer = _itKmer->value();
+			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+			if(H.find(kmerMin.getVal()) != H.end()){
+				_isPrevReadAnchorable = true;
+				_isPrevReadAnchorablePos = i;
+				return H[kmerMin.getVal()];
+			}
+			i += 1;
+		}
+
+	}*/
+
 	
 	for(int i=0; i<_kmers.size(); i++){
 		kmer = _kmers[i];
@@ -658,7 +731,15 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		CompressionUtils::encodeNumeric(_rangeEncoder3, _anchorAddressModel, anchorAddress);
 	#endif
 	//_rangeEncoder.encode(_anchorAddressDeltaTypeModel, deltaType);
+	//if(_isPrevReadAnchorable){
+		//	_rangeEncoder.encode(_isPrevReadAnchorableModel, 0);
+		//	CompressionUtils::encodeNumeric(_rangeEncoder, _isPrevReadAnchorablePosModel, _isPrevReadAnchorablePos);
+		//}
+		//else{
+		//_rangeEncoder.encode(_isPrevReadAnchorableModel, 1);
 	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressModel, anchorAddress);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _isPrevReadAnchorablePosModel, _isPrevReadAnchorablePos);
+		//}
 	//_prevAnchorAddress = anchorAddress;
 	//printf("anchor adress %i \n",anchorAddress);
 
@@ -699,7 +780,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
 		
-		
+
 	//Encode N positions
 	_prevNpos = 0;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _Npos.size());

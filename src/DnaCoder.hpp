@@ -30,7 +30,8 @@
 
 #include "OrderedBlocks.h"
 
-
+#include <unordered_set>
+#include <unordered_map>
 
 
 using namespace std;
@@ -55,6 +56,10 @@ class AbstractDnaCoder
 		Order0Model _errorPosDeltaTypeModel;
 		
 		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
+
+		//Sequence* _prevSequences;
+		//Order0Model _isPrevReadAnchorableModel;
+		//vector<Order0Model> _isPrevReadAnchorablePosModel;
 		
 		vector<Order0Model> _anchorAddressModel;
 		
@@ -140,6 +145,10 @@ class DnaEncoder : AbstractDnaCoder
 	int _bufferQuals_idx;
 	int _bufferQuals_size;
 	
+	//vector<Sequence*> _sequences;
+	//const int maxSequences = 1000;
+	//vector<u_int32_t> _distrib;
+	//u_int64_t _outDistrib;
 	
 	
 	
@@ -179,6 +188,9 @@ class DnaEncoder : AbstractDnaCoder
 		vector<u_int8_t> _binaryBifurcations;
 		vector<u_int8_t> _bifurcationTypes;
 		
+		//bool _isPrevReadAnchorable;
+		//u_int64_t _isPrevReadAnchorablePos;
+
 		vector<int> _solidMutaChain;
 		int _solidMutaChainPos;
 		u_int64_t _totalDnaSize;
