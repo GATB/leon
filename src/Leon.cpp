@@ -236,6 +236,9 @@ void Leon::execute()
     if(_decompress){
 		delete _inputFile;
 		delete _descInputFile;
+		delete _outputFile;
+		if(! _isFasta) delete _inputFileQual;
+		delete _bloom;
 	}
     
 }
@@ -1812,8 +1815,8 @@ void Leon::startDecompressionAllStreams(){
 			DnaDecoder* ddecoder = dnadecoders[j];
 			
 
-			std::istringstream  * stream_qual;
-			std::istringstream  * stream_header;
+			std::istringstream  * stream_qual = NULL;
+			std::istringstream  * stream_header = NULL;
 
 			if(! _isFasta)
 			{
@@ -1900,7 +1903,9 @@ void Leon::startDecompressionAllStreams(){
 			 
 			_outputFile->fwrite(output_buff.c_str(), output_buff.size(), 1);
 
-
+			if(stream_qual!= NULL) delete  stream_qual;
+			if(stream_header!= NULL) delete  stream_header;
+			
 			
 		}
 		
