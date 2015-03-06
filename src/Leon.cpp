@@ -194,8 +194,8 @@ void Leon::execute()
 		_lossless = true;
 		
 
-    //bool compress = false;
-    //bool decompress = false;
+    _compress = false;
+    _decompress = false;
     if(getParser()->saw (Leon::STR_COMPRESS)) _compress = true;
     if(getParser()->saw (Leon::STR_DECOMPRESS)) _decompress = true;
 	if((_compress && _decompress) || (!_compress && !_decompress)){
