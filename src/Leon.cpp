@@ -532,7 +532,7 @@ void Leon::executeCompression(){
 	#endif
 	
     _kmerSize      = getInput()->getInt (STR_KMER_SIZE);
-    _nks      = getInput()->get(STR_KMER_ABUNDANCE) ? getInput()->getInt(STR_KMER_ABUNDANCE) : 0;
+    _nks      = getInput()->get(STR_KMER_ABUNDANCE) ? getInput()->getInt(STR_KMER_ABUNDANCE) : 3;
 	//_nks           = getInput()->getInt (STR_KMER_ABUNDANCE);
     _inputFilename = getInput()->getStr (STR_URI_FILE);
     
