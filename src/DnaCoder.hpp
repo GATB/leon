@@ -27,11 +27,14 @@
 #include "Leon.hpp"
 //#include "CompressionUtils.hpp"
 
+//#define PRINT_DISTRIB
 
 #include "OrderedBlocks.h"
 
+#ifdef PRINT_DISTRIB
 #include <unordered_set>
 #include <unordered_map>
+#endif
 
 
 using namespace std;
@@ -145,10 +148,12 @@ class DnaEncoder : AbstractDnaCoder
 	int _bufferQuals_idx;
 	int _bufferQuals_size;
 	
-	//vector<Sequence*> _sequences;
-	//const int maxSequences = 1000;
-	//vector<u_int32_t> _distrib;
-	//u_int64_t _outDistrib;
+#ifdef PRINT_DISTRIB
+	vector<Sequence*> _sequences;
+	const int maxSequences = 100;
+	vector<u_int32_t> _distrib;
+	u_int64_t _outDistrib;
+#endif
 	
 	
 	

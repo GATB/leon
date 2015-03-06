@@ -31,14 +31,16 @@ using namespace std;
 int main (int argc, char* argv[])
 {
     // We dump some information about the gatb core library
-    std::cout << LibraryInfo::getInfo();
+    std::cout << LibraryInfo::getInfo() << endl;
 
-	bool compress =false;
-	bool decompress = false;
+
+	//bool compress =false;
+	//bool decompress = false;
 	
     // We define a try/catch block in case some method fails
     try
     {
+    	/*
 		if(argc < 2)
 		{
 			printf("Usage for leon\n");
@@ -72,14 +74,15 @@ int main (int argc, char* argv[])
 			if (strncmp("-c",argv[i],2)  == 0)  {  compress   = true;  }
             if (strncmp("-d",argv[i],2)  == 0)  {  decompress = true;  }
 		}
-		
-        Leon (compress, decompress).run (argc, argv);
+        Leon (compress, decompress).run (argc, argv);*/
+    	Leon ().run (argc, argv);
+
     }
     
-    catch (misc::impl::OptionFailure& e)
-    {
-        return e.displayErrors (cout);
-    }
+    //catch (misc::impl::OptionFailure& e)
+    //{
+    //   return e.displayErrors (cout);
+    //}
     
     catch (gatb::core::system::Exception& e)
     {

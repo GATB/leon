@@ -184,8 +184,10 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, 
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
-	//_distrib.resize(maxSequences);
-	//_outDistrib = 0;
+#ifdef PRINT_DISTRIB
+	_distrib.resize(maxSequences);
+	_outDistrib = 0;
+#endif
 
 	//pour quals
 	if(! leon->_isFasta)
@@ -209,8 +211,10 @@ AbstractDnaCoder(copy._leon), _itKmer(_kmerModel),
 _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, _MCmultipleNoSolid(0)
 {
 
-	//_distrib.resize(maxSequences);
-	//_outDistrib = 0;
+#ifdef PRINT_DISTRIB
+	_distrib.resize(maxSequences);
+	_outDistrib = 0;
+#endif
 
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 
@@ -309,9 +313,11 @@ DnaEncoder::~DnaEncoder(){
 
 void DnaEncoder::operator()(Sequence& sequence){
 
-	//if(_sequences.size() > maxSequences){
-	//	_sequences.pop_back();
-	//}
+#ifdef PRINT_DISTRIB
+	if(_sequences.size() > maxSequences){
+		_sequences.pop_back();
+	}
+#endif
 
 	_sequence = &sequence;
 	//cout << _sequence->getIndex() << endl;
@@ -327,7 +333,9 @@ void DnaEncoder::operator()(Sequence& sequence){
 	execute();
 
 	//_prevSequences = _sequence;
-	//_sequences.insert(_sequences.begin(), _sequence);
+#ifdef PRINT_DISTRIB
+	_sequences.insert(_sequences.begin(), _sequence);
+#endif
 
 	if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
 		
@@ -355,12 +363,14 @@ void DnaEncoder::writeBlock(){
 		_bufferQuals_idx = 0;
 	}
 	
+#ifdef PRINT_DISTRIB
+	cout << "----------------------------------------------------" << endl;
+	for(int i=0; i<_distrib.size(); i++){
+		cout << i << "    " << _distrib[i] << endl;
+	}
+	cout << "Adressed:    " << _outDistrib << endl;
+#endif
 
-	//cout << "----------------------------------------------------" << endl;
-	//for(int i=0; i<_distrib.size(); i++){
-	//	cout << i << "    " << _distrib[i] << endl;
-	//}
-	//cout << "Adressed:    " << _outDistrib << endl;
 	/*
 	cout << "------------------------" << endl;
 	cout << "Read count:    " << _leon->_readCount << endl;
@@ -595,7 +605,7 @@ void DnaEncoder::buildKmers(){
 	}
 	
 
-	/*
+#ifdef PRINT_DISTRIB
 	unordered_set<u_int64_t> H;
 	for(kmer_type kmer : _kmers){
 		kmer_type kmerMin = min(kmer, revcomp(kmer, _kmerSize));
@@ -615,7 +625,9 @@ void DnaEncoder::buildKmers(){
 		}
 	}
 
-	_outDistrib += 1;*/
+	_outDistrib += 1;
+#endif
+
 	//_sequences
 
 	//if(_sequence->getIndex() == 53445) cout << _Npos.size() << endl;

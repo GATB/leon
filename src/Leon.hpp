@@ -74,7 +74,8 @@ class Leon : public misc::impl::Tool
 {
 	public:
 		
-		Leon( bool compress, bool decompress);
+		//Leon( bool compress, bool decompress);
+		Leon();
 		~Leon();
 	
 		static const char* STR_COMPRESS;

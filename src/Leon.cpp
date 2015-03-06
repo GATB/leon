@@ -111,7 +111,8 @@ const char Leon::_nt2bin['N'] = {0};
 const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 */
 
-Leon::Leon ( bool compress, bool decompress) :
+//Leon::Leon ( bool compress, bool decompress) :
+Leon::Leon () :
 Tool("leon"),
 _generalModel(256),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
 _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
@@ -125,8 +126,8 @@ _isFasta = true;
 	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
 
     //_kmerSize(27)
-	_compress = compress;
-	_decompress = decompress;
+	//_compress = compress;
+	//_decompress = decompress;
 
 	/** We don't want default options of Tool (or we want to put them at a specific location). */
 	setParser (new OptionsParser ("leon"));
@@ -151,7 +152,7 @@ _isFasta = true;
 
     compressionParser->push_back (new OptionOneParam(STR_KMER_ABUNDANCE, "abundance threshold for solid kmers (default inferred)", false));
 	
-	compressionParser->push_back (new OptionNoParam (Leon::STR_DNA_ONLY, "store dna seq only, header and quals are discarded, will decompres to fasta (same as -noheader -noqual)", false));
+	compressionParser->push_back (new OptionNoParam (Leon::STR_DNA_ONLY, "store dna seq only, header and quals are discarded, will decompress to fasta (same as -noheader -noqual)", false));
 
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOQUAL, "discard quality scores", false));
@@ -195,10 +196,10 @@ void Leon::execute()
 	
     //bool compress = false;
     //bool decompress = false;
-    //if(getParser()->saw (Leon::STR_COMPRESS)) compress = true;
-    //if(getParser()->saw (Leon::STR_DECOMPRESS)) decompress = true;
+    if(getParser()->saw (Leon::STR_COMPRESS)) _compress = true;
+    if(getParser()->saw (Leon::STR_DECOMPRESS)) _decompress = true;
 	if((_compress && _decompress) || (!_compress && !_decompress)){
-		cout << "Choose one option among -c (compress) or -d (decompress)" << endl;
+		cout << "Choose one option among -c (compress) or -d (decompress)" << endl << endl;
 		return;
 	}
 
@@ -343,7 +344,10 @@ void Leon::createBloom (){
     //_bloomSize = estimatedBloomSize;
 	
 	if(_auto_cutoff)
-		printf("\tauto cutoff: %i   (total solids %lli)\n",_auto_cutoff,nbs);
+		cout << "Abundance threshold: " << _auto_cutoff << " (auto)    (nb solid kmers: " << nbs << ")"<< endl;
+		//printf("\tauto cutoff: %i   (total solids %lli)\n",_auto_cutoff,nbs);
+	else
+		cout << "Abundance threshold: " << _nks << "    (nb solid kmers: " << nbs << ")"<< endl;
 	
 	//modif ici pour virer les kmers < auto cutoff
     BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
@@ -528,7 +532,8 @@ void Leon::executeCompression(){
 	#endif
 	
     _kmerSize      = getInput()->getInt (STR_KMER_SIZE);
-	_nks           = getInput()->getInt (STR_KMER_ABUNDANCE_MIN);
+    _nks      = getInput()->get(STR_KMER_ABUNDANCE) ? getInput()->getInt(STR_KMER_ABUNDANCE) : 0;
+	//_nks           = getInput()->getInt (STR_KMER_ABUNDANCE);
     _inputFilename = getInput()->getStr (STR_URI_FILE);
     
 	#ifdef PRINT_DEBUG
@@ -1141,7 +1146,7 @@ void Leon::endDnaCompression(){
 	cout << "\t\tCompression rate: " << (float)_dnaCompRate << "  (" << _compressedSize << ")"<< endl;
 	std::cout.precision(2);
 	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "  (" << _bloom->getSize() << ")"<< endl;
-	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << "  (" << _anchorDictSize << ")    (" << to_string(_anchorAdress) << " entries)" << endl;
+	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << "  (" << _anchorDictSize << ")    (" << _anchorAdress << " entries)" << endl;
 	u_int64_t readsSize = _anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize;
 	cout << "\t\t\tReads: " << ((readsSize*100) / (double)_compressedSize) << "  (" << readsSize<< ")"<< endl;
 	cout << "\t\t\t\tAnchor adress: " << ((_anchorAdressSize*100) / (double)_compressedSize) << "  (" << _anchorAdressSize << ")" << endl;
