@@ -299,7 +299,7 @@ void Leon::createBloom (){
 	{
 		_auto_cutoff =0;
 		nbs  = nb_kmers_infile;
-
+		//printf("\tcutoff user: %i (total solids %lli) \n",_nks,nbs);
 	}
 	
 	
