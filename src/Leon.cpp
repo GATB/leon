@@ -298,7 +298,7 @@ void Leon::createBloom (){
 	{
 		_auto_cutoff =0;
 		nbs  = nb_kmers_infile;
-
+		printf("\tcutoff user: %i (total solids %lli) \n",_nks,nbs);
 	}
 	
 	
@@ -528,7 +528,7 @@ void Leon::executeCompression(){
 	#endif
 	
     _kmerSize      = getInput()->getInt (STR_KMER_SIZE);
-	_nks           = getInput()->getInt (STR_KMER_ABUNDANCE_MIN);
+	_nks           = getInput()->getInt (STR_KMER_ABUNDANCE);
     _inputFilename = getInput()->getStr (STR_URI_FILE);
     
 	#ifdef PRINT_DEBUG
