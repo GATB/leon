@@ -294,6 +294,7 @@ void Leon::createBloom (){
 		}
 		//////
 		
+
 	}
 	else
 	{
@@ -647,7 +648,7 @@ void Leon::executeCompression(){
         );
 
         sortingCount.getInput()->add (0, STR_VERBOSE, getInput()->getStr(STR_VERBOSE));
-
+        sortingCount.setMinAutoThreshold(4); // best compression ratio if min-abundance never below 4 (ie. each kmer of the graph is used by at least 4 reads)
         sortingCount.execute();
     }
 
