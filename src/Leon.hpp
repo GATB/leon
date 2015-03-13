@@ -114,6 +114,7 @@ class Leon : public misc::impl::Tool
 		u_int64_t _anchorDictSize;
 		u_int64_t _anchorAdressSize;
 		u_int64_t _anchorPosSize;
+		u_int64_t _otherSize;
 		u_int64_t _readSizeSize;
 		u_int64_t _bifurcationSize;
 		u_int64_t _noAnchorSize;

@@ -165,7 +165,8 @@ class DnaEncoder : AbstractDnaCoder
 			RangeEncoder _rangeEncoder2;
 			RangeEncoder _rangeEncoder3;
 			RangeEncoder _rangeEncoder4;
-			RangeEncoder _rangeEncoder5;			
+			RangeEncoder _rangeEncoder5;
+			RangeEncoder _rangeEncoder6;
 		#endif
 		
 		//static void encodeFirstHeader();
