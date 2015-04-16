@@ -583,43 +583,52 @@ void Leon::executeCompression(){
 	
 	//cout << Bank::getType(_inputFilename) << endl;
 	
-	//guess filename extension
-	if( extension.compare("fa")==0 || extension.compare("fasta")==0 )
-	//if(_inputFilename.find(".fa") !=  string::npos || _inputFilename.find(".fasta") !=  string::npos)
+	
+      if(_inputFilename.find(".fq") !=  string::npos || _inputFilename.find(".fastq") !=  string::npos)
 	{
-		//#ifdef PRINT_DEBUG
-			cout << "\tInput format: Fasta" << endl;
-		//#endif
-		infoByte |= 0x01;
-		_isFasta = true;
-	}
-	else //if(_inputFilename.find(".fq") !=  string::npos || _inputFilename.find(".fastq") !=  string::npos)
-		if( extension.compare("fq")==0 || extension.compare("fastq")==0 )
-	{
-			cout << "\tInput format: Fastq";
+		cout << "\tInput format: Fastq";
 		
 		if(! getParser()->saw (Leon::STR_DNA_ONLY) && ! getParser()->saw (Leon::STR_NOQUAL))
 		{
-		
-		if (_lossless)
-			cout << ", compressing qualities in lossless mode" << endl;
+			
+			if (_lossless)
+				cout << ", compressing qualities in lossless mode" << endl;
 			else
-		cout << ", compressing qualities in lossy mode (use -lossless for lossless compression)"<< endl;
+				cout << ", compressing qualities in lossy mode (use -lossless for lossless compression)"<< endl;
 			
 			_isFasta = false;
-
+			
 		}
 		
 		
 	}
-	else{
+	//attentio a l ordre, ".fa" est aussi present dans .fastq
+	else if (_inputFilename.find(".fa") !=  string::npos || _inputFilename.find(".fasta") !=  string::npos) {
+		//#ifdef PRINT_DEBUG
+		cout << "\tInput format: Fasta" << endl;
+		//#endif
+		infoByte |= 0x01;
+		_isFasta = true;
+		
+	}
+	else
+	{
 		cout << "\tUnknown input extension. Input extension must be one among fasta (.fa, .fasta) or fastq (.fq, .fastq)" << endl;
 		return;
 	}
 	
 	_rangeEncoder.encode(_generalModel, infoByte);
+	
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
 	
+	
+	u_int8_t version_major = LEON_VERSION_MAJOR;
+	u_int8_t version_minor = LEON_VERSION_MINOR;
+	u_int8_t version_patch = LEON_VERSION_PATCH;
+
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_major);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_minor);
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_patch);
 
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
@@ -682,7 +691,6 @@ void Leon::executeCompression(){
 	cout << "prefix " << prefix << endl;
 	cout << "dir " << dir << endl;
 	cout << "dskout  " << _dskOutputFilename << endl;
-
 #endif
 
 	
@@ -1617,6 +1625,21 @@ if(_noHeader)
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
 	cout << endl;
+	
+	//get version
+	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	
+
+	cout << "\tInput File was compressed with leon version " << version_major << "."  << version_minor << "."  << version_patch  << endl;
+	
+	
+//	if(version_major != LEON_VERSION_MAJOR || version_minor != LEON_VERSION_MINOR  || version_patch != LEON_VERSION_PATCH )
+//	{
+//		cout << "\tWarning diff version "   << endl;
+//	}
+	
 	
 	startDecompressionAllStreams();
 	

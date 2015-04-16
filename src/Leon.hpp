@@ -22,6 +22,11 @@
 #define __leon__Leon__
 
 
+#define LEON_VERSION_MAJOR 1
+#define LEON_VERSION_MINOR 0
+#define LEON_VERSION_PATCH 0
+
+
 //#define LEON_PRINT_STAT
 
 #include <iostream>

@@ -28,10 +28,29 @@ using namespace std;
 /********************************************************************************/
 
 
+void displayVersion(std::ostream& os){
+	
+	os << "* * * * * * * * * * * * * * * * * * * * * *" << endl;
+	os << "* Leon version "<< LEON_VERSION_MAJOR << "."
+	<< LEON_VERSION_MINOR << "."
+	<< LEON_VERSION_PATCH
+	<< "                      *" << endl; //<< " AGPL licence" <<endl;
+	os << "* Using gatb-core version "<< STR_LIBRARY_VERSION <<  "           *" << endl;
+	os << "* * * * * * * * * * * * * * * * * * * * * *" << endl;
+}
+
 int main (int argc, char* argv[])
 {
+	
+	
+	if(argc > 1 && (   strcmp(argv[1],STR_VERSION)==0 || strcmp(argv[1],"-v")==0    )     ){
+		displayVersion(cout);
+		return EXIT_FAILURE;
+	}
+	
+	
     // We dump some information about the gatb core library
-    std::cout << LibraryInfo::getInfo() << endl;
+   // std::cout << LibraryInfo::getInfo() << endl;
 
 
 	//bool compress =false;
