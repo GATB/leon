@@ -22,20 +22,28 @@ INSTALL
 	
 CHANGELOG
 
--version 0.1.2  Aug 10, 2014  
- initial public release
 
--version 0.2     Oct 31, 2014
- major performance improvement (about ~ 2 times faster)
+-version 1.0.0 April 16, 2015
+ bug fixes
+
+-version 0.3  March 19, 2015
+ added quality compression, and other optimizations
 
 -version 0.2.1  Dec 18, 2014
  bug fixes
 
+-version 0.2     Oct 31, 2014
+ major performance improvement (about ~ 2 times faster)
+
+-version 0.1.2  Aug 10, 2014  
+ initial public release
+
+
 MANUAL	 
 								
 1/ Description
-	Leon is a fasta read compressor using a probabilistic de Bruijn Graph, without the need of any reference genome.
-It currently does not compress qualities, if a fastq is compressed, it will be decompressed as a fasta.		
+	Leon is a fasta and fastq read compressor using a probabilistic de Bruijn Graph, without the need of any reference genome.
+It compresses qualities in lossy mode by default, by using information from k-mer counting. Downstream analysis on SNP calling compared to a gold standard showed the modification in qualities can in fact increase SNP calling performance (a little).		
 
 2/ Usage
 
@@ -52,9 +60,12 @@ Optional parameters
 
 
 Optional Compression parameters  
-    -kmer-size          :    kmer size  (default 31), currently should be <32 (or need to recompile, see below)
-    -abundance          :    minimal abundance threshold for solid kmers  (default: automatic)
-
+    -kmer-size   <int>  :    kmer size  (default 31), currently should be <32 (or need to recompile, see below)
+    -abundance   <int>  :    minimal abundance threshold for solid kmers  (default: automatic)
+    -lossless           :    switch to lossless compression for qualities (default is lossy. lossy has much higher compression rate, and the loss is in fact a gain. lossy is better!)
+    -seq-only         :    store dna sequence only, header and qualitiess are discarded, will decompress to fasta (same as -noheader -noqual)
+    -noheader         :    discard header
+    -noqual           :    discard quality scores
 
 
 Examples : 
