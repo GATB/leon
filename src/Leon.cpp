@@ -255,7 +255,6 @@ void Leon::createBloom (){
 	u_int64_t nbs = 0 ;
 	u_int64_t nb_kmers_infile;
 	
-	
 	//cout << _dskOutputFilename << endl;
 	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
 	LOCAL (storage);
@@ -269,13 +268,12 @@ void Leon::createBloom (){
 	//(System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
 
 	
-	
 	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
 		
 		//retrieve cutoff
 
 		
-		Collection<NativeInt64>& cutoff  = storage->getGroup("dsk").getCollection<NativeInt64> ("cutoff");
+		Collection<NativeInt64>& cutoff  = storage->getGroup("histogram").getCollection<NativeInt64> ("cutoff");
 		Iterator<NativeInt64>* iter = cutoff.iterator();
 		LOCAL (iter);
 		for (iter->first(); !iter->isDone(); iter->next())  {
@@ -286,7 +284,7 @@ void Leon::createBloom (){
 		//retrieve nb solids
 		
 		
-		Collection<NativeInt64>& storagesolid  = storage->getGroup("dsk").getCollection<NativeInt64> ("nbsolidsforcutoff");
+		Collection<NativeInt64>& storagesolid  = storage->getGroup("histogram").getCollection<NativeInt64> ("nbsolidsforcutoff");
 		Iterator<NativeInt64>* iter2 = storagesolid.iterator();
 		LOCAL (iter2);
 		for (iter2->first(); !iter2->isDone(); iter2->next())  {
@@ -354,7 +352,7 @@ void Leon::createBloom (){
 	//modif ici pour virer les kmers < auto cutoff
     BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
-	
+
 	//printf ("bloom size %lli  bits per k %f  nbkemrs infile %lli \n",estimatedBloomSize,NBITS_PER_KMER,nbs);
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
     //Bloom<kmer_type>* bloom = builder.build (itKmers);
@@ -642,23 +640,14 @@ void Leon::executeCompression(){
     /*************************************************/
 
     {
-        Storage* product = StorageFactory(STORAGE_HDF5).create (_dskOutputFilename, true, false);
-        LOCAL (product);
-
         /** We create a DSK instance and execute it. */
-        SortingCountAlgorithm<> sortingCount (
-            product,
-            _inputBank,
-            _kmerSize,
-            make_pair(_nks,~0),
-            getInput()->getInt(STR_MAX_MEMORY),
-            getInput()->getInt(STR_MAX_DISK),
-            getInput()->getInt(STR_NB_CORES),
-            gatb::core::tools::misc::KMER_SOLIDITY_DEFAULT
-        );
+        SortingCountAlgorithm<> sortingCount (_inputBank, getInput());
 
         sortingCount.getInput()->add (0, STR_VERBOSE, getInput()->getStr(STR_VERBOSE));
-        sortingCount.setMinAutoThreshold(4); // best compression ratio if min-abundance never below 4 (ie. each kmer of the graph is used by at least 4 reads)
+
+        // best compression ratio if min-abundance never below 4 (ie. each kmer of the graph is used by at least 4 reads)
+        getInput()->setInt (STR_KMER_ABUNDANCE_MIN_THRESHOLD, 4);
+
         sortingCount.execute();
     }
 
