@@ -3,65 +3,95 @@ project(leon)
 cmake_minimum_required(VERSION 2.6)
 
 ################################################################################
+# The version number.
+################################################################################
+SET (gatb-tool_VERSION_MAJOR 1)
+SET (gatb-tool_VERSION_MINOR 0)
+SET (gatb-tool_VERSION_PATCH 0)
+
+IF (DEFINED MAJOR)
+    SET (gatb-tool_VERSION_MAJOR ${MAJOR})
+ENDIF()
+IF (DEFINED MINOR)
+    SET (gatb-tool_VERSION_MINOR ${MINOR})
+ENDIF()
+IF (DEFINED PATCH)
+    SET (gatb-tool_VERSION_PATCH ${PATCH})
+ENDIF()
+
+set (gatb-tool-version ${gatb-tool_VERSION_MAJOR}.${gatb-tool_VERSION_MINOR}.${gatb-tool_VERSION_PATCH})
+
+
+################################################################################
 # Define cmake modules directory
 ################################################################################
-FOREACH (path "cmake" "../../cmake")
-    IF (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
-        SET (CMAKE_MODULE_PATH  "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/${path}")
-    ENDIF()
-ENDFOREACH(path)
+SET (GATB_CORE_HOME  ${PROJECT_SOURCE_DIR}/thirdparty/gatb-core/gatb-core)
+SET (CMAKE_MODULE_PATH ${GATB_CORE_HOME}/cmake)
+
+################################################################################
+# SUPPORTED KMER SIZES
+################################################################################
+
+# One can uncomment this line and set the wanted values
+#set (KSIZE_LIST "32   64   96  128  160  192  224  256")
 
 ################################################################################
 # THIRD PARTIES
 ################################################################################
 
 # We don't want to install some GATB-CORE artifacts
- SET (GATB_CORE_EXCLUDE_TOOLS     1)
- SET (GATB_CORE_EXCLUDE_TESTS     1)
- SET (GATB_CORE_EXCLUDE_EXAMPLES  1)
+SET (GATB_CORE_EXCLUDE_TOOLS     1)
+SET (GATB_CORE_EXCLUDE_TESTS     1)
+SET (GATB_CORE_EXCLUDE_EXAMPLES  1)
 
 # GATB CORE
 include (GatbCore)
 
-# LEON
-#LOOKUP_PATH ("leon" "../leon;thirdparty/leon" ${PROJECT_SOURCE_DIR} LEON_PATH)
-#LIST (APPEND CPACK_SOURCE_INSTALLED_DIRECTORIES  "${LEON_PATH}" "thirdparty/leon") 
-
 ################################################################################
-# TOOL
+# TOOLS
 ################################################################################
 
-# we get compilation definitions from the gatb-core part
+# We add the compilation options for the library
 add_definitions (${gatb-core-flags})
 
-# we give the headers directories from : 
-#       - from project source 
-#       - from GATB-CORE source
-#       - from dsk source 
-include_directories (src  ${gatb-core-includes}  ${LEON_PATH}/src)
+# We add the gatb-core include directory
+include_directories (${gatb-core-includes})
 
-# we define the files to be compiled
-file (GLOB_RECURSE  ProjectFiles  src/* ${LEON_PATH}/src/RangeCoder.* ${LEON_PATH}/src/HeaderCoder.* ${LEON_PATH}/src/DnaCoder.*)
+# We add the path for extra libraries
+link_directories (${gatb-core-extra-libraries-path})
 
-# we define the artifact to be built: the project binary
-add_executable        (${PROJECT_NAME}  ${ProjectFiles})
+set (PROGRAM_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
+include_directories (${PROGRAM_SOURCE_DIR})
+file (GLOB_RECURSE  ProjectFiles  ${PROGRAM_SOURCE_DIR}/*.cpp)
+add_executable(${PROJECT_NAME} ${ProjectFiles})
+target_link_libraries(${PROJECT_NAME} ${gatb-core-libraries})
 
-# we define which libraries to be linked with project binary
-target_link_libraries (${PROJECT_NAME}  ${gatb-core-libraries})
 
 ################################################################################
-#  PACKAGING 
+# DELIVERY
 ################################################################################
 
-# We chose the kind of archive we want to generate
-SET (CPACK_GENERATOR            "TGZ")
-SET (CPACK_SOURCE_GENERATOR     "TGZ")
+# We set the version number
+SET (CPACK_PACKAGE_DESCRIPTION_SUMMARY  "gatb-tool ${PROJECT_NAME}")
+SET (CPACK_PACKAGE_VENDOR               "Genscale team (INRIA)")
+SET (CPACK_PACKAGE_VERSION_MAJOR        "${gatb-tool_VERSION_MAJOR}")
+SET (CPACK_PACKAGE_VERSION_MINOR        "${gatb-tool_VERSION_MINOR}")
+SET (CPACK_PACKAGE_VERSION_PATCH        "${gatb-tool_VERSION_PATCH}")
+SET (CPACK_PACKAGE_VERSION              "${gatb-tool-version}")  
 
-# We copy the project binary to the 'bin' directory
+# We set the kind of archive
+SET (CPACK_GENERATOR                    "TGZ")
+SET (CPACK_SOURCE_GENERATOR             "TGZ")
+
+# We ignore unwated files for the source archive
+SET (CPACK_SOURCE_IGNORE_FILES          
+    "^${PROJECT_SOURCE_DIR}/build/"  
+    "^${GATB_CORE_HOME}/.project"
+    "^${GATB_CORE_HOME}/.gitignore"
+    "^${GATB_CORE_HOME}/doc/design"
+    "^${GATB_CORE_HOME}/DELIVERY.md"
+)
+
 INSTALL (TARGETS ${PROJECT_NAME} DESTINATION bin)
 
-# For the source archive, we exclude some unwanted directories.
-SET (CPACK_SOURCE_IGNORE_FILES  ${CPACK_SOURCE_IGNORE_FILES} "/build/" ".gitignore$")
-
-# To be done at the end. 
-INCLUDE (Delivery)
+include (CPack)
