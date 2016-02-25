@@ -1,4 +1,9 @@
-#CMake is required to compile leon (http://www.cmake.org/cmake/resources/software.html)
+# CMake is required to compile leon (http://www.cmake.org/cmake/resources/software.html)
+
+# prepare gatb-core submodule; of already done, thes lines do nothing.
+git submodule init
+git submodule update
+
 #you can install leon by executing this file:  sh INSTALL
 # Prepare directories:
 mkdir  build

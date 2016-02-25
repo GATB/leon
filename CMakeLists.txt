@@ -61,6 +61,8 @@ include_directories (${gatb-core-includes})
 link_directories (${gatb-core-extra-libraries-path})
 
 set (PROGRAM_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 include_directories (${PROGRAM_SOURCE_DIR})
 file (GLOB_RECURSE  ProjectFiles  ${PROGRAM_SOURCE_DIR}/*.cpp)
 add_executable(${PROJECT_NAME} ${ProjectFiles})
@@ -85,13 +87,24 @@ SET (CPACK_SOURCE_GENERATOR             "TGZ")
 
 # We ignore unwated files for the source archive
 SET (CPACK_SOURCE_IGNORE_FILES          
-    "^${PROJECT_SOURCE_DIR}/build/"  
-    "^${GATB_CORE_HOME}/.project"
-    "^${GATB_CORE_HOME}/.gitignore"
-    "^${GATB_CORE_HOME}/doc/design"
+    "^${PROJECT_SOURCE_DIR}/\\.git/"     ;
+    "^${PROJECT_SOURCE_DIR}/\\.gitmodules"  ;
+    "^${PROJECT_SOURCE_DIR}/\\.gitignore";
+    "^${PROJECT_SOURCE_DIR}/build/"  ;
+    "^${GATB_CORE_HOME}/\\.cproject" ;
+    "^${GATB_CORE_HOME}/\\.git/"     ;
+    "^${GATB_CORE_HOME}/\\.project"  ;
+    "^${GATB_CORE_HOME}/\\.gitignore";
+    "^${GATB_CORE_HOME}/doc/design"  ;
     "^${GATB_CORE_HOME}/DELIVERY.md"
 )
 
+# We copy some files to the binary archive
 INSTALL (TARGETS ${PROJECT_NAME} DESTINATION bin)
+INSTALL (DIRECTORY "${PROJECT_SOURCE_DIR}/data/" DESTINATION "data")
+INSTALL (FILES LICENSE README scripts/simple_test.sh DESTINATION bin/..)
+
+# We include the "bin" tag into binary archive file name
+set (CPACK_PACKAGE_FILE_NAME  ${PROJECT_NAME}-${CPACK_PACKAGE_VERSION}-bin-${CMAKE_SYSTEM_NAME})
 
 include (CPack)
