@@ -246,8 +246,6 @@ void Leon::execute()
 
 void Leon::createBloom (){
     TIME_INFO (getTimeInfo(), "fill bloom filter");
-    
-	
 	
 	//u_int64_t solidFileSize
 	
@@ -267,11 +265,9 @@ void Leon::createBloom (){
 	nb_kmers_infile = solidCollection.getNbItems();
 	//(System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
 
-	
 	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
 		
 		//retrieve cutoff
-
 		
 		Collection<NativeInt64>& cutoff  = storage->getGroup("histogram").getCollection<NativeInt64> ("cutoff");
 		Iterator<NativeInt64>* iter = cutoff.iterator();
@@ -282,7 +278,6 @@ void Leon::createBloom (){
 		//////
 		
 		//retrieve nb solids
-		
 		
 		Collection<NativeInt64>& storagesolid  = storage->getGroup("histogram").getCollection<NativeInt64> ("nbsolidsforcutoff");
 		Iterator<NativeInt64>* iter2 = storagesolid.iterator();
@@ -660,12 +655,22 @@ void Leon::executeCompression(){
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
     //_outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
-    _outputFilename = _inputFilename + ".leon";
+	string baseOutputname;
+	if(extension.find("gz") !=string::npos)
+	{
+		baseOutputname = dir + "/" + System::file().getBaseName(_inputFilename) ;
+	}
+	else
+	{
+		baseOutputname = _inputFilename;
+	}
+	_outputFilename = baseOutputname + ".leon";
+
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
 	if(! _isFasta)
 	{
-		_FileQualname = _inputFilename + ".qual";
+		_FileQualname = baseOutputname + ".qual";
 		_FileQual = System::file().newFile(_FileQualname, "wb");
 		_qualwriter = new OrderedBlocks( _FileQual , _nb_cores ) ;
 	}
@@ -724,7 +729,7 @@ void Leon::endQualCompression(){
 void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID){
 
 	
-	//printf("write block lena block %i  insize %i \n ",blockID,size);
+	//printf("write block  lena block %i  insize %i \n ",blockID,size);
 	//zlib compression for the quals
 	
 	z_stream zs;
@@ -766,11 +771,8 @@ void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCou
 	
 	//_qualwriter->insert((u_int8_t*) data, size ,blockID);
 
-	
 	_qualwriter->insert((u_int8_t*) outstring.data(), outstring.size() ,blockID);
 	_qualwriter->incDone(1);
-	
-	
 	
 	
 	pthread_mutex_lock(&writeblock_mutex);
@@ -1534,27 +1536,32 @@ void * decoder_qual_thread(void * args)
 }
 
 void Leon::executeDecompression(){
-
+	
 	_filePos = 0;
 	
 	cout << "Start decompression" << endl;
-    _inputFilename = getInput()->getStr(STR_URI_FILE);
-    //string inputFilename = prefix + ".txt"; //".leon"
+	_inputFilename = getInput()->getStr(STR_URI_FILE);
+	//string inputFilename = prefix + ".txt"; //".leon"
 	//_outputFile = System::file().newFile(outputFilename, "wb");
 	cout << "\tInput filename: " << _inputFilename << endl;
 	
 	
 	string dir = System::file().getDirectory(_inputFilename);
-
+	
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	
+	
+	if ( (_inputFile->rdstate() & std::ifstream::failbit ) != 0 )
+	{
+		fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
+		exit( EXIT_FAILURE);
+	}
+	
+	//remove .leon at the end :
+	string inputFilename_leon_removed = System::file().getBaseName(_inputFilename);
 
-if ( (_inputFile->rdstate() & std::ifstream::failbit ) != 0 )	
-{
-fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
-exit( EXIT_FAILURE);
-}
+	
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
 	_descInputFile->seekg(0, _descInputFile->end);
@@ -1563,15 +1570,19 @@ exit( EXIT_FAILURE);
 	//_rangeDecoder.setInputFile(_descInputFile);
 	
 	//Output file
-	string prefix = System::file().getBaseName(_inputFilename);;
+	string prefix = System::file().getBaseName(inputFilename_leon_removed); // for prefix need to remove two dots : .fastq.leon , but not all of them if another dot in the filename (it happened, mail from angry users)
 	//while(prefix.find('.') != string::npos){
 	//	int lastindex = prefix.find_last_of(".");
 	//	prefix = prefix.substr(0, lastindex);
 	//}
+	//printf("dir %s \n",dir.c_str());
 
-    //string prefix = System::file().getBaseName(_inputFilename);
+	//printf("prefix %s \n",prefix.c_str());
+	//string prefix = System::file().getBaseName(_inputFilename);
 	_outputFilename = dir + "/" + prefix;
 	
+	//printf("_outputFilename %s \n",_outputFilename.c_str());
+
 	//Decode the first byte of the compressed file which is an info byte
 	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
 	
@@ -1579,7 +1590,7 @@ exit( EXIT_FAILURE);
 	_isFasta = ((infoByte & 0x01) == 0x01);
 	
 	
-
+	
 	//Second bit : option no header
 	_noHeader = ((infoByte & 0x02) == 0x02);
 	
@@ -1588,16 +1599,16 @@ exit( EXIT_FAILURE);
 	if(! _isFasta)
 	{
 		
-		_FileQualname =    dir + "/" +  System::file().getBaseName(_inputFilename) + ".fastq.qual";
+		_FileQualname =    dir + "/" +  System::file().getBaseName(inputFilename_leon_removed) + ".fastq.qual";
 		_inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
 		cout << "\tQual filename: " << _FileQualname << endl;
 	}
 	
 	
-if(_noHeader)
-{
-	cout << "Headers were not stored, will number reads \n" << endl;
-}
+	if(_noHeader)
+	{
+		cout << "Headers were not stored, will number reads \n" << endl;
+	}
 	
 	if(_isFasta){
 		cout << "\tOutput format: Fasta" << endl;
@@ -1608,8 +1619,8 @@ if(_noHeader)
 		_outputFilename += ".fastq.d";
 	}
 	
-	_outputFile = System::file().newFile(_outputFilename, "wb"); 
-
+	_outputFile = System::file().newFile(_outputFilename, "wb");
+	
 	//Get kmer size
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -1620,26 +1631,26 @@ if(_noHeader)
 	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	
-
+	
 	cout << "\tInput File was compressed with leon version " << version_major << "."  << version_minor << "."  << version_patch  << endl;
 	
 	
-//	if(version_major != LEON_VERSION_MAJOR || version_minor != LEON_VERSION_MINOR  || version_patch != LEON_VERSION_PATCH )
-//	{
-//		cout << "\tWarning diff version "   << endl;
-//	}
+	//	if(version_major != LEON_VERSION_MAJOR || version_minor != LEON_VERSION_MINOR  || version_patch != LEON_VERSION_PATCH )
+	//	{
+	//		cout << "\tWarning diff version "   << endl;
+	//	}
 	
 	
 	startDecompressionAllStreams();
 	
 	/*
-	startHeaderDecompression();
-	startDnaDecompression();
-
-	if(! _isFasta){
+	 startHeaderDecompression();
+	 startDnaDecompression();
+	 
+	 if(! _isFasta){
 		startQualDecompression();
-	}
-	*/
+	 }
+	 */
 	
 	endDecompression();
 }

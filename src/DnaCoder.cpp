@@ -252,7 +252,7 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, 
 
 DnaEncoder::~DnaEncoder(){
 
-	if(_thread_id!=0 && (_seqId+1) % Leon::READ_PER_BLOCK != 0){
+	if(_thread_id!=0 && (_seqId+1) % Leon::READ_PER_BLOCK != 0 ){
 		writeBlock();
 	}
 	int nb_remaining = __sync_fetch_and_add (&_leon->_nb_thread_living, -1);
@@ -350,12 +350,14 @@ void DnaEncoder::operator()(Sequence& sequence){
 }
 
 void DnaEncoder::writeBlock(){
+	if(_processedSequenceCount == 0) return;
+	
 	if(_rangeEncoder.getBufferSize() > 0){
 		_rangeEncoder.flush();
 	}
 	
 	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
-	//printf("\nTid %i  WB :  blockid %i sid %llu     size: %llu \n",_thread_id, blockId, _seqId, _rangeEncoder.getBufferSize() );
+	//printf("\nTid %i  WB :  blockid %i sid %llu     size: %llu  _processedSequenceCount %i\n",_thread_id, blockId, _seqId, _rangeEncoder.getBufferSize(),_processedSequenceCount );
 
 	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
