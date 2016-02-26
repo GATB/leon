@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# One can define SILENT_MODE=true to enable progrss monitor while loading data
+# One can define SILENT_MODE=true to enable progress monitor while loading data
 # from EBI.
 
 ################################################################################
@@ -13,7 +13,7 @@ WGET_PATH=`which wget`
 echo ">>> Retrieving data sample: ${DATA_SAMPLE}"
 if [ ! -z "$WGET_PATH" ] ; then
   echo "    using '$WGET_PATH'..."
-  if [ $SILENT_MODE="true"  ] ; then
+  if [ $SILENT_MODE=="true"  ] ; then
     wget --quiet ${DATA_SAMPLE}
   else
     wget ${DATA_SAMPLE}
@@ -22,7 +22,7 @@ else
    CURL_PATH=`which curl`
   if [ ! -z "$CURL_PATH" ] ; then
     echo "    using '$CURL_PATH'..."
-    if [ $SILENT_MODE="true"  ] ; then
+    if [ $SILENT_MODE=="true"  ] ; then
       curl --silent -O ${DATA_SAMPLE}
     else
       curl -O ${DATA_SAMPLE}
