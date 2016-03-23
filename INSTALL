@@ -12,9 +12,9 @@ cd build
 # Prepare the makefile
 cmake -DMAJOR=1 -DMINOR=0 -DPATCH=0 ..
 # Run the newly created makefile:
-make
+make -j 4
 # Copy the created binaries in directory:
-cp leon ../
+cp ./bin/leon ../
 # Go back at the installation root directory
 cd ..
 #toy example
