@@ -634,17 +634,7 @@ void Leon::executeCompression(){
     // Sorting count part
     /*************************************************/
 
-    
-        /** We create a DSK instance and execute it. */
-        SortingCountAlgorithm<> sortingCount (_inputBank, getInput());
-
-        sortingCount.getInput()->add (0, STR_VERBOSE, getInput()->getStr(STR_VERBOSE));
-
-        // best compression ratio if min-abundance never below 4 (ie. each kmer of the graph is used by at least 4 reads)
-        getInput()->setInt (STR_KMER_ABUNDANCE_MIN_THRESHOLD, 4);
-
-        sortingCount.execute();
-
+	
         _graph =  Graph::create (_inputBank, "");
     
 
@@ -1217,7 +1207,6 @@ void Leon::endDnaCompression(){
 	//_anchorKmers->clear();
 	
 	delete _anchorKmers;
-	System::file().remove(_dskOutputFilename);
 
 
 }
