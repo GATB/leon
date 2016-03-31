@@ -955,35 +955,6 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	
 	
 	
-	/*
-	std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
-	for(int nt=0; nt<4; nt++){
-		
-		//mutatedKmer.printASCII(_kmerSize);
-		
-		if(res4[nt]){
-
-			indexedKmerCount += 1;
-
-			if(!firstSolidKmer){
-				firstSolidKmer = true;
-				uniqKmer = kmer;
-				codeSeedBin(&_kmerModel, &uniqKmer, nt, rightExtend);
-			}
-			
-			
-			//uniqNt = nt;
-			//uniqKmer = mutatedKmer;
-			
-			
-			if(nt == nextNtBin){
-				isKmerSolid = true;
-			}
-		}
-		
-	}
-	*/
-	
 	std::bitset<4> res4;
 	for(int nt=0; nt<4; nt++){
 		
@@ -996,8 +967,37 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		
 		//mutatedKmer.printASCII(_kmerSize);
 		
-		res4[nt] = _leon->_graph.contains(node);	
+		res4[nt] = _leon->_graph.contains(node);
 	}
+	
+	
+	
+//	std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+	for(int nt=0; nt<4; nt++){
+		
+		
+		if(res4[nt]){
+
+			indexedKmerCount += 1;
+
+			if(!firstSolidKmer){
+				firstSolidKmer = true;
+				uniqKmer = kmer;
+				codeSeedBin(&_kmerModel, &uniqKmer, nt, rightExtend);
+			}
+
+			
+			if(nt == nextNtBin){
+				isKmerSolid = true;
+			}
+		}
+		
+	}
+
+	
+	
+	
+	
 	
 	_MCtotal +=1;
 	
