@@ -239,7 +239,7 @@ void Leon::execute()
 		delete _descInputFile;
 		delete _outputFile;
 		if(! _isFasta) delete _inputFileQual;
-		delete _bloom;
+		//delete _bloom;
 	}
     
 }
@@ -345,8 +345,8 @@ void Leon::createBloom (){
 		cout << "Abundance threshold: " << _nks << "    (nb solid kmers: " << nbs << ")"<< endl;
 	
 	//modif ici pour virer les kmers < auto cutoff
-    BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
-    _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
+    //BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
+    //_bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
 
 	//printf ("bloom size %lli  bits per k %f  nbkemrs infile %lli \n",estimatedBloomSize,NBITS_PER_KMER,nbs);
     //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
@@ -628,13 +628,13 @@ void Leon::executeCompression(){
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
         System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
 
-#if 1
+
 
     /*************************************************/
     // Sorting count part
     /*************************************************/
 
-    {
+    
         /** We create a DSK instance and execute it. */
         SortingCountAlgorithm<> sortingCount (_inputBank, getInput());
 
@@ -644,9 +644,9 @@ void Leon::executeCompression(){
         getInput()->setInt (STR_KMER_ABUNDANCE_MIN_THRESHOLD, 4);
 
         sortingCount.execute();
-    }
 
-#endif
+        _graph =  Graph::create (_inputBank, "");
+    
 
     /*************************************************/
     // We create the modified file
@@ -1069,7 +1069,7 @@ void Leon::startDnaCompression(){
 	
 
 	//Create and fill bloom
-    createBloom ();
+    //createBloom ();
    // LOCAL (_bloom); //now we need it later
     
 	int64_t nbestimated = _inputBank->estimateNbItems();
@@ -1132,7 +1132,7 @@ void Leon::endDnaCompression(){
 	}
 	_blockSizes.clear();
 	
-	writeBloom();
+	//writeBloom();
 	writeAnchorDict();
 	
 	_dnaCompRate = ((double)_compressedSize / _totalDnaSize);
@@ -1146,7 +1146,7 @@ void Leon::endDnaCompression(){
 	std::cout.precision(4);
 	cout << "\t\tCompression rate: " << (float)_dnaCompRate << "  (" << _compressedSize << ")"<< endl;
 	std::cout.precision(2);
-	cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "  (" << _bloom->getSize() << ")"<< endl;
+	//cout << "\t\t\tBloom: " << ((_bloom->getSize()*100) / (double)_compressedSize) << "  (" << _bloom->getSize() << ")"<< endl;
 	cout << "\t\t\tAnchors dict: " << ((_anchorDictSize*100) / (double)_compressedSize) << "  (" << _anchorDictSize << ")    (" << _anchorAdress << " entries)" << endl;
 	u_int64_t readsSize = _anchorAdressSize+_anchorPosSize+_readSizeSize+_bifurcationSize+_otherSize;
 	cout << "\t\t\tReads: " << ((readsSize*100) / (double)_compressedSize) << "  (" << readsSize<< ")"<< endl;
@@ -1222,10 +1222,11 @@ void Leon::endDnaCompression(){
 
 }
 
+/*
 void Leon::writeBloom(){
 	//_bloom->save(_outputFilename + ".bloom.temp");
 	//cout << _bloom->getBitSize() << endl;
-	_compressedSize += _bloom->getSize();
+	_compressedSize += _bloomSize->getSize();
 	
 	//_outputFile->fwrite(_anchorRangeEncoder.getBuffer(), size, 1);
 
@@ -1241,6 +1242,7 @@ void Leon::writeBloom(){
 
 	//_outputFile->fwrite(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), 1);
 }
+*/
 
 void Leon::writeAnchorDict(){
 
@@ -1319,6 +1321,8 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	
 
 	kmer_type kmer, kmerMin;
+	Node node;
+	Node nodeMin;
 	
 	/*
 	////////////
@@ -1350,8 +1354,8 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
-
-		if(_bloom->contains(kmerMin)){
+		node = Node(Node::Value(kmerMin));
+		if(_graph.contains(node)){
 			maxAbundance = 0;
 			bestPos = i;
 			bestKmer = kmerMin;
@@ -1364,9 +1368,10 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		for(int i=0; i<iMin; i++){
 			kmer = kmers[i];
 			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+			node = Node(Node::Value(kmerMin));
 
 
-			if(_bloom->contains(kmerMin)){
+			if(_graph.contains(node)){
 				maxAbundance = 0;
 				bestPos = i;
 				bestKmer = kmerMin;
@@ -1379,8 +1384,9 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 			for(int i=iMax; i<kmers.size(); i++){
 				kmer = kmers[i];
 				kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+				node = Node(Node::Value(kmerMin));
 
-				if(_bloom->contains(kmerMin)){
+				if(_graph.contains(node)){
 					maxAbundance = 0;
 					bestPos = i;
 					bestKmer = kmerMin;
@@ -1691,7 +1697,7 @@ void Leon::startDecompressionAllStreams(){
 	_kmerModel = new KmerModel(_kmerSize);
 
 	
-	decodeBloom();
+	//decodeBloom();
 	decodeAnchorDict();
 	
 	
@@ -2005,7 +2011,7 @@ void Leon::setupNextComponent( 		vector<u_int64_t>   & blockSizes    ){
 }
 
 
-
+/*
 void Leon::decodeBloom(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\tDecode bloom filter" << endl;
@@ -2069,6 +2075,7 @@ void Leon::decodeBloom(){
 	
 
 }
+*/
 
 void Leon::decodeAnchorDict(){
 	#ifdef PRINT_DEBUG_DECODER

@@ -127,7 +127,8 @@ class Leon : public misc::impl::Tool
 		//u_int64_t _totalDnaCompressedSize;
 		//u_int64_t _realDnaCompressedSize;
 		u_int64_t _compressedSize;
-		IBloom<kmer_type>* _bloom;
+		//IBloom<kmer_type>* _bloom;
+		Graph _graph;
 	
 		bool _isFasta;
 		bool _noHeader;

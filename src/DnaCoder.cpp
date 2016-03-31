@@ -54,7 +54,7 @@ _NposDeltaTypeModel(3),
 _errorPosDeltaTypeModel(3),_seqId(0)
 {
 	_leon = leon;
-	_bloom = _leon->_bloom;
+	//_bloom = _leon->_bloom;
 	_kmerSize = _leon->_kmerSize;
 	
 	
@@ -76,7 +76,6 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 }
 
 void AbstractDnaCoder::startBlock(){
-	//_prevSequences = NULL;
 
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_anchorAddressModel[i].clear();
@@ -536,6 +535,7 @@ bool DnaEncoder::apply_smoothing_at_pos(int pos)
 void DnaEncoder::storeSolidCoverageInfo()
 {
 	kmer_type kmer, kmerMin;
+	Node node;
 	
 	if(_readSize >= _max_read_size)
 	{
@@ -549,8 +549,9 @@ void DnaEncoder::storeSolidCoverageInfo()
 	for(int ii=0; ii<_kmers.size(); ii++){
 		kmer = _kmers[ii];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		node = Node(Node::Value(kmerMin));
 
-		if(_bloom->contains(kmerMin))
+		if(_leon->_graph.contains(node))
 		{
 			//increments all pos covered by the solid kmer
 			for (int jj=0; jj< _kmerSize ; jj++)
@@ -690,13 +691,15 @@ int DnaEncoder::findExistingAnchor(u_int32_t* anchorAddress){
 bool DnaEncoder::isReadAnchorable(){
 	int nbKmerSolid = 0;
 	kmer_type kmer, kmerMin;
+	Node node;
 
 	for(int i=0; i<_kmers.size(); i++){
 
 		kmer = _kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		node = Node(Node::Value(kmerMin));
 
-		if(_bloom->contains(kmerMin)){
+		if(_leon->_graph.contains(node)){
 			nbKmerSolid += 1;
 			i += _kmerSize;
 		}
@@ -924,7 +927,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	//kmer_type kmerMin;
 	kmer_type uniqKmer;
 	bool firstSolidKmer = false;
-	//int uniqNt;
+	int uniqNt;
 	//u_int8_t binNt2;
 	bool isKmerSolid = false;
 	
@@ -952,7 +955,7 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 	
 	
 	
-	
+	/*
 	std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
 	for(int nt=0; nt<4; nt++){
 		
@@ -967,11 +970,11 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 				uniqKmer = kmer;
 				codeSeedBin(&_kmerModel, &uniqKmer, nt, rightExtend);
 			}
-			/*
+			
 			
 			//uniqNt = nt;
-			uniqKmer = mutatedKmer;
-			*/
+			//uniqKmer = mutatedKmer;
+			
 			
 			if(nt == nextNtBin){
 				isKmerSolid = true;
@@ -979,30 +982,22 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		}
 		
 	}
+	*/
 	
-	
-	/*
+	std::bitset<4> res4;
 	for(int nt=0; nt<4; nt++){
 		
 		kmer_type mutatedKmer = kmer;
 		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+		Node node;
 		//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
 		kmer_type mutatedKmerMin = mutatedKmer;
+		node = Node(Node::Value(mutatedKmerMin));
 		
 		//mutatedKmer.printASCII(_kmerSize);
 		
-		if(_bloom->contains(mutatedKmerMin)){
-			indexedKmerCount += 1;
-			uniqNt = nt;
-			uniqKmer = mutatedKmer;
-			
-			
-			if(Leon::bin2nt(nt) == nextNt){
-				isKmerSolid = true;
-			}
-		}
-		
-	}*/
+		res4[nt] = _leon->_graph.contains(node);	
+	}
 	
 	_MCtotal +=1;
 	
@@ -1241,90 +1236,6 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 }
 
 
-int DnaEncoder::getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend){
-
-
-	char ntInRead = 0;
-	if(rightExtend){
-		if(pos+1 < _readSize){
-			ntInRead = _readseq[pos+1];
-		}
-	}
-	else{
-		if(pos-1 >= 0){
-			ntInRead = _readseq[pos-1];
-		}
-	}
-
-	int ntInReadBin = Leon::nt2bin(ntInRead);
-
-
-	/*
-	//if(pos == 31){
-		cout << string(_readseq) << endl;
-		cout  << kmer.toString(_kmerSize) << endl;
-		cout << "\t" << pos << "   " << rightExtend << endl;
-		cout << "\t" << _readseq[pos] << "  " << ntInRead << endl;
-	//}*/
-
-	//int depth = 2;
-	int bestNt = -1;
-	bool isValid[4];
-	for(int i=0; i<4; i++){
-		isValid[i] = true;
-	}
-
-	//for(int j=0; j<depth; j++){
-
-	for(int nt=0; nt<4; nt++){
-
-		if(initRes4[nt]){
-
-			kmer_type mutatedKmer = kmer;
-			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
-
-			bitset<4> res4  = _bloom->contains4(mutatedKmer, rightExtend);
-			int nbSolidKmer = 0;
-
-			for(int nt2=0; nt2<4; nt2++){
-
-				if(res4[nt2]){
-					nbSolidKmer += 1;
-
-					if(nt2 == ntInReadBin){
-						bestNt = nt;
-					}
-				}
-
-			}
-
-			if(nbSolidKmer != 1){
-				isValid[nt] = false;
-			}
-		}
-		else{
-			isValid[nt] = false;
-		}
-	}
-
-	//}
-
-	int nbAlternative = 0;
-	int uniqAlternative = -1;
-
-	for(int nt=0; nt<4; nt++){
-		if(isValid[nt]){
-			nbAlternative += 1;
-			uniqAlternative = nt;
-		}
-	}
-
-	if(nbAlternative == 1){
-		return uniqAlternative;
-	}
-
-	return bestNt;
-}
 
 int DnaEncoder::voteMutations(int pos, int depth, bool rightExtend){
 	kmer_type kmer;
@@ -1868,9 +1779,20 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 			else
 				_currentSeq.insert(_currentSeq.begin(), nextNt);
 
-			std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+			std::bitset<4> res4;
 
 			for(int nt=0; nt<4; nt++){
+
+				kmer_type mutatedKmer = kmer;
+				codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+				Node node;
+				//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+				kmer_type mutatedKmerMin = mutatedKmer;
+				node = Node(Node::Value(mutatedKmerMin));
+		
+		//mutatedKmer.printASCII(_kmerSize);
+		
+				res4[nt] = _leon->_graph.contains(node);
 
 				if(res4[nt]){
 					kmer_type mutatedKmer = kmer;
@@ -1897,8 +1819,20 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	
 	
 	
-	std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
+	std::bitset<4> res4;
 	for(int nt=0; nt<4; nt++){
+
+		kmer_type mutatedKmer = kmer;
+		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
+		Node node;
+		//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+		kmer_type mutatedKmerMin = mutatedKmer;
+		node = Node(Node::Value(mutatedKmerMin));
+		
+		//mutatedKmer.printASCII(_kmerSize);
+		
+		res4[nt] = _leon->_graph.contains(node);
+
 		if(res4[nt]){
 			kmer_type mutatedKmer = kmer;
 			codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
