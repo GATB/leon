@@ -91,7 +91,7 @@ class Leon : public misc::impl::Tool
 		static const char* STR_NOQUAL;
 	
 		size_t          _kmerSize;
-		string     _dskOutputFilename;
+		string     _h5OutputFilename;
 		static const int READ_PER_BLOCK = 50000;
 		int _nb_cores;
 		

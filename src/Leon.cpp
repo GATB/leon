@@ -253,8 +253,8 @@ void Leon::createBloom (){
 	u_int64_t nbs = 0 ;
 	u_int64_t nb_kmers_infile;
 	
-	//cout << _dskOutputFilename << endl;
-	Storage* storage = StorageFactory(STORAGE_HDF5).load (_dskOutputFilename);
+	//cout << _h5OutputFilename << endl;
+	Storage* storage = StorageFactory(STORAGE_HDF5).load (_h5OutputFilename);
 	LOCAL (storage);
 	
 	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
@@ -263,7 +263,7 @@ void Leon::createBloom (){
     u_int64_t solidFileSize = solidCollection.getNbItems();
 	
 	nb_kmers_infile = solidCollection.getNbItems();
-	//(System::file().getSize(_dskOutputFilename) / sizeof (kmer_count)); //approx total number of kmer
+	//(System::file().getSize(_h5OutputFilename) / sizeof (kmer_count)); //approx total number of kmer
 
 	if( ! getParser()->saw(STR_KMER_ABUNDANCE)){
 		
@@ -316,7 +316,7 @@ void Leon::createBloom (){
     
     /** We create the kmers iterator from the solid file. */
 //    Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
-//                                                                new IteratorFile<kmer_count>(_dskOutputFilename),
+//                                                                new IteratorFile<kmer_count>(_h5OutputFilename),
 //                                                                nb_kmers_infile,
 //                                                                "fill bloom filter"
 //                                                                );
@@ -428,7 +428,7 @@ void Leon::createBloom (){
     //itKmers.first();
     //KmerModel model(_kmerSize);
 
-    //IteratorFile<kmer_count> it(_dskOutputFilename);
+    //IteratorFile<kmer_count> it(_h5OutputFilename);
     itKmers = solidCollection.iterator();
 
     for(int i=0; i<thresholds.size()-1; i++){
@@ -481,7 +481,7 @@ void Leon::createKmerAbundanceHash(){
 	
     KmerModel model(_kmerSize);
     
-    IteratorFile<kmer_count> it(_dskOutputFilename);
+    IteratorFile<kmer_count> it(_h5OutputFilename);
     
     for(int i=0; i<thresholds.size()-1; i++){
 		for (it.first(); !it.isDone(); it.next()){
@@ -624,7 +624,7 @@ void Leon::executeCompression(){
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_patch);
 
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
+    _h5OutputFilename = getInput()->get(STR_URI_OUTPUT) ?
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
         System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
 
@@ -635,8 +635,10 @@ void Leon::executeCompression(){
     /*************************************************/
 
 	
-        _graph =  Graph::create (_inputBank, "");
-    
+        _graph =  Graph::create (_inputBank, "-abundance-min 4 -debloom original -solid-kmers-out ajeter -out %s",_h5OutputFilename.c_str());
+	
+	 remove("ajeter.h5");
+
 
     /*************************************************/
     // We create the modified file
@@ -674,7 +676,7 @@ void Leon::executeCompression(){
 	cout << "\tOutput filename: " << _outputFilename << endl;
 	cout << "prefix " << prefix << endl;
 	cout << "dir " << dir << endl;
-	cout << "dskout  " << _dskOutputFilename << endl;
+	cout << "dskout  " << _h5OutputFilename << endl;
 #endif
 
 	
@@ -1686,7 +1688,17 @@ void Leon::startDecompressionAllStreams(){
 	_kmerModel = new KmerModel(_kmerSize);
 
 	
-	//decodeBloom();
+	decodeBloom();
+	
+	string _h5OutputFilename = System::file().getBaseName(_inputFilename);
+	 _h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
+	
+	printf("_h5OutputFilename %s \n",_h5OutputFilename.c_str());
+	
+	_graph =  Graph::load(_h5OutputFilename.c_str() );
+	
+
+	
 	decodeAnchorDict();
 	
 	
@@ -2000,7 +2012,7 @@ void Leon::setupNextComponent( 		vector<u_int64_t>   & blockSizes    ){
 }
 
 
-/*
+
 void Leon::decodeBloom(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\tDecode bloom filter" << endl;
@@ -2033,8 +2045,8 @@ void Leon::decodeBloom(){
     
     //cout << bloomSize << endl;
     
-	u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	u_int64_t bloomHashCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+//	u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+//	u_int64_t bloomHashCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	//u_int64_t tai = (bloomSize) * 8LL;
 	
 	
@@ -2043,13 +2055,13 @@ void Leon::decodeBloom(){
 	//_bloom->contains("lala");
 	//nchar  = (1+tai/8LL);
 	//_bloom = new BloomCacheCoherent<kmer_type>(bloomBitSize, bloomHashCount);
-	_bloom   =  new BloomNeighborCoherent<kmer_type> (bloomBitSize,_kmerSize,bloomHashCount);
+//	_bloom   =  new BloomNeighborCoherent<kmer_type> (bloomBitSize,_kmerSize,bloomHashCount);
 	
 
-	_inputFile->read((char*)_bloom->getArray(), _bloom->getSize());
+//	_inputFile->read((char*)_bloom->getArray(), _bloom->getSize());
 	//fread(_bloom->getArray(), sizeof(unsigned char), result->getSize(), file);
 	
-	//_dskOutputFilename = "/local/gbenoit/leontest/SRR747737.h5";
+	//_h5OutputFilename = "/local/gbenoit/leontest/SRR747737.h5";
 	//createBloom();
 	//cout << _bloom->getSize() << endl;
 	//memcpy(_bloom, buffer, _bloom->getSize());
@@ -2064,7 +2076,7 @@ void Leon::decodeBloom(){
 	
 
 }
-*/
+
 
 void Leon::decodeAnchorDict(){
 	#ifdef PRINT_DEBUG_DECODER
