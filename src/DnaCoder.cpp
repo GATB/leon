@@ -26,7 +26,6 @@
 #define PRINT_DEBUG_DECODER
 */
 
-
 char bin2NTrev[4] = {'T','G','A','C'};
 //char bin2NT[4] = {'A','C','T','G'};
 
@@ -71,8 +70,6 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 		_leftErrorModel.push_back(Order0Model(256));
 		//_rightErrorModel.push_back(Order0Model(256));
 	}
-	
-	
 }
 
 void AbstractDnaCoder::startBlock(){
@@ -202,6 +199,10 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, 
 	_smoothing_threshold = 2;
 		
 	}
+
+	//TEST_ANCHOR
+	pthread_mutex_init(&incr_nb_anchored_reads_mutex, NULL);
+	//END TEST_ANCHOR
 }
 
 DnaEncoder::DnaEncoder(const DnaEncoder& copy) :
@@ -433,6 +434,7 @@ void DnaEncoder::execute(){
 	//_isPrevReadAnchorable = false;
 	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
 
+
 	if(anchorPos == -1)
 		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);  //unsynch
 
@@ -442,6 +444,11 @@ void DnaEncoder::execute(){
 		encodeNoAnchorRead();
 	else{
 		encodeAnchorRead(anchorPos, anchorAddress);
+		//TEST_ANCHOR
+		//pthread_mutex_lock(&incr_nb_anchored_reads_mutex);
+		++_leon->_nb_anchored_reads;
+		//pthread_mutex_unlock(&incr_nb_anchored_reads_mutex);
+		//END TEST_ANCHOR
 	}
 	//}
 	
