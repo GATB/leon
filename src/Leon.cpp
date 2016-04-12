@@ -1281,14 +1281,22 @@ void Leon::endDnaCompression(){
 	u_int64_t q3 = 3*q1;
 	u_int64_t q4 = 4*q1;
 
+	u_int64_t nb_anchors_q1 = 0;
 	u_int64_t anchors_occurrence_sum_q1 = 0;
 	long double anchors_occurrence_average_q1 = 0;
+	long double anchors_occurrence_variance_q1 = 0;
+	u_int64_t nb_anchors_q2 = 0;
 	u_int64_t anchors_occurrence_sum_q2 = 0;
 	long double anchors_occurrence_average_q2 = 0;
+	long double anchors_occurrence_variance_q2 = 0;
+	u_int64_t nb_anchors_q3 = 0;
 	u_int64_t anchors_occurrence_sum_q3 = 0;
 	long double anchors_occurrence_average_q3 = 0;
+	long double anchors_occurrence_variance_q3 = 0;
+	u_int64_t nb_anchors_q4 = 0;
 	u_int64_t anchors_occurrence_sum_q4 = 0;
 	long double anchors_occurrence_average_q4 = 0;
+	long double anchors_occurrence_variance_q4 = 0;
 
 	//TODO : better memset...
 	for (int i=0; i < anchors_occurrence_max+1; ++i){
@@ -1296,6 +1304,10 @@ void Leon::endDnaCompression(){
 	}
 
 	long double anchors_occurrence_standard_deviation = 0;
+	long double anchors_occurrence_standard_deviation_q1 = 0;
+	long double anchors_occurrence_standard_deviation_q2 = 0;
+	long double anchors_occurrence_standard_deviation_q3 = 0;
+	long double anchors_occurrence_standard_deviation_q4 = 0;
 
 	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
    		// retrieve the current item of some type
@@ -1309,39 +1321,67 @@ void Leon::endDnaCompression(){
 
 	}
 
-	for (long long index = 0; index < anchors_occurrence_max+1; ++index){
+	for (long long anchor_occurrence = 0; anchor_occurrence < anchors_occurrence_max+1; ++anchor_occurrence){
 
-		if (index <= q1){
-   			anchors_occurrence_sum_q1 += (u_int64_t) anchors_occurrence_histo[index];
+		u_int64_t nb_anchors_of_actual_occurence = anchors_occurrence_histo[anchor_occurrence];
+
+		if (anchor_occurrence <= q1){
+			anchors_occurrence_sum_q1 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q1 += (u_int64_t) nb_anchors_of_actual_occurence;
    		}
-   		if (q1 <= index && index <= q2){
-   			anchors_occurrence_sum_q2 += (u_int64_t) anchors_occurrence_histo[index];
+   		if (q1 <= anchor_occurrence && anchor_occurrence <= q2){
+   			anchors_occurrence_sum_q2 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q2 += (u_int64_t) nb_anchors_of_actual_occurence;
    		}
-   		if (q2 <= index && q1 <= index && index <= q3){
-   			anchors_occurrence_sum_q3 += (u_int64_t) anchors_occurrence_histo[index];
+   		if (q2 <= anchor_occurrence && q1 <= anchor_occurrence && anchor_occurrence <= q3){
+   			anchors_occurrence_sum_q3 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q3 += (u_int64_t) nb_anchors_of_actual_occurence;
    		}
-   		if (q3 <= index && index <= anchors_occurrence_max+1){
-   			anchors_occurrence_sum_q4 += (u_int64_t) anchors_occurrence_histo[index];
+   		if (q3 <= anchor_occurrence && anchor_occurrence <= anchors_occurrence_max+1){
+   			anchors_occurrence_sum_q4 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q4 += (u_int64_t) nb_anchors_of_actual_occurence;
    		}
 
 	}
-cout << "DEBUG" << endl;
+
+	anchors_occurrence_average_q1 = (long double) anchors_occurrence_sum_q1 / nb_anchors_q1;
+	anchors_occurrence_average_q2 = (long double) anchors_occurrence_sum_q2 / nb_anchors_q2;
+	anchors_occurrence_average_q3 = (long double) anchors_occurrence_sum_q3 / nb_anchors_q3;
+	anchors_occurrence_average_q4 = (long double) anchors_occurrence_sum_q4 / nb_anchors_q4;
+
 	u_int64_t debug_histo_total_count = 0;
 
 	for (int anchor_occurrence=0; anchor_occurrence < anchors_occurrence_max; ++ anchor_occurrence){
 		debug_histo_total_count += anchors_occurrence_histo[anchor_occurrence];
 		anchors_occurrence_variance += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average), 2));
+	
+		if (anchor_occurrence <= q1){
+   			anchors_occurrence_variance_q1 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q1), 2));
+   		}
+   		if (q1 <= anchor_occurrence && anchor_occurrence <= q2){
+   			anchors_occurrence_variance_q2 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q2), 2));
+   		}
+   		if (q2 <= anchor_occurrence && q1 <= anchor_occurrence && anchor_occurrence <= q3){
+   			anchors_occurrence_variance_q3 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q3), 2));
+   		}
+   		if (q3 <= anchor_occurrence && anchor_occurrence <= anchors_occurrence_max+1){
+   			anchors_occurrence_variance_q4 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q4), 2));   			
+   		}
 	}
 	
 	anchors_occurrence_variance /= (double) nb_anchors;
+	anchors_occurrence_variance_q1 /= (double) nb_anchors_q1;
+	anchors_occurrence_variance_q2 /= (double) nb_anchors_q2;
+	anchors_occurrence_variance_q3 /= (double) nb_anchors_q3;
+	anchors_occurrence_variance_q4 /= (double) nb_anchors_q4;
+
 	//cout << anchors_occurrence_variance << endl;
 	anchors_occurrence_standard_deviation = sqrt(anchors_occurrence_variance);
+	anchors_occurrence_standard_deviation_q1 = sqrt(anchors_occurrence_variance_q1);
+	anchors_occurrence_standard_deviation_q2 = sqrt(anchors_occurrence_variance_q2);
+	anchors_occurrence_standard_deviation_q3 = sqrt(anchors_occurrence_variance_q3);
+	anchors_occurrence_standard_deviation_q4 = sqrt(anchors_occurrence_variance_q4);
 
-	anchors_occurrence_average_q1 = (long double) anchors_occurrence_sum_q1/q1;
-
-	anchors_occurrence_average_q2 = (long double) anchors_occurrence_sum_q2/(q2-q1);
-	anchors_occurrence_average_q3 = (long double) anchors_occurrence_sum_q3/(q3-q2);
-	anchors_occurrence_average_q4 = (long double) anchors_occurrence_sum_q4/(q4-q3);
 
 	//printing stats
 
@@ -1364,6 +1404,10 @@ cout << "DEBUG" << endl;
 	kmersAnchorsStats << "anchors occurrence quartil 2-3 : " << q3-q2 << endl;
 	kmersAnchorsStats << "anchors occurrence quartil 4 : " << q4 << endl;
 	kmersAnchorsStats << "anchors occurrence quartil 3-4 : " << q4-q3 << "\n" << endl;
+	kmersAnchorsStats << "nb anchors q1 : " << nb_anchors_q1 << endl;
+	kmersAnchorsStats << "nb anchors q2 : " << nb_anchors_q2 << endl;
+	kmersAnchorsStats << "nb anchors q3 : " << nb_anchors_q3 << endl;
+	kmersAnchorsStats << "nb anchors q4 : " << nb_anchors_q4 << endl;
 	kmersAnchorsStats << "anchors occurrence sum q1 : " << anchors_occurrence_sum_q1 << endl;
 	kmersAnchorsStats << "anchors occurrence sum q2 : " << anchors_occurrence_sum_q2 << endl;
 	kmersAnchorsStats << "anchors occurrence sum q3 : " << anchors_occurrence_sum_q3 << endl;
@@ -1372,6 +1416,16 @@ cout << "DEBUG" << endl;
 	kmersAnchorsStats << "anchors occurrence average q2 : " << anchors_occurrence_average_q2 << endl;
 	kmersAnchorsStats << "anchors occurrence average q3 : " << anchors_occurrence_average_q3 << endl;
 	kmersAnchorsStats << "anchors occurrence average q4 : " << anchors_occurrence_average_q4 << "\n" << endl;
+
+	kmersAnchorsStats << "anchors occurrence variance q1 : " << anchors_occurrence_variance_q1 << endl;
+	kmersAnchorsStats << "anchors occurrence variance q2 : " << anchors_occurrence_variance_q2 << endl;
+	kmersAnchorsStats << "anchors occurrence variance q3 : " << anchors_occurrence_variance_q3 << endl;
+	kmersAnchorsStats << "anchors occurrence variance q4 : " << anchors_occurrence_variance_q4 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q1 : " << anchors_occurrence_standard_deviation_q1 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q2 : " << anchors_occurrence_standard_deviation_q2 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q3 : " << anchors_occurrence_standard_deviation_q3 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q4 : " << anchors_occurrence_standard_deviation_q4 << "\n" << endl;
+
 
 	kmersAnchorsStats << "debug histo total count : " << debug_histo_total_count << endl;
 
