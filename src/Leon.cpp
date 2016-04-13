@@ -82,6 +82,7 @@ const char* Leon::STR_DNA_ONLY = "-seq-only";
 const char* Leon::STR_NOHEADER = "-noheader";
 const char* Leon::STR_NOQUAL = "-noqual";
 
+
 const int Leon::nt2binTab[128] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -156,6 +157,7 @@ _isFasta = true;
 
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOQUAL, "discard quality scores", false));
+
 
     IOptionsParser* decompressionParser = new OptionsParser ("decompression");
     decompressionParser->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
@@ -1081,6 +1083,15 @@ void Leon::startDnaCompression(){
 	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated ); //creator with nb entries given
 //	printf("asked %lli entries, got %llu \n",nbestimated/10 ,nbcreated);
 	
+	/*
+	** TEST_ANCHOR 
+	*/
+	size_t max_size_hash16 = 1024;
+	_anchorKmersCount = new Hash16<kmer_type, u_int32_t > (max_size_hash16); 
+	/*
+	** END TEST_ANCHOR
+	*/
+
     Iterator<Sequence>* itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
                                                           nbestimated,
@@ -1215,10 +1226,23 @@ void Leon::endDnaCompression(){
 	//#endif
 	//_anchorKmers.clear();
 	//_anchorKmers->clear();
-	
+
 	delete _anchorKmers;
 	System::file().remove(_dskOutputFilename);
 
+	//TEST_ANCHOR
+	dp::Iterator<std::pair<kmer_type,u_int32_t>>* it_kmer_count = _anchorKmersCount->iterator();
+
+	cout << "\n\n\t\t NB OCCURRENCE OF ANCHORS :\n\n" << endl;
+
+	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
+   		// retrieve the current item of some type
+   		pair<kmer_type,u_int32_t> pair_kmer_nb = it_kmer_count->item ();
+   		cout << pair_kmer_nb.first << "\t\t" << pair_kmer_nb.second << "\t" << endl;
+	}
+
+	delete _anchorKmersCount;
+	//END TEST_ANCHOR
 
 }
 
@@ -1312,7 +1336,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 		
 	//cout << "\tSearching and insert anchor" << endl;
-	int maxAbundance = -1;
+	int isAnchorFound = 0;
 	int bestPos;
 	kmer_type bestKmer;
 	//int bestPos = -1;
@@ -1352,14 +1376,14 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
 		if(_bloom->contains(kmerMin)){
-			maxAbundance = 0;
+			isAnchorFound = 1;
 			bestPos = i;
 			bestKmer = kmerMin;
 			break;
 		}
 	}
 
-	if(maxAbundance == -1){
+	if(!isAnchorFound){
 
 		for(int i=0; i<iMin; i++){
 			kmer = kmers[i];
@@ -1367,7 +1391,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 
 			if(_bloom->contains(kmerMin)){
-				maxAbundance = 0;
+				isAnchorFound = 1;
 				bestPos = i;
 				bestKmer = kmerMin;
 				break;
@@ -1375,13 +1399,13 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		}
 
 
-		if(maxAbundance == -1){
+		if(!isAnchorFound){
 			for(int i=iMax; i<kmers.size(); i++){
 				kmer = kmers[i];
 				kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
 				if(_bloom->contains(kmerMin)){
-					maxAbundance = 0;
+					isAnchorFound = 1;
 					bestPos = i;
 					bestKmer = kmerMin;
 					break;
@@ -1399,30 +1423,33 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 		int abundance;
 		if(_kmerAbundance->get(kmerMin, &abundance)){
-			if(abundance > maxAbundance){
-				maxAbundance = abundance;// + ((kmers.size()-i)*2);
+			if(abundance > isAnchorFound){
+				isAnchorFound = abundance;// + ((kmers.size()-i)*2);
 				bestKmer = kmerMin;
 				bestPos = i;
-				//cout << maxAbundance << endl;
+				//cout << isAnchorFound << endl;
 				//cout << bestPos << " " << abundance << " " << kmer.toString(_kmerSize) << " " << revcomp(kmer, _kmerSize).toString(_kmerSize) << endl;
 			}
 			//cout << abundance << endl;
 		}
-		else if(maxAbundance == -1 && _bloom->contains(kmerMin)){
-			maxAbundance = _nks;
+		else if(isAnchorFound == -1 && _bloom->contains(kmerMin)){
+			isAnchorFound = _nks;
 			bestKmer = kmerMin;
 			bestPos = i;
-			//cout << maxAbundance << endl;
+			//cout << isAnchorFound << endl;
 		}
 	}*/
 	
-	if(maxAbundance == -1)
+	if(!isAnchorFound)
 	{
 		pthread_mutex_unlock(&findAndInsert_mutex);
 		return -1;
 	}
 
-	encodeInsertedAnchor(bestKmer);
+	encodeInsertedAnchor(bestKmer);	
+	//TEST_ANCHOR
+	_anchorKmersCount->insert(kmerMin);
+	// END TEST_ANCHOR
 	
 	_anchorKmers->insert(bestKmer,_anchorAdress); //with Hash16
 	//_anchorKmers[bestKmer] = _anchorAdress;

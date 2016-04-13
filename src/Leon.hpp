@@ -281,6 +281,14 @@ class Leon : public misc::impl::Tool
 		//OAHash<kmer_type> _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
 
+		/*
+		** TEST_ANCHOR
+		*/
+		Hash16<kmer_type, u_int32_t> * _anchorKmersCount;
+		/*
+		** END TEST_ANCHOR
+		*/
+
 		//Header decompression
 	
 		string _headerOutputFilename;
