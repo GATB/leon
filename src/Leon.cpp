@@ -1522,7 +1522,10 @@ bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
 	//end debug
 
 	//part of test
+	pthread_mutex_lock(&findAndInsert_mutex);
 	_anchorKmersCount->insert(kmer);
+	pthread_mutex_unlock(&findAndInsert_mutex);
+
 	// END TEST_ANCHOR
 
 	//DEBUG
