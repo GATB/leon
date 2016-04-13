@@ -32,6 +32,8 @@
 #include <iostream>
 #include <gatb/gatb_core.hpp>
 #include <sys/time.h>
+#include <iostream>
+#include <fstream>
 
 /** NOTE: we should not include namespaces here => only to make user life easier... */
 using namespace gatb::core;
@@ -70,6 +72,9 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 #include <pthread.h>
 
+//TEST_ANCHOR
+#include <math.h>
+//END TEST_ANCHOR
 
 class HeaderEncoder;
 class HeaderDecoder;
@@ -191,6 +196,14 @@ class Leon : public misc::impl::Tool
 		static int bin2nt(int nt){
 			return bin2ntTab[nt];
 		}
+
+				/*
+		** TEST_ANCHOR
+		*/
+		u_int64_t _nb_anchored_reads;
+		/*
+		** END TEST_ANCHOR
+		*/
 		
 	
 	private:
@@ -297,6 +310,10 @@ class Leon : public misc::impl::Tool
 	   	int _auto_cutoff;
 		pthread_mutex_t findAndInsert_mutex;
 		pthread_mutex_t writeblock_mutex;
+
+		//TEST_ANCHOR
+		pthread_mutex_t incr_nb_anchors_mutex;
+		//END TEST_ANCHOR
 
 		//DNA Decompression
 		void decodeBloom();

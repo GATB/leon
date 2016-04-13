@@ -129,7 +129,10 @@ class DnaEncoder : AbstractDnaCoder
 		
 	private:
 	
-	
+	//TEST_ANCHOR
+	pthread_mutex_t incr_nb_anchored_reads_mutex;
+	//END TEST_ANCHOR
+
 	//pour quals
 	char * _qualseq;
 	int * _nb_solids;

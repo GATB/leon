@@ -170,6 +170,11 @@ _isFasta = true;
 
 	pthread_mutex_init(&findAndInsert_mutex, NULL);
 	pthread_mutex_init(&writeblock_mutex, NULL);
+
+	//TEST_ANCHOR
+	u_int64_t _nb_anchored_reads = 0;
+	pthread_mutex_init(&incr_nb_anchors_mutex, NULL);
+	//END TEST_ANCHOR
 }
 
 Leon::~Leon ()
@@ -186,7 +191,7 @@ Leon::~Leon ()
 void Leon::execute()
 {
 	_time = clock(); //Used to calculate time taken by decompression
-	
+
 	gettimeofday(&_tim, NULL);
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
@@ -703,6 +708,7 @@ void Leon::executeCompression(){
 	//setBlockWriter(0);
 	//setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
+
 	startDnaCompression();
 	
 
@@ -1064,11 +1070,16 @@ void Leon::endHeaderCompression(){
 
 
 void Leon::startDnaCompression(){
+
+	//TEST_ANCHOR
+
+	//pourquoi est-ce qu'il faut initialiser la variable ici ?? et pas avant
+	_nb_anchored_reads = 0;
+	//END TEST_ANCHOR
+		
 	#ifdef PRINT_DEBUG
 		cout << endl << "Start reads compression" << endl;
     #endif
-    
-	
 
 	//Create and fill bloom
     createBloom ();
@@ -1233,14 +1244,202 @@ void Leon::endDnaCompression(){
 	//TEST_ANCHOR
 	dp::Iterator<std::pair<kmer_type,u_int32_t>>* it_kmer_count = _anchorKmersCount->iterator();
 
-	cout << "\n\n\t\t NB OCCURRENCE OF ANCHORS :\n\n" << endl;
+	ofstream kmersAnchorsOccurrences;
+	ofstream kmersAnchorsStats;
+	kmersAnchorsOccurrences.open("kmers_anchors_occurrences");
+	kmersAnchorsStats.open("kmers_anchors_stats");
+
+	kmersAnchorsStats << "\n\n\t\t NB OCCURRENCE OF ANCHORS :\n\n" << endl;
+
+	u_int32_t anchor_occurrence;
+	u_int64_t nb_anchors = 0;
+	u_int64_t anchors_occurrence_sum = 0;
+	u_int64_t anchors_occurrence_max = 0;
+
+	//Calculating average
 
 	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
    		// retrieve the current item of some type
    		pair<kmer_type,u_int32_t> pair_kmer_nb = it_kmer_count->item ();
-   		cout << pair_kmer_nb.first << "\t\t" << pair_kmer_nb.second << "\t" << endl;
+   		/*strcpy(kmer_key, pair_kmer_nb.first.toString(_kmerSize));
+   		fprintf(kmersAnchorsStats, "%s\t\t%d\n", kmer_key, pair_kmer_nb.second);*/
+
+   		//pthread_mutex_lock(&incr_nb_anchors_mutex);
+   		++nb_anchors;
+   		//pthread_mutex_unlock(&incr_nb_anchors_mutex);
+
+   		anchor_occurrence = pair_kmer_nb.second;
+   		if (anchors_occurrence_max < anchor_occurrence){
+   			anchors_occurrence_max = anchor_occurrence;
+   		}
+
+   		anchors_occurrence_sum += anchor_occurrence;
+
+   		kmersAnchorsOccurrences << pair_kmer_nb.first.toString(_kmerSize) << "\t\t" << anchor_occurrence << endl;
 	}
 
+	long double anchors_occurrence_average = (double) anchors_occurrence_sum / (double) nb_anchors;
+
+	//Calculating variance, standard deviation and quartils
+
+	long double anchors_occurrence_variance = 0;
+	long long anchors_occurrence_histo[anchors_occurrence_max+1];
+
+	u_int64_t q1 = ceil((float) ((float) (anchors_occurrence_max+1) / (float) 4));
+	u_int64_t q2 = 2*q1;
+	u_int64_t q3 = 3*q1;
+	u_int64_t q4 = 4*q1;
+
+	u_int64_t nb_anchors_q1 = 0;
+	u_int64_t anchors_occurrence_sum_q1 = 0;
+	long double anchors_occurrence_average_q1 = 0;
+	long double anchors_occurrence_variance_q1 = 0;
+	u_int64_t nb_anchors_q2 = 0;
+	u_int64_t anchors_occurrence_sum_q2 = 0;
+	long double anchors_occurrence_average_q2 = 0;
+	long double anchors_occurrence_variance_q2 = 0;
+	u_int64_t nb_anchors_q3 = 0;
+	u_int64_t anchors_occurrence_sum_q3 = 0;
+	long double anchors_occurrence_average_q3 = 0;
+	long double anchors_occurrence_variance_q3 = 0;
+	u_int64_t nb_anchors_q4 = 0;
+	u_int64_t anchors_occurrence_sum_q4 = 0;
+	long double anchors_occurrence_average_q4 = 0;
+	long double anchors_occurrence_variance_q4 = 0;
+
+	//TODO : better memset...
+	for (int i=0; i < anchors_occurrence_max+1; ++i){
+		anchors_occurrence_histo[i] = (long long) 0;
+	}
+
+	long double anchors_occurrence_standard_deviation = 0;
+	long double anchors_occurrence_standard_deviation_q1 = 0;
+	long double anchors_occurrence_standard_deviation_q2 = 0;
+	long double anchors_occurrence_standard_deviation_q3 = 0;
+	long double anchors_occurrence_standard_deviation_q4 = 0;
+
+	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
+   		// retrieve the current item of some type
+   		pair<kmer_type,u_int32_t> pair_kmer_nb = it_kmer_count->item ();
+   		/*strcpy(kmer_key, pair_kmer_nb.first.toString(_kmerSize));
+   		fprintf(kmersAnchorsStats, "%s\t\t%d\n", kmer_key, pair_kmer_nb.second);*/
+
+   		anchor_occurrence = pair_kmer_nb.second;
+
+   		++anchors_occurrence_histo[anchor_occurrence];
+
+	}
+
+	for (long long anchor_occurrence = 0; anchor_occurrence < anchors_occurrence_max+1; ++anchor_occurrence){
+
+		u_int64_t nb_anchors_of_actual_occurence = anchors_occurrence_histo[anchor_occurrence];
+
+		if (anchor_occurrence <= q1){
+			anchors_occurrence_sum_q1 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q1 += (u_int64_t) nb_anchors_of_actual_occurence;
+   		}
+   		if (q1 <= anchor_occurrence && anchor_occurrence <= q2){
+   			anchors_occurrence_sum_q2 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q2 += (u_int64_t) nb_anchors_of_actual_occurence;
+   		}
+   		if (q2 <= anchor_occurrence && q1 <= anchor_occurrence && anchor_occurrence <= q3){
+   			anchors_occurrence_sum_q3 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q3 += (u_int64_t) nb_anchors_of_actual_occurence;
+   		}
+   		if (q3 <= anchor_occurrence && anchor_occurrence <= anchors_occurrence_max+1){
+   			anchors_occurrence_sum_q4 += anchor_occurrence * nb_anchors_of_actual_occurence;
+   			nb_anchors_q4 += (u_int64_t) nb_anchors_of_actual_occurence;
+   		}
+
+	}
+
+	anchors_occurrence_average_q1 = (long double) anchors_occurrence_sum_q1 / nb_anchors_q1;
+	anchors_occurrence_average_q2 = (long double) anchors_occurrence_sum_q2 / nb_anchors_q2;
+	anchors_occurrence_average_q3 = (long double) anchors_occurrence_sum_q3 / nb_anchors_q3;
+	anchors_occurrence_average_q4 = (long double) anchors_occurrence_sum_q4 / nb_anchors_q4;
+
+	u_int64_t debug_histo_total_count = 0;
+
+	for (int anchor_occurrence=0; anchor_occurrence < anchors_occurrence_max; ++ anchor_occurrence){
+		debug_histo_total_count += anchors_occurrence_histo[anchor_occurrence];
+		anchors_occurrence_variance += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average), 2));
+	
+		if (anchor_occurrence <= q1){
+   			anchors_occurrence_variance_q1 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q1), 2));
+   		}
+   		if (q1 <= anchor_occurrence && anchor_occurrence <= q2){
+   			anchors_occurrence_variance_q2 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q2), 2));
+   		}
+   		if (q2 <= anchor_occurrence && q1 <= anchor_occurrence && anchor_occurrence <= q3){
+   			anchors_occurrence_variance_q3 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q3), 2));
+   		}
+   		if (q3 <= anchor_occurrence && anchor_occurrence <= anchors_occurrence_max+1){
+   			anchors_occurrence_variance_q4 += (anchors_occurrence_histo[anchor_occurrence] * pow((anchor_occurrence - anchors_occurrence_average_q4), 2));   			
+   		}
+	}
+	
+	anchors_occurrence_variance /= (double) nb_anchors;
+	anchors_occurrence_variance_q1 /= (double) nb_anchors_q1;
+	anchors_occurrence_variance_q2 /= (double) nb_anchors_q2;
+	anchors_occurrence_variance_q3 /= (double) nb_anchors_q3;
+	anchors_occurrence_variance_q4 /= (double) nb_anchors_q4;
+
+	//cout << anchors_occurrence_variance << endl;
+	anchors_occurrence_standard_deviation = sqrt(anchors_occurrence_variance);
+	anchors_occurrence_standard_deviation_q1 = sqrt(anchors_occurrence_variance_q1);
+	anchors_occurrence_standard_deviation_q2 = sqrt(anchors_occurrence_variance_q2);
+	anchors_occurrence_standard_deviation_q3 = sqrt(anchors_occurrence_variance_q3);
+	anchors_occurrence_standard_deviation_q4 = sqrt(anchors_occurrence_variance_q4);
+
+
+	//printing stats
+
+	kmersAnchorsStats << "\n\n\n\t\t STATS \n\n\n" << endl;
+
+	kmersAnchorsStats << "nb anchored reads : " << _nb_anchored_reads << endl;
+
+	kmersAnchorsStats << "nb anchors : " << nb_anchors << endl;
+	kmersAnchorsStats << "anchors occurrence sum : " << anchors_occurrence_sum << endl;
+	kmersAnchorsStats << "anchors occurrence average : " << anchors_occurrence_average << endl;
+	kmersAnchorsStats << "anchors occurrence max : " << anchors_occurrence_max << endl;
+	kmersAnchorsStats << "anchors occurrence variance : " << anchors_occurrence_variance << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation : " << anchors_occurrence_standard_deviation << "\n" << endl;
+
+	kmersAnchorsStats << "anchors occurrence quartil 1 : " << q1 << endl;
+	kmersAnchorsStats << "anchors occurrence quartil 2 : " << q2 << endl;
+
+	kmersAnchorsStats << "anchors occurrence quartil 1-2 : " << q2-q1 << endl;
+	kmersAnchorsStats << "anchors occurrence quartil 3 : " << q3 << endl;
+	kmersAnchorsStats << "anchors occurrence quartil 2-3 : " << q3-q2 << endl;
+	kmersAnchorsStats << "anchors occurrence quartil 4 : " << q4 << endl;
+	kmersAnchorsStats << "anchors occurrence quartil 3-4 : " << q4-q3 << "\n" << endl;
+	kmersAnchorsStats << "nb anchors q1 : " << nb_anchors_q1 << endl;
+	kmersAnchorsStats << "nb anchors q2 : " << nb_anchors_q2 << endl;
+	kmersAnchorsStats << "nb anchors q3 : " << nb_anchors_q3 << endl;
+	kmersAnchorsStats << "nb anchors q4 : " << nb_anchors_q4 << endl;
+	kmersAnchorsStats << "anchors occurrence sum q1 : " << anchors_occurrence_sum_q1 << endl;
+	kmersAnchorsStats << "anchors occurrence sum q2 : " << anchors_occurrence_sum_q2 << endl;
+	kmersAnchorsStats << "anchors occurrence sum q3 : " << anchors_occurrence_sum_q3 << endl;
+	kmersAnchorsStats << "anchors occurrence sum q4 : " << anchors_occurrence_sum_q4 << endl;
+	kmersAnchorsStats << "anchors occurrence average q1 : " << anchors_occurrence_average_q1 << endl;
+	kmersAnchorsStats << "anchors occurrence average q2 : " << anchors_occurrence_average_q2 << endl;
+	kmersAnchorsStats << "anchors occurrence average q3 : " << anchors_occurrence_average_q3 << endl;
+	kmersAnchorsStats << "anchors occurrence average q4 : " << anchors_occurrence_average_q4 << "\n" << endl;
+
+	kmersAnchorsStats << "anchors occurrence variance q1 : " << anchors_occurrence_variance_q1 << endl;
+	kmersAnchorsStats << "anchors occurrence variance q2 : " << anchors_occurrence_variance_q2 << endl;
+	kmersAnchorsStats << "anchors occurrence variance q3 : " << anchors_occurrence_variance_q3 << endl;
+	kmersAnchorsStats << "anchors occurrence variance q4 : " << anchors_occurrence_variance_q4 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q1 : " << anchors_occurrence_standard_deviation_q1 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q2 : " << anchors_occurrence_standard_deviation_q2 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q3 : " << anchors_occurrence_standard_deviation_q3 << endl;
+	kmersAnchorsStats << "anchors occurrence standard deviation q4 : " << anchors_occurrence_standard_deviation_q4 << "\n" << endl;
+
+
+	kmersAnchorsStats << "debug histo total count : " << debug_histo_total_count << endl;
+
+	kmersAnchorsOccurrences.close();
+	kmersAnchorsStats.close();
 	delete _anchorKmersCount;
 	//END TEST_ANCHOR
 
@@ -1315,6 +1514,29 @@ bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
 	
 	if (_anchorKmers->get(kmer,anchorAdress)) //avec Hash16
 	{
+	//TEST_ANCHOR
+
+	// try to DEBUG
+	u_int32_t old_anchors_count;
+	_anchorKmersCount->get(kmer, &old_anchors_count);
+	//end debug
+
+	//part of test
+	_anchorKmersCount->insert(kmer);
+	// END TEST_ANCHOR
+
+	//DEBUG
+	ofstream debug_file;
+	debug_file.open("debug_file");
+	u_int32_t new_anchors_count;
+	_anchorKmersCount->get(kmer, &new_anchors_count);
+	if (new_anchors_count - old_anchors_count != 1){
+		debug_file << "\n\t\tError while counting Anchors :\nanchor :\t" << kmer.toString(_kmerSize) <<
+						"\n old_anchors_count :\t" << old_anchors_count <<
+						"\n new_anchors_count :\t" << new_anchors_count << endl;
+	}
+	debug_file.close();
+	//end debug
 		return true;
 	}
 	
