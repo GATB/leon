@@ -58,11 +58,11 @@ Optional Compression parameters:
 
 Examples : 
 
-    leon -file read.fasta -c 
-       -> generates the file read.leon
+    leon -file data/toy.fasta -c 
+       -> generates the file toy.leon
  
-    leon -file read.leon  -d 
-       -> "restores" the file read_d.fasta
+    leon -file toy.leon  -d 
+       -> "restores" the file toy.fasta
 
  
 
