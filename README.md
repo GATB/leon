@@ -97,3 +97,6 @@ this will allow to use k<63. For larger k, change the values such that they are 
 * version 0.1.2  Aug 10, 2014:
  initial public release
 
+#Contact
+
+To contact a developer, request help, etc: https://gatb.inria.fr/contact/
