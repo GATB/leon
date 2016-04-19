@@ -47,7 +47,12 @@ class AbstractDnaCoder
 {
 	public:
 		AbstractDnaCoder(Leon* leon);
-		
+		//ANCHOR_TEST
+
+		//normalement en protected
+		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
+		//END ANCHOR_TEST
+
 	protected:
 		Leon* _leon;
 		collections::impl::IBloom<kmer_type>* _bloom; // the bloom containing the solid kmers
@@ -94,7 +99,7 @@ class AbstractDnaCoder
 		
 		void startBlock();
 		void endRead();
-		void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
+		//void codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bool right);
 		void codeSeedNT(KmerModel* model, kmer_type* kmer, char nt, bool right);
 
 		void addErrorPos(int pos, bool rightExtend);

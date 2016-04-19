@@ -1544,9 +1544,60 @@ bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
 	//bool exist = _anchorKmers.get(kmer, &anchorAdress);
 	//return _anchorKmers.has_key(kmer);
 }
+//ANCHOR_TEST
+
+bool Leon::findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side, u_int32_t* anchorAdress, int bestPos){
+
+	kmer_type next_kmer;
+	bool isValid[4];
+
+	if (right_side){
+		++bestPos;
+	}
+	else{
+		--bestPos;
+	}
+
+	if (nb_request_max > 0){
+		for (int nt=0; nt<4; nt++){
+
+			next_kmer = kmer;
+			AbstractDnaCoder::codeSeedBin(&_kmerModel, &next_kmer, nt, right_side);
+
+			if (_graph->contains(next_kmer)){
+				if (_anchorKmers->get(kmer,anchorAdress)){
+					return true;
+				}
+				isValid[nt] = true;
+			}
+			else{
+				isValid[nt] = false;
+			}
+
+		--nb_request_max;
+		}
+	}
+
+	if (nb_request_max > 0){
+		for (int nt=0; nt<4; nt++){		
+
+			if (isValid[nt]){
+				next_kmer = kmer;
+				AbstractDnaCoder::codeSeedBin(&_kmerModel, &next_kmer, nt, right_side);
+				if (findExternAnchor(nb_request_max, next_kmer, right_side, anchorAdress, bestPos)){
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+//END ANCHOR_TEST
 
 int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorAdress){
-	
+
 	pthread_mutex_lock(&findAndInsert_mutex);
 
 		
@@ -1558,6 +1609,33 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	
 
 	kmer_type kmer, kmerMin;
+	
+
+	//ANCHOR_TEST
+
+	int nb_request_max = pow(4,5);
+	bool right_side = false;
+
+	//recherche à gauche
+
+	kmer = kmers[0];
+	bestPos = 0;
+
+	if (findExternAnchor(nb_request_max, kmer, right_side, anchorAdress, bestPos)){
+		return bestPos;
+	}
+
+	//recherche à droite
+	
+	kmer = kmers[kmers.size()-1];
+	bestPos = kmers.size()-1;
+	right_side = true;
+
+	if (findExternAnchor(nb_request_max, kmer, right_side, anchorAdress, bestPos)){
+		return bestPos;
+	}
+
+	//END ANCHOR_TEST
 	Node node;
 	Node nodeMin;
 	

@@ -119,6 +119,10 @@ class Leon : public misc::impl::Tool
 		
 		bool anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress);
 		int findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorAdress);
+
+		//ANCHOR_TEST
+		bool findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side, u_int32_t* anchorAdress, int bestPos);
+		//END ANCHOR_TEST
 		
 		u_int64_t _totalDnaSize;
 		u_int64_t _anchorDictSize;
