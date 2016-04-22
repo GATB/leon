@@ -140,10 +140,11 @@ void AbstractDnaCoder::codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bo
 	//string kmerStr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAN"
 	//kmer_type kmer2 = model->codeSeed(kmerStr.c_str(), Data::ASCII);
 	//cout << kmer2->toString(_kmerSize) << endl;
-	
+
 	if(right)
 	{
         /** We initialize the kmer. */
+
         KmerModel::Kmer tmp;  tmp.set (*kmer);
 
 		*kmer = model->codeSeedRight (tmp, nt, Data::INTEGER).value();
@@ -151,9 +152,11 @@ void AbstractDnaCoder::codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bo
 	else
 	{
         /** We initialize the canonical kmer. */
+
         KmerModel::Kmer tmp;  tmp.set (revcomp(*kmer, _kmerSize));
 
 		*kmer = model->codeSeedRight (tmp, binrev[nt], Data::INTEGER).value();
+		                											cout << "lol" << endl;
 		*kmer = revcomp(*kmer, _kmerSize);
 	}
 }
@@ -774,9 +777,14 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	//_prevAnchorAddress = anchorAddress;
 	//printf("anchor adress %i \n",anchorAddress);
 
+	//ANCHOR_TEST
+	//code original :
+	//kmer_type anchor = _kmers[anchorPos];
 	
-	kmer_type anchor = _kmers[anchorPos];
-	
+	kmer_type anchor;
+	_leon->_anchorKmers->get(anchor,&anchorAddress);
+	//END ANCHOR_TEST
+
 	//Encode a bit that says if the anchor is normal or revcomp
 	if(anchor == min(anchor, revcomp(anchor, _kmerSize))){
 		#ifdef LEON_PRINT_STAT
@@ -793,7 +801,10 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\t\t\tAnchor pos: " << anchorPos << endl;
-		cout << "\t\t\tAnchor: " << _kmers[anchorPos].toString(_kmerSize) << endl;
+		//ANCHOR_TEST
+		//cout << "\t\t\tAnchor: " << _kmers[anchorPos].toString(_kmerSize) << endl;
+		cout << "\t\t\tAnchor: " << anchor.toString(_kmerSize) << endl;
+		//END ANCHOR_TEST
 	#endif
 
 	_bifurcations.clear();
@@ -802,10 +813,13 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	_leftErrorPos.clear();
 	//_rightErrorPos.clear();
 
+	//ANCHOR_TEST
+	bool right_extend = true;
+	//END ANCHOR_TEST
 	
 	kmer_type kmer = anchor;
 	for(int i=anchorPos-1; i>=0; i--){
-		kmer = buildBifurcationList(i, kmer, false);
+		kmer = buildBifurcationList(i, kmer, !right_extend);
 		//i = buildBifurcationList(i, false);
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
@@ -813,7 +827,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	kmer = anchor;
 	for(int i=anchorPos+_kmerSize; i<_readSize; i++){
 		//cout << "Pos: " << i << endl;
-		kmer = buildBifurcationList(i, kmer, true);
+		kmer = buildBifurcationList(i, kmer, right_extend);
 		//i = buildBifurcationList(i, true);
 	//for(int i=anchorPos; i<_kmers.size()-1; i++)
 		//cout << kmer.toString(_kmerSize) << endl;

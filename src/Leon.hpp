@@ -122,6 +122,8 @@ class Leon : public misc::impl::Tool
 
 		//ANCHOR_TEST
 		bool findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side, u_int32_t* anchorAdress, int bestPos);
+		//normalement privée
+		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
 		//END ANCHOR_TEST
 		
 		u_int64_t _totalDnaSize;
@@ -297,7 +299,10 @@ class Leon : public misc::impl::Tool
 		
 		//map<kmer_type, u_int32_t> _anchorKmers; //uses 46 B per elem inserted
 		//OAHash<kmer_type> _anchorKmers;
-		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
+
+		//ANCHOR_TEST
+		//Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
+		//END ANCHOR_TEST
 
 		/*
 		** TEST_ANCHOR

@@ -1550,6 +1550,9 @@ bool Leon::findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side,
 
 	kmer_type next_kmer;
 	bool isValid[4];
+	Node node;
+
+	AbstractDnaCoder* adc = new AbstractDnaCoder(this);
 
 	if (right_side){
 		++bestPos;
@@ -1562,10 +1565,12 @@ bool Leon::findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side,
 		for (int nt=0; nt<4; nt++){
 
 			next_kmer = kmer;
-			AbstractDnaCoder::codeSeedBin(&_kmerModel, &next_kmer, nt, right_side);
-
-			if (_graph->contains(next_kmer)){
+			adc->codeSeedBin(_kmerModel, &next_kmer, nt, right_side);
+										cout << "lol" << endl;
+			node = Node(Node::Value(kmer));
+			if (_graph.contains(node)){
 				if (_anchorKmers->get(kmer,anchorAdress)){
+					delete adc;
 					return true;
 				}
 				isValid[nt] = true;
@@ -1583,14 +1588,16 @@ bool Leon::findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side,
 
 			if (isValid[nt]){
 				next_kmer = kmer;
-				AbstractDnaCoder::codeSeedBin(&_kmerModel, &next_kmer, nt, right_side);
+				adc->codeSeedBin(_kmerModel, &next_kmer, nt, right_side);
 				if (findExternAnchor(nb_request_max, next_kmer, right_side, anchorAdress, bestPos)){
+					delete adc;
 					return true;
 				}
 			}
 		}
 	}
 
+	delete adc;
 	return false;
 }
 
@@ -1612,7 +1619,6 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	
 
 	//ANCHOR_TEST
-
 	int nb_request_max = pow(4,5);
 	bool right_side = false;
 
@@ -1620,7 +1626,6 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 	kmer = kmers[0];
 	bestPos = 0;
-
 	if (findExternAnchor(nb_request_max, kmer, right_side, anchorAdress, bestPos)){
 		return bestPos;
 	}
