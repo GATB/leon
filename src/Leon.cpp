@@ -545,6 +545,9 @@ void Leon::executeCompression(){
 	u_int8_t infoByte = 0;
 	
 	
+	_kmerModel = new KmerModel(_kmerSize);
+
+	
 	/** We look for the beginnin of the suffix. */
 	int lastindex = _inputFilename.find_last_of (".");
 	
@@ -923,6 +926,7 @@ void Leon::endCompression(){
 	printf("\tTime: %.2fs\n", (  _wfin_leon - _wdebut_leon) );
 	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
 
+	delete _kmerModel;
 	
 	//printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
 	//printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));
@@ -1567,7 +1571,9 @@ bool Leon::findExternAnchor(int nb_request_max, kmer_type kmer, bool right_side,
 			next_kmer = kmer;
 			adc->codeSeedBin(_kmerModel, &next_kmer, nt, right_side);
 										cout << "lol" << endl;
-			node = Node(Node::Value(kmer));
+			kmer_type kmin = min (next_kmer, revcomp(next_kmer, _kmerSize));
+			node = Node(Node::Value(kmin));
+			
 			if (_graph.contains(node)){
 				if (_anchorKmers->get(kmer,anchorAdress)){
 					delete adc;
