@@ -120,7 +120,7 @@ _anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T,
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_readWithoutAnchorCount(0),
 _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _otherSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0),
-_progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0), _qualwriter(NULL)
+_progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0), _qualwriter(NULL),nb_multa(0),nb_a(0)
 
 {
 _isFasta = true;
@@ -185,6 +185,7 @@ Leon::~Leon ()
 	if(_qualwriter != NULL)
 		delete(_qualwriter);
 	
+	fclose(ddebug);
 	if (_progress_decode)  { delete _progress_decode; }
 }
 
@@ -195,6 +196,8 @@ void Leon::execute()
 	gettimeofday(&_tim, NULL);
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
+	
+	ddebug = fopen("histo_max","w");
 	
 	
 	if(getParser()->saw ("-lossless"))
@@ -1098,7 +1101,10 @@ void Leon::startDnaCompression(){
 	** TEST_ANCHOR 
 	*/
 	size_t max_size_hash16 = 1024;
-	_anchorKmersCount = new Hash16<kmer_type, u_int32_t > (max_size_hash16); 
+	_anchorKmersCount = new Hash16<kmer_type, u_int32_t > (max_size_hash16);
+	
+	_hashAnchorTemp = new Hash16<kmer_type, u_int32_t > (max_size_hash16);
+
 	/*
 	** END TEST_ANCHOR
 	*/
@@ -1133,7 +1139,39 @@ void Leon::startDnaCompression(){
 		setDispatcher (  new Dispatcher (_nb_cores) );
 	#endif
 
-	//getDispatcher()->iterate (itSeq,  HeaderEncoder(this, &nb_threads_living), 10000);
+	//////////////////////////////////////////////// First pass  ///////////////////////////////////////
+	/*
+	Iterator<Sequence>* itSeq_anchors = createIterator<Sequence> (
+														  _inputBank->iterator(),
+														  nbestimated,
+														  "Computing anchors"
+														  );
+	LOCAL(itSeq_anchors);
+	
+	getDispatcher()->iterate (itSeq_anchors,  AnchorFinder(this), READ_PER_BLOCK);
+	
+	
+	//test
+	dp::Iterator<std::pair<kmer_type,u_int32_t>>* it_kmer_count = _hashAnchorTemp->iterator();
+//compute average
+	u_int64_t nb_anchors = 0;
+	u_int64_t anchors_occurrence_sum = 0;
+	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
+		// retrieve the current item of some type
+		pair<kmer_type,u_int32_t> pair_kmer_nb = it_kmer_count->item ();
+
+		++nb_anchors;
+		anchors_occurrence_sum += pair_kmer_nb.second;
+		
+	}
+	
+	 double anchors_occurrence_average = (double) anchors_occurrence_sum / (double) nb_anchors;
+
+	printf("---first pass average read per anchor : %.2f ---\n",anchors_occurrence_average);
+	*/
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 	getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
 	
 	endDnaCompression();
@@ -1391,6 +1429,9 @@ void Leon::endDnaCompression(){
 	anchors_occurrence_standard_deviation_q3 = sqrt(anchors_occurrence_variance_q3);
 	anchors_occurrence_standard_deviation_q4 = sqrt(anchors_occurrence_variance_q4);
 
+	
+	cout << "------ anchors occurrence average : " << anchors_occurrence_average << " ---------" << endl;
+
 
 	//printing stats
 
@@ -1435,7 +1476,10 @@ void Leon::endDnaCompression(){
 	kmersAnchorsStats << "anchors occurrence standard deviation q3 : " << anchors_occurrence_standard_deviation_q3 << endl;
 	kmersAnchorsStats << "anchors occurrence standard deviation q4 : " << anchors_occurrence_standard_deviation_q4 << "\n" << endl;
 
+	kmersAnchorsStats << "nb multiple anchors " << nb_multa  << endl;
+	kmersAnchorsStats << "nb anchors " << nb_a  << endl;
 
+	
 	kmersAnchorsStats << "debug histo total count : " << debug_histo_total_count << endl;
 
 	kmersAnchorsOccurrences.close();
@@ -1514,39 +1558,43 @@ bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
 	
 	if (_anchorKmers->get(kmer,anchorAdress)) //avec Hash16
 	{
-	//TEST_ANCHOR
-
-	// try to DEBUG
-	u_int32_t old_anchors_count;
-	_anchorKmersCount->get(kmer, &old_anchors_count);
-	//end debug
-
-	//part of test
-	pthread_mutex_lock(&findAndInsert_mutex);
-	_anchorKmersCount->insert(kmer);
-	pthread_mutex_unlock(&findAndInsert_mutex);
-
-	// END TEST_ANCHOR
-
-	//DEBUG
-	ofstream debug_file;
-	debug_file.open("debug_file");
-	u_int32_t new_anchors_count;
-	_anchorKmersCount->get(kmer, &new_anchors_count);
-	if (new_anchors_count - old_anchors_count != 1){
-		debug_file << "\n\t\tError while counting Anchors :\nanchor :\t" << kmer.toString(_kmerSize) <<
-						"\n old_anchors_count :\t" << old_anchors_count <<
-						"\n new_anchors_count :\t" << new_anchors_count << endl;
-	}
-	debug_file.close();
-	//end debug
+		//TEST_ANCHOR
+		
+		// try to DEBUG
+		u_int32_t old_anchors_count;
+		_anchorKmersCount->get(kmer, &old_anchors_count);
+		//end debug
+		
+		if(old_anchors_count==0)
+			printf("prob old kmercount %i ==0   kmer %s \n",old_anchors_count, kmer.toString(_kmerSize).c_str());
+		
+		//part of test
+		pthread_mutex_lock(&findAndInsert_mutex);
+		_anchorKmersCount->insert(kmer);
+	//	printf("use existing anchor %s \n",kmer.toString(_kmerSize).c_str());
+		pthread_mutex_unlock(&findAndInsert_mutex);
+		
+		// END TEST_ANCHOR
+		
+		//DEBUG
+		ofstream debug_file;
+		debug_file.open("debug_file");
+		u_int32_t new_anchors_count;
+		_anchorKmersCount->get(kmer, &new_anchors_count);
+		if (new_anchors_count - old_anchors_count != 1){
+			debug_file << "\n\t\tError while counting Anchors :\nanchor :\t" << kmer.toString(_kmerSize) <<
+			"\n old_anchors_count :\t" << old_anchors_count <<
+			"\n new_anchors_count :\t" << new_anchors_count << endl;
+		}
+		debug_file.close();
+		//end debug
 		return true;
 	}
 	
-//	if(_anchorKmers.find( kmer ) != _anchorKmers.end()){ //avec std map
-//		*anchorAdress = _anchorKmers[kmer];
-//		return true;
-//	}
+	//	if(_anchorKmers.find( kmer ) != _anchorKmers.end()){ //avec std map
+	//		*anchorAdress = _anchorKmers[kmer];
+	//		return true;
+	//	}
 	
 	return false;
 	//return _anchorKmers.get(kmer, (int*)anchorAdress); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!changer OAHash in to u_int32_t
@@ -1595,12 +1643,22 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 	iMin = std::max(iMin, 0);
 	iMax = std::min(iMax, (int) kmers.size());
 
+	
+	int max_occ = 0;
+	
 	for(int i=iMin; i<iMax; i++){
 
 		kmer = kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
+//		u_int32_t first_pass_anchor_count;
+//		_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count);
+		
+//		if(_bloom->contains(kmerMin) && first_pass_anchor_count >3){
+//		if(_bloom->contains(kmerMin) && first_pass_anchor_count  > max_occ){
+//			max_occ = first_pass_anchor_count ;
 		if(_bloom->contains(kmerMin)){
+
 			isAnchorFound = 1;
 			bestPos = i;
 			bestKmer = kmerMin;
@@ -1608,14 +1666,21 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		}
 	}
 
-	if(!isAnchorFound){
+	if(!isAnchorFound)
+	{
 
 		for(int i=0; i<iMin; i++){
 			kmer = kmers[i];
 			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
 
-			if(_bloom->contains(kmerMin)){
+//			u_int32_t first_pass_anchor_count;
+//			_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count);
+			
+		//	if(_bloom->contains(kmerMin) && first_pass_anchor_count >3){
+				if(_bloom->contains(kmerMin)){
+//				if(_bloom->contains(kmerMin) && first_pass_anchor_count  > max_occ){
+//					max_occ = first_pass_anchor_count ;
 				isAnchorFound = 1;
 				bestPos = i;
 				bestKmer = kmerMin;
@@ -1624,12 +1689,20 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		}
 
 
-		if(!isAnchorFound){
+		if(!isAnchorFound)
+		{
 			for(int i=iMax; i<kmers.size(); i++){
 				kmer = kmers[i];
 				kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
-				if(_bloom->contains(kmerMin)){
+//				u_int32_t first_pass_anchor_count;
+//				_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count);
+				
+		//		if(_bloom->contains(kmerMin) && first_pass_anchor_count >3){
+					if(_bloom->contains(kmerMin)){
+//					if(_bloom->contains(kmerMin) && first_pass_anchor_count  > max_occ){
+//						max_occ = first_pass_anchor_count ;
+				
 					isAnchorFound = 1;
 					bestPos = i;
 					bestKmer = kmerMin;
@@ -1638,7 +1711,153 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 			}
 		}
 	}
+	
+//	
+//	
+//	//print max val :
+//	u_int32_t maxk=0;
+//	int nbchoice =0;
+//	for(int i=0; i<kmers.size(); i++){
+//		
+//		kmer = kmers[i];
+//		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+//		
+//		u_int32_t first_pass_anchor_count;
+//		if(_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count))
+//		{
+//			if(first_pass_anchor_count > maxk) maxk = first_pass_anchor_count;
+//		}
+//		
+//		if(_bloom->contains(kmerMin))
+//		{
+//			nbchoice++;
+//		}
+//	}
+//	
+//	fprintf(ddebug,"%u %i\n",maxk,nbchoice);
 
+	
+	
+	//si < seuil, cherche autre si possible
+	
+//	u_int32_t chosen_anchor_count;
+//	_hashAnchorTemp->get(bestKmer, &chosen_anchor_count);
+//
+//	if(chosen_anchor_count< 10)
+//	{
+//			int max_occ = chosen_anchor_count;
+//		
+//				for(int i=0; i<kmers.size(); i++){
+//		
+//					kmer = kmers[i];
+//					kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+//		
+//					u_int32_t first_pass_anchor_count;
+//					_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count);
+//		
+//					if(_bloom->contains(kmerMin) && first_pass_anchor_count  > max_occ){
+//						max_occ = first_pass_anchor_count ;
+//						isAnchorFound = 1;
+//						bestPos = i;
+//						bestKmer = kmerMin;
+//						//break;
+//					}
+//				}
+//	}
+	
+	
+	//avec max de la first pass
+	
+//	int max_occ = 0;
+//	
+//		for(int i=0; i<kmers.size(); i++){
+//	
+//			kmer = kmers[i];
+//			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+//	
+//			u_int32_t first_pass_anchor_count;
+//			_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count);
+//			
+//			if(_bloom->contains(kmerMin) && first_pass_anchor_count  > max_occ){
+//				max_occ = first_pass_anchor_count ;
+//				isAnchorFound = 1;
+//				bestPos = i;
+//				bestKmer = kmerMin;
+//				//break;
+//			}
+//		}
+	
+	
+	
+/*
+	//spirale partant du milieu
+	
+	int index_k =  ceilf (kmers.size()/2) -1 ;
+	int offset  = 1 ;
+	int sens = 1;
+	
+while(offset <= kmers.size())
+{
+	kmer = kmers[index_k];
+	kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+	
+	if(_bloom->contains(kmerMin)){
+		isAnchorFound = 1;
+		bestPos = index_k;
+		bestKmer = kmerMin;
+		break;
+	}
+	
+	index_k += sens * offset;
+	
+	offset++ ;
+	sens *= -1;
+	
+}
+	
+	*/
+	
+	
+//	
+//	for(int i=0; i<kmers.size(); i++){
+//		
+//		kmer = kmers[i];
+//		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+//		
+//		if(_bloom->contains(kmerMin)){
+//			isAnchorFound = 1;
+//			bestPos = i;
+//			bestKmer = kmerMin;
+//			break;
+//		}
+//	}
+	
+	
+
+	/*
+	bestKmer = ( 1ULL <<  ( _kmerSize *2)) -1;
+	
+	
+	for(int i=0; i<kmers.size(); i++){
+		
+
+		
+		kmer = kmers[i];
+		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		
+
+		if(_bloom->contains(kmerMin)){
+			
+			if(kmerMin < bestKmer)
+			{
+				bestPos = i;
+				bestKmer = kmerMin;
+			}
+			isAnchorFound = 1;
+
+		}
+	}
+	*/
 
 	/*
 	for(int i=0; i<kmers.size(); i++){
@@ -1673,7 +1892,13 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 	encodeInsertedAnchor(bestKmer);	
 	//TEST_ANCHOR
-	_anchorKmersCount->insert(kmerMin);
+	
+
+//	printf("use new anchor %s \n",bestKmer.toString(_kmerSize).c_str());
+
+	_anchorKmersCount->insert(bestKmer);
+	 __sync_fetch_and_add (&nb_a, 1);
+
 	// END TEST_ANCHOR
 	
 	_anchorKmers->insert(bestKmer,_anchorAdress); //with Hash16
@@ -1693,6 +1918,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		_kmerAbundance->remove(kmerMin, &val);
 		//_kmerAbundance->insert(kmerMin, val-1);
 	}*/
+
 
 	pthread_mutex_unlock(&findAndInsert_mutex);
 	return bestPos;

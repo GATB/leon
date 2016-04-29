@@ -40,6 +40,31 @@
 using namespace std;
 class Leon;
 
+class AnchorFinder
+{
+public:
+	
+	AnchorFinder(Leon* leon);
+	~AnchorFinder();
+	void operator()(Sequence& sequence);
+	
+	void buildKmers();
+
+	int _readSize;
+	Sequence* _sequence;
+	u_int64_t _seqId;
+	char* _readseq;
+	size_t _kmerSize;
+
+	
+	KmerModel _kmerModel;
+	vector<kmer_type> _kmers;
+	KmerModel::Iterator _itKmer;
+protected:
+	Leon* _leon;
+	
+};
+
 //====================================================================================
 // ** AbstractDnaCoder
 //====================================================================================
@@ -112,6 +137,8 @@ class AbstractDnaCoder
 	
 		int _processedSequenceCount;
 };
+
+
 
 //====================================================================================
 // ** DnaEncoder

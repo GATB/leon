@@ -289,26 +289,36 @@ class Leon : public misc::impl::Tool
 			
 		RangeEncoder _anchorRangeEncoder;
 		Order0Model _anchorDictModel;
-		
+public:
 		//map<kmer_type, u_int32_t> _anchorKmers; //uses 46 B per elem inserted
 		//OAHash<kmer_type> _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
 
+	
+	FILE * ddebug;
 		/*
 		** TEST_ANCHOR
 		*/
 		Hash16<kmer_type, u_int32_t> * _anchorKmersCount;
+	
+		Hash16<kmer_type, u_int32_t> * _hashAnchorTemp;
+
 		/*
 		** END TEST_ANCHOR
 		*/
+	pthread_mutex_t findAndInsert_mutex;
+	
+	u_int64_t nb_multa;
+	u_int64_t nb_a;
 
+private:
 		//Header decompression
 	
 		string _headerOutputFilename;
 		ofstream* _headerOutputFile;
 		
 	   	int _auto_cutoff;
-		pthread_mutex_t findAndInsert_mutex;
+	
 		pthread_mutex_t writeblock_mutex;
 
 		//TEST_ANCHOR

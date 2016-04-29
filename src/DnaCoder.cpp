@@ -316,6 +316,177 @@ DnaEncoder::~DnaEncoder(){
 	}
 }
 
+void AnchorFinder::operator()(Sequence& sequence)
+{
+	_sequence = &sequence;
+	_seqId = _sequence->getIndex() ;
+	_readSize = _sequence->getDataSize();
+	_readseq = _sequence->getDataBuffer();
+	
+	kmer_type kmer, kmerMin;
+
+	
+	//printf("AnchorFinder seq id %i \n",_seqId);
+
+	buildKmers();
+	
+	
+	bool anchorfound = false;
+	//test if existing anchor
+
+	
+	
+	//comptage kmer
+
+//	for(int i=0; i<_kmers.size(); i++){
+//		kmer = _kmers[i];
+//		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+//		
+//		_leon->_hashAnchorTemp->insert(kmerMin);
+//
+//	}
+
+	
+	
+	
+	u_int32_t old_anchors_count;
+	
+	for(int i=0; i<_kmers.size(); i++){
+		kmer = _kmers[i];
+		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		
+		if (_leon->_hashAnchorTemp->get(kmerMin, &old_anchors_count))//ancre deja utilisée, on prend celle là
+		{
+			pthread_mutex_lock(& _leon->findAndInsert_mutex);
+			_leon->_hashAnchorTemp->insert(kmerMin);
+			
+		//	printf("use existing anchor %s \n",kmerMin.toString(_kmerSize).c_str());
+
+			pthread_mutex_unlock(& _leon->findAndInsert_mutex);
+			anchorfound = true;
+			break;
+		}
+		
+	}
+	
+
+	// if no existing anchor yet :
+	
+	if(!anchorfound)
+	{
+		pthread_mutex_lock(&_leon->findAndInsert_mutex);
+		
+		
+		int isAnchorFound = 0;
+		int bestPos;
+		kmer_type bestKmer;
+		//int bestPos = -1;
+
+		
+		kmer_type kmer, kmerMin;
+
+		int iMin = _kmers.size()/2;
+		int iMax = _kmers.size()/2 + 10;
+		iMin = std::max(iMin, 0);
+		iMax = std::min(iMax, (int) _kmers.size());
+		
+		
+		for(int i=iMin; i<iMax; i++){
+			
+			kmer = _kmers[i];
+			kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+			
+			if(_leon->_bloom->contains(kmerMin)){
+				isAnchorFound = 1;
+				bestPos = i;
+				bestKmer = kmerMin;
+				break;
+			}
+		}
+		
+		if(!isAnchorFound){
+			
+			for(int i=0; i<iMin; i++){
+				kmer = _kmers[i];
+				kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+				
+				
+				if(_leon->_bloom->contains(kmerMin)){
+					isAnchorFound = 1;
+					bestPos = i;
+					bestKmer = kmerMin;
+					break;
+				}
+			}
+			
+			
+			if(!isAnchorFound){
+				for(int i=iMax; i<_kmers.size(); i++){
+					kmer = _kmers[i];
+					kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+					
+					if(_leon->_bloom->contains(kmerMin)){
+						isAnchorFound = 1;
+						bestPos = i;
+						bestKmer = kmerMin;
+						break;
+					}
+				}
+			}
+		}
+		
+		if(isAnchorFound)
+		{
+	//		printf("use new anchor %s \n",bestKmer.toString(_kmerSize).c_str());
+
+			_leon->_hashAnchorTemp->insert(bestKmer);
+		}
+	
+
+		pthread_mutex_unlock(& _leon->findAndInsert_mutex);
+	}
+	
+	
+	
+	
+	
+}
+
+AnchorFinder::AnchorFinder(Leon* leon) : _kmerModel(leon->_kmerSize), _itKmer(_kmerModel)
+{
+	_leon = leon;
+	_kmerSize = _leon->_kmerSize;
+
+}
+
+AnchorFinder::~AnchorFinder()
+{
+	
+}
+
+
+void AnchorFinder::buildKmers(){
+	
+	
+	
+	for(int i=0; i<_readSize; i++){
+		if(_readseq[i] == 'N'){
+			_readseq[i] = 'A';
+		}
+	}
+	
+
+	_itKmer.setData(_sequence->getData());
+	
+	_kmers.clear();
+	for (_itKmer.first(); !_itKmer.isDone(); _itKmer.next()){
+		_kmers.push_back(_itKmer->value());
+	}
+	
+
+}
+
+
 void DnaEncoder::operator()(Sequence& sequence){
 
 #ifdef PRINT_DISTRIB
@@ -335,6 +506,7 @@ void DnaEncoder::operator()(Sequence& sequence){
 	
 //	if(_sequence->getIndex() % Leon::READ_PER_BLOCK == 0){
 
+//	printf("DNAencoder seq id %i \n",_seqId);
 	execute();
 
 	//_prevSequences = _sequence;
@@ -396,6 +568,10 @@ void DnaEncoder::writeBlock(){
 	
 }
 
+
+
+
+
 void DnaEncoder::execute(){
 
 	//if(_leon->_readCount > 18) return;
@@ -430,6 +606,38 @@ void DnaEncoder::execute(){
 		storeSolidCoverageInfo();
 		smoothQuals();
 	}
+	
+	
+//	{
+//	
+//	kmer_type kmer, kmerMin;
+//
+//	
+//	//print max val :
+//	u_int32_t maxk=0;
+//	int nbchoice =0;
+//	for(int i=0; i<_kmers.size(); i++){
+//		
+//		kmer = _kmers[i];
+//		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+//		
+//	
+//		
+//		u_int32_t first_pass_anchor_count;
+//		if(_leon->_hashAnchorTemp->get(kmerMin, &first_pass_anchor_count))
+//		{
+//			if(first_pass_anchor_count > maxk) maxk = first_pass_anchor_count;
+//		}
+//		
+//		if(_leon->_bloom->contains(kmerMin))
+//		{
+//			nbchoice++;
+//		}
+//	}
+//	
+//	fprintf(_leon->ddebug,"%u %i\n",maxk,nbchoice);
+//	}
+	
 	
 
 	//_isPrevReadAnchorable = false;
@@ -691,6 +899,62 @@ int DnaEncoder::findExistingAnchor(u_int32_t* anchorAddress){
 			return i;
 		}
 	}
+
+	
+	
+///	printf("find max anchor \n");
+
+	
+	/*
+	
+	int anchormax  = 0;
+	kmer_type bestanchor;
+	int best_idx;
+	for(int i=0; i<_kmers.size(); i++){
+		kmer = _kmers[i];
+		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+		
+
+		u_int32_t anchorAdress;
+		if (_leon->_anchorKmers->get(kmerMin,&anchorAdress)) //avec Hash16  _anchorKmers
+		{
+			u_int32_t old_anchors_count;
+			_leon->_hashAnchorTemp->get(kmerMin, &old_anchors_count);
+			
+			if(old_anchors_count > anchormax )
+			{
+				anchormax = old_anchors_count;
+				bestanchor =  kmerMin;
+				best_idx = i ;
+			  __sync_fetch_and_add (& _leon->nb_multa, 1);
+			}
+			
+		}
+		
+	}
+
+	if(anchormax == 0)
+	{
+		//printf("not found   anchormax = %i   bestanchor %s \n",anchormax, bestanchor.toString(_kmerSize).c_str());
+
+		return -1;
+	}
+	else
+	{
+		//printf(" found   anchormax = %i   bestanchor %s \n",anchormax, bestanchor.toString(_kmerSize).c_str());
+
+		pthread_mutex_lock(&  (_leon->findAndInsert_mutex));
+		
+		_leon->_anchorKmersCount->insert(bestanchor);
+		
+		pthread_mutex_unlock(& (_leon->findAndInsert_mutex));
+		
+		return best_idx;
+	}
+	
+	*/
+
+
 	return -1;
 }
 
