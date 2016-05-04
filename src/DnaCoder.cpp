@@ -156,7 +156,7 @@ void AbstractDnaCoder::codeSeedBin(KmerModel* model, kmer_type* kmer, int nt, bo
         KmerModel::Kmer tmp;  tmp.set (revcomp(*kmer, _kmerSize));
 
 		*kmer = model->codeSeedRight (tmp, binrev[nt], Data::INTEGER).value();
-		                											cout << "lol" << endl;
+		                											
 		*kmer = revcomp(*kmer, _kmerSize);
 	}
 }
@@ -438,14 +438,18 @@ void DnaEncoder::execute(){
 	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
 
 
-	if(anchorPos == -1)
+	if(anchorPos == -1){
+		cout << "searching for anchor" << endl;
 		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);  //unsynch
-
+	}
 	//cout << anchorPos << endl;
 
-	if(anchorPos == -1)
+	if(anchorPos == -1){
+		cout << "no anchor found :(" << endl;
 		encodeNoAnchorRead();
+	}
 	else{
+		cout << "encode anchor at pos : " << anchorPos << endl;
 		encodeAnchorRead(anchorPos, anchorAddress);
 		//TEST_ANCHOR
 		//pthread_mutex_lock(&incr_nb_anchored_reads_mutex);
@@ -822,7 +826,9 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		kmer = buildBifurcationList(i, kmer, !right_extend);
 		//i = buildBifurcationList(i, false);
 		//cout << kmer.toString(_kmerSize) << endl;
+		cout << "debug left i : " << i << endl;
 	}
+	cout << "end left" << endl;
 
 	kmer = anchor;
 	for(int i=anchorPos+_kmerSize; i<_readSize; i++){
@@ -830,8 +836,10 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		kmer = buildBifurcationList(i, kmer, right_extend);
 		//i = buildBifurcationList(i, true);
 	//for(int i=anchorPos; i<_kmers.size()-1; i++)
+		cout << "debug right i : " << i << endl;
 		//cout << kmer.toString(_kmerSize) << endl;
 	}
+	cout << "end right" << endl;
 		
 
 	//Encode N positions
@@ -931,7 +939,7 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	}
 
 	
-	
+	cout << "end" << endl;
 }
 	
 kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightExtend){
