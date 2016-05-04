@@ -1237,7 +1237,7 @@ void Leon::endDnaCompression(){
 	delete _anchorKmers;
 
 	//TEST_ANCHOR
-	dp::Iterator<std::pair<kmer_type,u_int32_t>>* it_kmer_count = _anchorKmersCount->iterator();
+	dp::Iterator<std::pair<kmer_type,u_int32_t> >* it_kmer_count = _anchorKmersCount->iterator();
 
 	ofstream kmersAnchorsOccurrences;
 	ofstream kmersAnchorsStats;
@@ -1566,7 +1566,6 @@ int Leon::findExternalAnchor(int nb_request_max, kmer_type kmer, bool right_side
 	else{
 		--bestPos;
 	}
-	//cout << "hello1" << endl;
 
 	if (nb_request_max > 0){
 		for (int nt=0; nt<4; nt++){
@@ -1599,7 +1598,9 @@ int Leon::findExternalAnchor(int nb_request_max, kmer_type kmer, bool right_side
 			if (isValid[nt]){
 				next_kmer = kmer;
 				adc->codeSeedBin(_kmerModel, &next_kmer, nt, right_side);
+				cout << "before recursive call" << endl;
 				if ((bestPos = findExternalAnchor(nb_request_max, next_kmer, right_side, anchorAdress, bestPos)) != 0){
+					cout << "after recursive call" << endl;
 					delete adc;
 					return bestPos;
 				}
