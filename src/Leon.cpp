@@ -1237,8 +1237,7 @@ void Leon::endDnaCompression(){
 	delete _anchorKmers;
 	
 	//TEST_ANCHOR
-	//	dp::Iterator<std::pair<kmer_type,u_int32_t> >*
-	auto it_kmer_count = _anchorKmersCount->iterator();
+	dp::Iterator<std::pair<kmer_type,u_int32_t> >* it_kmer_count = _anchorKmersCount->iterator();
 	
 	ofstream kmersAnchorsOccurrences;
 	ofstream kmersAnchorsStats;
@@ -1256,8 +1255,7 @@ void Leon::endDnaCompression(){
 	
 	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
 		// retrieve the current item of some type
-		//pair<kmer_type,u_int32_t>
-		auto pair_kmer_nb = it_kmer_count->item ();
+		pair<kmer_type,u_int32_t> pair_kmer_nb = it_kmer_count->item ();
 		/*strcpy(kmer_key, pair_kmer_nb.first.toString(_kmerSize));
 		 fprintf(kmersAnchorsStats, "%s\t\t%d\n", kmer_key, pair_kmer_nb.second);*/
 		
@@ -1265,14 +1263,14 @@ void Leon::endDnaCompression(){
 		++nb_anchors;
 		//pthread_mutex_unlock(&incr_nb_anchors_mutex);
 		
-		anchor_occurrence = pair_kmer_nb.val;
+		anchor_occurrence = pair_kmer_nb.second;
 		if (anchors_occurrence_max < anchor_occurrence){
 			anchors_occurrence_max = anchor_occurrence;
 		}
 		
 		anchors_occurrence_sum += anchor_occurrence;
 		
-		kmersAnchorsOccurrences << pair_kmer_nb.graine.toString(_kmerSize) << "\t\t" << anchor_occurrence << endl;
+		kmersAnchorsOccurrences << pair_kmer_nb.first.toString(_kmerSize) << "\t\t" << anchor_occurrence << endl;
 	}
 	
 	long double anchors_occurrence_average = (double) anchors_occurrence_sum / (double) nb_anchors;
@@ -1317,12 +1315,11 @@ void Leon::endDnaCompression(){
 	
 	for (it_kmer_count->first(); !it_kmer_count->isDone(); it_kmer_count->next() ){
 		// retrieve the current item of some type
-		//pair<kmer_type,u_int32_t>
-		auto pair_kmer_nb = it_kmer_count->item ();
+		pair<kmer_type,u_int32_t> pair_kmer_nb = it_kmer_count->item ();
 		/*strcpy(kmer_key, pair_kmer_nb.first.toString(_kmerSize));
 		 fprintf(kmersAnchorsStats, "%s\t\t%d\n", kmer_key, pair_kmer_nb.second);*/
 		
-		anchor_occurrence = pair_kmer_nb.val;
+		anchor_occurrence = pair_kmer_nb.second;
 		
 		++anchors_occurrence_histo[anchor_occurrence];
 		
