@@ -196,6 +196,13 @@ class Leon : public misc::impl::Tool
 	
 	private:
 
+		unsigned char  * _signature_array;
+		unsigned char  * _color_array;
+	
+	
+	
+	
+	
 		u_int64_t _lastAnchorValue;
 		
 		 struct timeval _tim;
@@ -207,6 +214,7 @@ class Leon : public misc::impl::Tool
 		
 		void execute ();
 		void createBloom ();
+	void coloriage();
 		//void createKmerAbundanceHash();
 		
 		//Global compression

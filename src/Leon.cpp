@@ -244,6 +244,129 @@ void Leon::execute()
     
 }
 
+
+void Leon::coloriage (){
+	TIME_INFO (getTimeInfo(), "fill bloom filter");
+	
+	//u_int64_t solidFileSize
+	
+	_auto_cutoff = 0 ;
+	u_int64_t nbs = 0 ;
+	u_int64_t nb_kmers_infile;
+	
+	std::string h5count_file  = "kcount.h5";
+	//cout << _h5OutputFilename << endl;
+	Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
+	LOCAL (storage);
+	
+	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
+	
+	u_int64_t solidFileSize = solidCollection.getNbItems();
+	
+	printf("nb kk h5 %llu \n",solidFileSize);
+	nb_kmers_infile = solidCollection.getNbItems();
+	
+	
+	Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
+																solidCollection.iterator(),
+																nb_kmers_infile,
+																"coloriage"
+																);
+	LOCAL (itKmers);
+	
+	_signature_array =  (unsigned char  *)  malloc(solidFileSize*sizeof(unsigned char));
+	_color_array = (unsigned char  *)  calloc(solidFileSize,sizeof(unsigned char));
+	
+	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
+	{
+	
+		uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
+		
+		Node node(Node::Value(itKmers->item().getValue()));
+		
+		_signature_array[  _graph.nodeMPHFIndex(node) ]  = hashvalue  & 255 ;
+		
+	//	printf("%u \n",_signature_array[  _graph.nodeMPHFIndex(node) ]);
+		
+	}
+	
+	
+	
+	
+	
+	Iterator<Sequence>* it = _inputBank->iterator();
+	std::vector<Iterator<Sequence>*> itBanks =  it->getComposition();
+	int _nbBanks = itBanks.size();
+	
+	printf("nb opened banks  %i \n",_nbBanks);
+	
+	Kmer<>::ModelCanonical model (_kmerSize);
+
+	// We declare a kmer iterator
+	Kmer<>::ModelCanonical::Iterator itKmer (model);
+	
+	
+	for (size_t ii=0; ii<itBanks.size(); ii++)
+	{
+		Iterator<Sequence>* itSeq = itBanks[ii];
+
+		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
+		{
+			Sequence& seq = itSeq->item();
+			char* data = seq.getDataBuffer();
+			
+			// We set the data from which we want to extract kmers.
+			itKmer.setData ((*itSeq)->getData());
+			
+			for (itKmer.first(); !itKmer.isDone(); itKmer.next())
+			{
+				
+				Node node(Node::Value(itKmer->value()));
+				unsigned long  mphf_index = _graph.nodeMPHFIndex(node) ;
+				unsigned char signature = hash1(itKmer->value(),0) & 255 ;
+				if ( signature ==  _signature_array[mphf_index] )
+				{
+					_color_array[mphf_index] |=   (1 << ii) ;
+					
+				}
+				
+			}
+		}
+	}
+	
+	
+//	for(int cc = 0; cc< solidFileSize ; cc++)
+//	{
+//		
+//		 std::cout << std::bitset<8>(_color_array[cc]) << std::endl;
+//		
+//	}
+	
+	
+	
+	//test print
+	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
+	{
+		
+		uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
+		
+		Node node(Node::Value(itKmers->item().getValue()));
+		
+		
+		 std::cout <<  model.toString (itKmers->item().getValue())  << "    " <<
+		std::bitset<8>(_color_array[  _graph.nodeMPHFIndex(node)]) << std::endl;
+			
+		
+	}
+	
+	
+	
+	
+
+	
+}
+
+
 void Leon::createBloom (){
     TIME_INFO (getTimeInfo(), "fill bloom filter");
 	
@@ -635,9 +758,15 @@ void Leon::executeCompression(){
     /*************************************************/
 
 	
-        _graph =  Graph::create (_inputBank, "-abundance-min 4 -debloom original -solid-kmers-out ajeter -out %s",_h5OutputFilename.c_str());
+        _graph =  Graph::create (_inputBank, "-abundance-min 4 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
 	
-	 remove("ajeter.h5");
+	
+	
+	coloriage();
+	
+	u_int64_t nb_kmers = 0;// _graph.iterator().size();
+	printf("nb kmers %llu \n",nb_kmers);
+	// remove("kcount.h5.h5");
 
 
     /*************************************************/
