@@ -355,13 +355,76 @@ void Leon::coloriage (){
 		
 		 std::cout <<  model.toString (itKmers->item().getValue())  << "    " <<
 		std::bitset<8>(_color_array[  _graph.nodeMPHFIndex(node)]) << std::endl;
-			
+		std::cout << std::bitset<8>(_signature_array[  _graph.nodeMPHFIndex(node)]) << std::endl;
+			//std::cout << "_graph.nodeMPHFIndex(node) : " << _graph.nodeMPHFIndex(node) << std::endl; 
 		
 	}
+
+      //  for (int i=0; i<3/*solidFileSize*/; ++i){
+       //   cout << "sig nb " << i << " : " << _color_array[  i] << endl;
+        //}
+
 	
-	
-	
-	
+	std::cout <<  "saving signatures" << std::endl;
+
+
+	const char* signature_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+	char* signature_file_ext = ".leon.signatures_file";
+	char signature_file_path_ext[1024];
+	strcpy(signature_file_path_ext, signature_file_path);
+	strcat(signature_file_path_ext, signature_file_ext);
+	//printf("ICIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\n %s \n", signature_file_path_ext);
+
+	FILE* signature_file = fopen(signature_file_path_ext, "w");
+	unsigned char bit_vector;
+
+	//printf("test : reading signature array, writing in bit vector, then writing bit vector in outputfile\n");
+	for (int i=0; i<solidFileSize; ++i){
+        fwrite(&_signature_array[i], 1, 1, signature_file);
+        cout << "signature_array[" << i << "] : " << std::bitset<8>(_signature_array[i]) << endl;
+	}
+
+    std::cout <<  "saving colors" << std::endl;
+
+    const char* color_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+	char* color_file_ext = ".leon.colors_file";
+	char color_file_path_ext[1024];
+	strcpy(color_file_path_ext, color_file_path);
+	strcat(color_file_path_ext, color_file_ext);
+
+    FILE* color_file = fopen(color_file_path_ext, "w");
+
+    for (int i=0; i<solidFileSize; ++i){
+        fwrite(&_color_array[i], 1, 1, color_file);
+        cout << "_color_array[" << i << "] : " << std::bitset<8>(_color_array[i]) << endl;
+	}
+
+        //test read saved file   
+	fseek(signature_file, SEEK_SET, 0);
+	fseek(color_file, SEEK_SET, 0);
+    unsigned char* _signature_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+    unsigned char* _color_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+
+    memset(_signature_array2, 0, solidFileSize);
+    memset(_color_array2, 0, solidFileSize);
+
+    FILE* signature_file2 = fopen(signature_file_path_ext, "r");
+    FILE* color_file2 = fopen(color_file_path_ext, "r");
+
+    fread(_signature_array2, 1, solidFileSize, signature_file2); 
+
+    fread(_color_array2, 1, solidFileSize, color_file2); 
+                                                              
+    std::cout << "original signature and color arrays" << endl;
+
+    for (int i=solidFileSize-10; i<solidFileSize; ++i){
+    	cout << std::bitset<8>(_signature_array[i])  << "\t" << std::bitset<8>(_color_array[i]) << endl;
+    }
+
+    std::cout << "saved signature and color arrays" << endl;
+    for (int i=solidFileSize-10; i<solidFileSize; ++i){
+        cout << std::bitset<8>(_signature_array2[i]) << "\t" << std::bitset<8>(_color_array2[i]) << endl;
+    } 
 
 	
 }
