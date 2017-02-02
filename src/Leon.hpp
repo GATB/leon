@@ -57,6 +57,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 #include <sstream>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
+#include "Requests.hpp"
 
 #include "OrderedBlocks.h"
 
@@ -89,13 +90,21 @@ class Leon : public misc::impl::Tool
 		static const char* STR_DNA_ONLY;
 		static const char* STR_NOHEADER;
 		static const char* STR_NOQUAL;
+
+		//add
+		static const char* STR_OUTPUT_FILE;
+
+		//requests
+		static const char* STR_REQUEST;
+		static const char* STR_SEARCH_SEQUENCE;
+
 	
 		size_t          _kmerSize;
 		string     _h5OutputFilename;
 		static const int READ_PER_BLOCK = 50000;
 		int _nb_cores;
 		
-		bool _compress, _decompress;
+		bool _compress, _decompress, _request;
 		
 		clock_t _time; //Used to calculate time taken by decompression
 		
@@ -244,6 +253,7 @@ class Leon : public misc::impl::Tool
 		
 		void executeCompression();
 		void executeDecompression();
+		void executeRequest();
 		void endCompression();
 		void endQualCompression();
 	

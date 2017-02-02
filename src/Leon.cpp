@@ -63,6 +63,8 @@ TODO
  */
  
  
+
+
 #include "Leon.hpp"
 
 
@@ -81,6 +83,13 @@ const char* Leon::STR_TEST_DECOMPRESSED_FILE = "-test-file";
 const char* Leon::STR_DNA_ONLY = "-seq-only";
 const char* Leon::STR_NOHEADER = "-noheader";
 const char* Leon::STR_NOQUAL = "-noqual";
+
+//adds
+const char* Leon::STR_OUTPUT_FILE = "-output";
+
+//requests
+const char* Leon::STR_REQUEST = "-r";
+const char* Leon::STR_SEARCH_SEQUENCE = "-search";
 
 const int Leon::nt2binTab[128] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -133,8 +142,20 @@ _isFasta = true;
 	setParser (new OptionsParser ("leon"));
 
     getParser()->push_back (new OptionOneParam (STR_URI_FILE, "input file (e.g. FASTA/FASTQ for compress or .leon file for decompress)",   true));
+
     getParser()->push_back (new OptionNoParam  ("-c", "compression",   false));
     getParser()->push_back (new OptionNoParam  ("-d", "decompression", false));
+    
+    // requests version
+	getParser()->push_back (new OptionNoParam  ("-r", "requests, for now tes with -c and -r... example : -- ./leon -file data/toy.fasta -output tests/res -c -r --",   false));
+
+/*	///Test
+	 if(getParser()->saw (Leon::STR_SEARCH_SEQUENCE)){
+	 	printf("OUIIIIIIIIIIIIIIII");
+	 }
+*/
+	//requests version end
+
     getParser()->push_back (new OptionOneParam (STR_NB_CORES, "number of cores (default is the available number of cores)", false, "0"));
     getParser()->push_back (new OptionOneParam (STR_VERBOSE,  "verbosity level",                                            false, "1", false));
 
@@ -148,10 +169,11 @@ _isFasta = true;
     compressionParser->push_back (SortingCountAlgorithm<>::getOptionsParser(), 1, false);
 
     if (IOptionsParser* input = compressionParser->getParser (STR_URI_INPUT))  {  input->setName (STR_URI_FILE);  }
+    if (IOptionsParser* input = compressionParser->getParser (STR_URI_INPUT))  {  input->setName (STR_OUTPUT_FILE);  }
     if (IOptionsParser* input = compressionParser->getParser (STR_KMER_SIZE))  {  input->setVisible (true);  }
 
     compressionParser->push_back (new OptionOneParam(STR_KMER_ABUNDANCE, "abundance threshold for solid kmers (default inferred)", false));
-	
+	compressionParser->push_back (new OptionOneParam (STR_OUTPUT_FILE, "output file name", false));
 	compressionParser->push_back (new OptionNoParam (Leon::STR_DNA_ONLY, "store dna seq only, header and quals are discarded, will decompress to fasta (same as -noheader -noqual)", false));
 
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
@@ -161,10 +183,12 @@ _isFasta = true;
     decompressionParser->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
 	
 
-
+    IOptionsParser* requestsParser = new OptionsParser ("requests");
+    requestsParser->push_back(new OptionOneParam  (STR_SEARCH_SEQUENCE, "presence of specified sequence, returns true or false",   false));
 	
     getParser()->push_back (compressionParser);
     getParser()->push_back (decompressionParser, 0, false);
+    getParser()->push_back (requestsParser);
 
 	pthread_mutex_init(&findAndInsert_mutex, NULL);
 	pthread_mutex_init(&writeblock_mutex, NULL);
@@ -183,6 +207,7 @@ Leon::~Leon ()
 
 void Leon::execute()
 {
+
 	_time = clock(); //Used to calculate time taken by decompression
 	
 	gettimeofday(&_tim, NULL);
@@ -198,8 +223,10 @@ void Leon::execute()
     _decompress = false;
     if(getParser()->saw (Leon::STR_COMPRESS)) _compress = true;
     if(getParser()->saw (Leon::STR_DECOMPRESS)) _decompress = true;
-	if((_compress && _decompress) || (!_compress && !_decompress)){
-		cout << "Choose one option among -c (compress) or -d (decompress)" << endl << endl;
+    if(getParser()->saw (Leon::STR_REQUEST)) _request = true;
+	if((_compress && _decompress) || (_decompress && _request) || /*(_request && _compress)||*/
+		 (!_compress && !_decompress && !_request)){
+		cout << "Choose one option among -c (compress), -d (decompress) or -r (request)" << endl << endl;
 		return;
 	}
 
@@ -217,10 +244,18 @@ void Leon::execute()
 	
 	if(_compress){
 		//#define SERIAL
+		if(!getParser()->saw (Leon::STR_OUTPUT_FILE))
+		{
+			cout << "Please give the name of the output (-output)" << endl << endl;
+			return;
+		}
 		executeCompression();
 	}
-	else{
+	else if (_decompress){
 		executeDecompression();
+	}
+	else if (_request){
+		executeRequest();
 	}
 	
 
@@ -244,11 +279,53 @@ void Leon::execute()
     
 }
 
+void Leon::executeRequest(){
 
-void Leon::coloriage (){
-	TIME_INFO (getTimeInfo(), "fill bloom filter");
+
+		_filePos = 0;
 	
-	//u_int64_t solidFileSize
+	cout << "Starting answering request " << endl;
+	_inputFilename = getInput()->getStr(STR_URI_FILE);
+
+	cout << "Reading file : " << _inputFilename << endl;
+
+	
+	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
+	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
+	
+	
+	if ( (_inputFile->rdstate() & std::ifstream::failbit ) != 0 )
+	{
+		fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
+		exit( EXIT_FAILURE);
+	}
+
+	
+	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
+	//The first number is the number of data blocks
+	_descInputFile->seekg(0, _descInputFile->end);
+	_rangeDecoder.setInputFile(_descInputFile, true);
+	
+	//Decode the first byte of the compressed file which is an info byte
+	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
+	
+	//the first bit holds the file format. 0: fastq, 1: fasta
+	_isFasta = ((infoByte & 0x01) == 0x01);
+	
+	
+	
+	//Second bit : option no header
+	_noHeader = ((infoByte & 0x02) == 0x02);
+	
+	//Get kmer size
+	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	cout << "\tKmer size: " << _kmerSize << endl;
+	cout << endl;
+
+
+
+	TIME_INFO (getTimeInfo(), "preparing for requests");
+	
 	
 	_auto_cutoff = 0 ;
 	u_int64_t nbs = 0 ;
@@ -266,6 +343,213 @@ void Leon::coloriage (){
 	printf("nb kk h5 %llu \n",solidFileSize);
 	nb_kmers_infile = solidCollection.getNbItems();
 	
+	
+	
+
+	Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
+																solidCollection.iterator(),
+																nb_kmers_infile
+																);
+	LOCAL (itKmers);
+
+
+
+
+
+	
+	Kmer<>::ModelCanonical model (_kmerSize);
+
+	// We declare a kmer iterator
+	//Kmer<>::ModelCanonical::Iterator itKmer (model);
+
+
+	//decompress part - retreive graph and maybe other things we need ? -
+	/////// dna setup ////////////
+	
+	//need to init _filePosDna here
+	/*for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
+	{
+		_filePosDna += _headerBlockSizes[ii];
+	}
+	
+	setupNextComponent(_dnaBlockSizes);
+	
+	_kmerModel = new KmerModel(_kmerSize);
+
+	
+	decodeBloom();*/
+	
+	string _h5OutputFilename = System::file().getBaseName(_inputFilename) + ".h5" ;
+	 //_h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
+	
+	printf("_h5OutputFilename %s \n",_h5OutputFilename.c_str());
+	
+	_graph =  Graph::load(_h5OutputFilename.c_str() );
+	
+
+	
+	/*decodeAnchorDict();
+	
+	
+	/////////// qualities setup //////////
+
+	
+
+	if(! _isFasta)
+	{
+	_filePosQual =0;
+	
+	//read block sizes and _blockCount
+	_qualBlockSizes.clear();
+	_inputFileQual->seekg(- sizeof(u_int64_t),_inputFileQual->end);
+	
+	_inputFileQual->read((char *)&_blockCount,sizeof(u_int64_t));
+	//cout << "\tBlock count: " << _blockCount/2 << endl;
+	
+	_qualBlockSizes.resize(_blockCount,0);
+	char * databuff = (char * )& _qualBlockSizes[0];
+	
+	_inputFileQual->seekg(- (sizeof(u_int64_t)*(_blockCount+1)),_inputFileQual->end);
+	_inputFileQual->read( databuff ,sizeof(u_int64_t) *  _blockCount);
+	
+	}*/
+
+	
+
+	//decompress part end
+
+
+	//retrieving signatures and colors
+
+	unsigned char* _signature_array =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+    unsigned char* _color_array =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+
+    memset(_signature_array, 0, solidFileSize);
+    memset(_color_array, 0, solidFileSize);
+
+
+
+    const char* signatures_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+	char* signatures_file_ext = ".signatures_file";
+	char signatures_file_path_ext[1024];
+	strcpy(signatures_file_path_ext, signatures_file_path);
+	strcat(signatures_file_path_ext, signatures_file_ext);
+	printf("signatures_file_path_ext : %s", signatures_file_path_ext);
+
+	const char* colors_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+	char* colors_file_ext = ".colors_file";
+	char colors_file_path_ext[1024];
+	strcpy(colors_file_path_ext, colors_file_path);
+	strcat(colors_file_path_ext, colors_file_ext);
+
+	cout << "\nheyooooo\n" << endl;
+
+    FILE* signatures_file = fopen(signatures_file_path_ext, "r");
+    FILE* colors_file = fopen(colors_file_path_ext, "r");
+
+    fread(_signature_array, 1, solidFileSize, signatures_file); 
+
+    fread(_color_array, 1, solidFileSize, colors_file); 
+
+	//Test we have all needed data
+
+	cout << "kmers, colors and signatures : \n" << endl;
+
+	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
+	{
+		
+		//uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
+		
+		Node node(Node::Value(itKmers->item().getValue()));
+		printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));	
+		
+		cout << "heyooooo 2222\n" << endl;
+		 //std::cout <<  model.toString (itKmers->item().getValue())  << "\t"  << std::bitset<8>(_signature_array[index]) << "\t" << std::bitset<8>(_color_array[index]) << endl;
+		//PT666
+	 	std::cout <<  model.toString (itKmers->item().getValue())  << "\t" << "heyooooo 3333\n" <<
+		std::bitset<8>(_color_array[  _graph.nodeMPHFIndex(node)]) << "\t" << "heyooooo 4444\n" <<
+		std::bitset<8>(_signature_array[  _graph.nodeMPHFIndex(node)]) << std::endl;
+
+		
+	}
+
+
+	//fseek(signature_file, SEEK_SET, 0);
+	//fseek(color_file, SEEK_SET, 0);
+    unsigned char* _signature_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+    unsigned char* _color_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+
+    memset(_signature_array2, 0, solidFileSize);
+    memset(_color_array2, 0, solidFileSize);
+
+    FILE* signature_file2 = fopen(signatures_file_path_ext, "r");
+    FILE* color_file2 = fopen(colors_file_path_ext, "r");
+
+    fread(_signature_array2, 1, solidFileSize, signature_file2); 
+
+    fread(_color_array2, 1, solidFileSize, color_file2); 
+                                                              
+    std::cout << "original signature and color arrays" << endl;
+
+    for (int i=solidFileSize-10; i<solidFileSize; ++i){
+    	cout << std::bitset<8>(_signature_array[i])  << "\t" << std::bitset<8>(_color_array[i]) << endl;
+    }
+
+    std::cout << "saved signature and color arrays" << endl;
+    /*for (int i=solidFileSize-10; i<solidFileSize; ++i){
+        cout << model.toString (itKmers->item().getValue())  << "\t" <<
+        std::bitset<8>(_signature_array2[i]) << "\t" << 
+        std::bitset<8>(_color_array2[i]) << endl;
+    }*/
+
+	Iterator<kmer_count>* itKmers_test = createIterator<kmer_count> (
+																solidCollection.iterator(),
+																nb_kmers_infile
+																);
+
+    for (itKmers_test->first(); !itKmers_test->isDone(); itKmers_test->next())
+	{
+		
+		//uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
+		
+		Node node(Node::Value(itKmers_test->item().getValue()));
+		
+		printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));
+		 //std::cout <<  model.toString (itKmers->item().getValue())  << "\t"  << std::bitset<8>(_signature_array[index]) << "\t" << std::bitset<8>(_color_array[index]) << endl;
+		
+		 std::cout <<  model.toString (itKmers_test->item().getValue())  << "\t" <<
+		std::bitset<8>(_color_array2[  _graph.nodeMPHFIndex(node)]) << "\t" <<
+		std::bitset<8>(_signature_array2[  _graph.nodeMPHFIndex(node)]) << std::endl;
+
+		
+	} 
+
+
+
+	printf("end request\n");
+}
+
+void Leon::coloriage (){
+	TIME_INFO (getTimeInfo(), "fill colors");
+	
+	//u_int64_t solidFileSize
+	cout << "lol coloriage" << endl;
+	_auto_cutoff = 0 ;
+	u_int64_t nbs = 0 ;
+	u_int64_t nb_kmers_infile;
+	
+	std::string h5count_file  = "kcount.h5";
+	//cout << _h5OutputFilename << endl;
+	Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
+	LOCAL (storage);
+	
+	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
+	
+	u_int64_t solidFileSize = solidCollection.getNbItems();
+	
+	printf("nb kk h5 %llu \n",solidFileSize);
+	nb_kmers_infile = solidCollection.getNbItems();
+
 	
 	Iterator<kmer_count>* itKmers = createIterator<kmer_count> (
 																solidCollection.iterator(),
@@ -298,7 +582,10 @@ void Leon::coloriage (){
 	std::vector<Iterator<Sequence>*> itBanks =  it->getComposition();
 	int _nbBanks = itBanks.size();
 	
+
+	#ifdef PRINT_DEBUG 
 	printf("nb opened banks  %i \n",_nbBanks);
+	#endif
 	
 	Kmer<>::ModelCanonical model (_kmerSize);
 
@@ -306,7 +593,7 @@ void Leon::coloriage (){
 	Kmer<>::ModelCanonical::Iterator itKmer (model);
 	
 	
-	for (size_t ii=0; ii<itBanks.size(); ii++)
+	for (size_t ii=0; ii<_nbBanks; ii++)
 	{
 		Iterator<Sequence>* itSeq = itBanks[ii];
 
@@ -343,7 +630,7 @@ void Leon::coloriage (){
 //	}
 	
 	
-	
+	#ifdef PRINT_DEBUG 
 	//test print
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
 	{
@@ -364,12 +651,18 @@ void Leon::coloriage (){
        //   cout << "sig nb " << i << " : " << _color_array[  i] << endl;
         //}
 
-	
+
 	std::cout <<  "saving signatures" << std::endl;
+	#endif
 
+	//const char* signature_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+	const char* signature_file_path = (getInput()->getStr(STR_OUTPUT_FILE)).c_str();
 
-	const char* signature_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
-	char* signature_file_ext = ".leon.signatures_file";
+	#ifdef DEBUG
+	std::cout <<  "signature file path " << signature_file_path << std::endl;
+	#endif
+
+	char* signature_file_ext = ".signatures_file";
 	char signature_file_path_ext[1024];
 	strcpy(signature_file_path_ext, signature_file_path);
 	strcat(signature_file_path_ext, signature_file_ext);
@@ -381,13 +674,17 @@ void Leon::coloriage (){
 	//printf("test : reading signature array, writing in bit vector, then writing bit vector in outputfile\n");
 	for (int i=0; i<solidFileSize; ++i){
         fwrite(&_signature_array[i], 1, 1, signature_file);
-        cout << "signature_array[" << i << "] : " << std::bitset<8>(_signature_array[i]) << endl;
+    //    cout << "signature_array[" << i << "] : " << std::bitset<8>(_signature_array[i]) << endl;
 	}
 
-    std::cout <<  "saving colors" << std::endl;
+#ifdef PRINT_DEBUG 
 
-    const char* color_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
-	char* color_file_ext = ".leon.colors_file";
+    std::cout <<  "saving colors" << std::endl;
+#endif
+
+    //const char* color_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+    const char* color_file_path = (getInput()->getStr(STR_OUTPUT_FILE)).c_str();
+	char* color_file_ext = ".colors_file";
 	char color_file_path_ext[1024];
 	strcpy(color_file_path_ext, color_file_path);
 	strcat(color_file_path_ext, color_file_ext);
@@ -396,10 +693,12 @@ void Leon::coloriage (){
 
     for (int i=0; i<solidFileSize; ++i){
         fwrite(&_color_array[i], 1, 1, color_file);
-        cout << "_color_array[" << i << "] : " << std::bitset<8>(_color_array[i]) << endl;
+     //   cout << "_color_array[" << i << "] : " << std::bitset<8>(_color_array[i]) << endl;
 	}
 
-        //test read saved file   
+//test read saved file   
+ #ifdef PRINT_DEBUG   
+
 	fseek(signature_file, SEEK_SET, 0);
 	fseek(color_file, SEEK_SET, 0);
     unsigned char* _signature_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
@@ -414,7 +713,9 @@ void Leon::coloriage (){
     fread(_signature_array2, 1, solidFileSize, signature_file2); 
 
     fread(_color_array2, 1, solidFileSize, color_file2); 
-                                                              
+    
+   
+
     std::cout << "original signature and color arrays" << endl;
 
     for (int i=solidFileSize-10; i<solidFileSize; ++i){
@@ -423,9 +724,32 @@ void Leon::coloriage (){
 
     std::cout << "saved signature and color arrays" << endl;
     for (int i=solidFileSize-10; i<solidFileSize; ++i){
-        cout << std::bitset<8>(_signature_array2[i]) << "\t" << std::bitset<8>(_color_array2[i]) << endl;
-    } 
+        cout << model.toString (itKmers->item().getValue())  << "\t" <<
+        std::bitset<8>(_signature_array2[i]) << "\t" << 
+        std::bitset<8>(_color_array2[i]) << endl;
+    }
 
+
+
+
+	Iterator<kmer_count>* itKmers_test = createIterator<kmer_count> (
+																solidCollection.iterator(),
+																nb_kmers_infile
+																);
+    for (itKmers_test->first(); !itKmers_test->isDone(); itKmers_test->next())
+	{
+		//uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
+		Node node(Node::Value(itKmers_test->item().getValue()));
+		printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));
+		 //std::cout <<  model.toString (itKmers->item().getValue())  << "\t"  << std::bitset<8>(_signature_array[index]) << "\t" << std::bitset<8>(_color_array[index]) << endl;
+		 std::cout <<  model.toString (itKmers_test->item().getValue())  << "\t" <<
+		std::bitset<8>(_color_array2[  _graph.nodeMPHFIndex(node)]) << "\t" <<
+		std::bitset<8>(_signature_array2[  _graph.nodeMPHFIndex(node)]) << std::endl;
+	} 
+	#endif
+
+	fclose(signature_file);
+	fclose(color_file);
 	
 }
 
@@ -732,7 +1056,7 @@ void Leon::executeCompression(){
 	
 	_noHeader =false;
 
-	
+
 	if(getParser()->saw (Leon::STR_NOHEADER))
 	{
 		_noHeader = true;
@@ -795,11 +1119,11 @@ void Leon::executeCompression(){
 		cout << "\tUnknown input extension. Input extension must be one among fasta (.fa, .fasta) or fastq (.fq, .fastq)" << endl;
 		return;
 	}
-	
+
 	_rangeEncoder.encode(_generalModel, infoByte);
-	
+
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
-	
+
 	
 	u_int8_t version_major = LEON_VERSION_MAJOR;
 	u_int8_t version_minor = LEON_VERSION_MINOR;
@@ -810,25 +1134,29 @@ void Leon::executeCompression(){
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_patch);
 
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    _h5OutputFilename = getInput()->get(STR_URI_OUTPUT) ?
+
+    //	old version
+    /*	_h5OutputFilename = getInput()->get(STR_URI_OUTPUT) ?
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
         System::file().getBaseName (_inputFilename) + ".h5"; //_inputFilename instead of prefix GR
+	*/
 
-
+        _h5OutputFilename = getInput()->getStr(STR_OUTPUT_FILE) + ".h5";
+        cout << "loltest, _h5OutputFilename : " << _h5OutputFilename << endl;
 
     /*************************************************/
     // Sorting count part
     /*************************************************/
 
-	
-        _graph =  Graph::create (_inputBank, "-abundance-min 4 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
+	//TODO test modif abundance default value : 4
+        _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
 	
 	
 	
 	coloriage();
 	
 	u_int64_t nb_kmers = 0;// _graph.iterator().size();
-	printf("nb kmers %llu \n",nb_kmers);
+	//printf("nb kmers %llu \n",nb_kmers);
 	// remove("kcount.h5.h5");
 
 
@@ -846,7 +1174,8 @@ void Leon::executeCompression(){
 	}
 	else
 	{
-		baseOutputname = _inputFilename;
+		//baseOutputname = _inputFilename;
+		baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
 	}
 	_outputFilename = baseOutputname + ".leon";
 
@@ -872,7 +1201,78 @@ void Leon::executeCompression(){
 #endif
 
 	
-	
+//TMP REQUEST EMPLACEMENT CODE TEST
+	if (_request){
+
+		cout << "option requests catched" << endl;
+
+
+	Kmer<>::ModelCanonical model (_kmerSize);
+
+
+		std::string h5count_file  = "kcount.h5";
+		Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
+		LOCAL (storage);
+		
+		Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
+		
+
+		Requests requests = Requests(_inputBank, baseOutputname, _graph, model, solidCollection, _kmerSize);
+		//Requests * requests = Requests::Requests(_inputBank); 
+		//HeaderDecoder * header_decoder = (HeaderDecoder*) args;
+
+		char req[1024];
+
+		bool quit_requests = false;
+		do{
+		//scanf(req);
+		cout << "test requests : " << endl <<
+		"############# debug #############" << endl << endl <<
+		"q \t\tto quit" << endl <<
+		"sig \t\tto print sinatures" << endl <<
+		"col \t\tto print colors" << endl <<
+		"seq \t\tto print sequences" << endl <<
+		"kmers \t\tto print kmers" << endl <<
+		"mphf \t\tto print mphf indexes" << endl <<
+		"testall \tto print kmers, indexes in mphf, color and signature" << endl << endl <<
+		"############ requests ############" << endl << endl;
+		gets(req);
+		cout << "req : " << req << endl;
+
+		if (strcmp(req, "sig")==0){
+			requests.printSignatures();
+		}
+
+		if (strcmp(req, "col")==0){
+			requests.printColors();
+		}
+
+		if (strcmp(req, "seq")==0){
+			requests.printSequences();
+		}
+
+		if (strcmp(req, "kmers")==0){
+			requests.printKmers();
+		}
+
+		if (strcmp(req, "mphf")==0){
+			requests.printMPHFIndexes();
+		}
+
+		if (strcmp(req, "testall")==0){
+			requests.printTestAll();
+		}
+
+		if (strcmp(req, "q")==0){
+			quit_requests = true;
+		}
+
+		}while(!quit_requests);
+		return;
+	}
+
+//END TMP REQUEST EMPLACEMENT CODE TEST
+
     //Compression
 	if(! _noHeader)
 	{
@@ -1436,7 +1836,6 @@ void Leon::writeAnchorDict(){
 	_dictAnchorFile->close();
 	_anchorRangeEncoder.clear();
 	
-	//cout << "lololol: " << _outputFile->tell() << endl;
 	
 	u_int64_t size = System::file().getSize(_outputFilename + ".adtemp");
 	_anchorDictSize = size;
@@ -1734,7 +2133,7 @@ void Leon::executeDecompression(){
 	//_outputFile = System::file().newFile(outputFilename, "wb");
 	cout << "\tInput filename: " << _inputFilename << endl;
 	
-	
+
 	string dir = System::file().getDirectory(_inputFilename);
 	
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
@@ -1885,7 +2284,7 @@ void Leon::startDecompressionAllStreams(){
 	string _h5OutputFilename = System::file().getBaseName(_inputFilename);
 	 _h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
 	
-	printf("_h5OutputFilename %s \n",_h5OutputFilename.c_str());
+	printf("_h5OutputFilename : %s \n",_h5OutputFilename.c_str());
 	
 	_graph =  Graph::load(_h5OutputFilename.c_str() );
 	
@@ -1965,7 +2364,6 @@ void Leon::startDecompressionAllStreams(){
 	int livingThreadCount = 0;
 	
 	
-
 	
 	while(i < _dnaBlockSizes.size()){
 		
@@ -2035,15 +2433,15 @@ void Leon::startDecompressionAllStreams(){
 		}
 
 		
-		
+
 		
 		for(int j=0; j < livingThreadCount; j++){
-			
+
 			pthread_join(tab_threads[j], NULL);
-			
-			HeaderDecoder* hdecoder = NULL;
-			QualDecoder* qdecoder = NULL;
-			DnaDecoder* ddecoder = dnadecoders[j];
+
+			HeaderDecoder* hdecoder = NULL; 
+			QualDecoder* qdecoder = NULL; 
+			DnaDecoder* ddecoder = dnadecoders[j]; 
 			
 
 			std::istringstream  * stream_qual = NULL;
@@ -2064,12 +2462,11 @@ void Leon::startDecompressionAllStreams(){
 				hdecoder->_buffer.clear();
 
 			}
-			
+
 			std::istringstream stream_dna (ddecoder->_buffer);
 			
 			ddecoder->_buffer.clear();
 
-			
 			std::string line;
 			std::string output_buff;
 
@@ -2078,7 +2475,6 @@ void Leon::startDecompressionAllStreams(){
 			output_buff.reserve(READ_PER_BLOCK * 500);
 			
 			bool reading = true;
-			
 			
 			
 			u_int64_t readid=0;
@@ -2143,7 +2539,7 @@ void Leon::startDecompressionAllStreams(){
 		livingThreadCount = 0;
 	}
 	
-	
+
 	
 	_outputFile->flush();
 
