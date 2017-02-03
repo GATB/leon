@@ -1200,6 +1200,23 @@ void Leon::executeCompression(){
 	cout << "dskout  " << _h5OutputFilename << endl;
 #endif
 
+//TEST DEBUG
+	cout << "loltest" << endl;
+	string kmer_chars = "GGGGGGGGGGGGGGGGGGGGTGARSATGATATATGATCGATCTAGTTTAGTCATGATCTTAG";
+	cout << "loltest1.5" << endl;
+	//kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ;
+	_kmerModel = new KmerModel(_kmerSize);
+	kmer_type kmer = _kmerModel->codeSeed(kmer_chars.c_str(), Data::ASCII).value() ;
+	cout << "loltest2" << endl;
+	Node node = Node(Node::Value(kmer));
+	cout << "loltest3" << endl;
+	if (_graph.contains(node))
+	{
+		std::cout << kmer_chars << " is present" << std::endl;
+	}
+	else{
+		std::cout << kmer_chars << " is not present" << std::endl;
+	}
 	
 //TMP REQUEST EMPLACEMENT CODE TEST
 	if (_request){
@@ -1226,19 +1243,25 @@ void Leon::executeCompression(){
 		bool quit_requests = false;
 		do{
 		//scanf(req);
-		cout << "test requests : " << endl <<
+		cout <<
 		"############# debug #############" << endl << endl <<
-		"q \t\tto quit" << endl <<
 		"sig \t\tto print sinatures" << endl <<
 		"col \t\tto print colors" << endl <<
 		"seq \t\tto print sequences" << endl <<
 		"kmers \t\tto print kmers" << endl <<
 		"mphf \t\tto print mphf indexes" << endl <<
 		"testall \tto print kmers, indexes in mphf, color and signature" << endl << endl <<
-		"############ requests ############" << endl << endl;
+		"############ requests ############" << endl << 
+		"kmer s \t\tto get size of kmers" << endl <<
+		"kmer p \t\tto know if the kmer is present in the data" << endl <<
+		"kmer h \t\tto know in how many datasets the kmer is present" << endl <<
+		"kmer d \t\tto know in which datasets the kmer is present" << endl <<
+		"q \t\tto quit" << endl << endl;
 		gets(req);
-		cout << "req : " << req << endl;
+		cout << endl;
 
+
+		//debug
 		if (strcmp(req, "sig")==0){
 			requests.printSignatures();
 		}
@@ -1261,6 +1284,26 @@ void Leon::executeCompression(){
 
 		if (strcmp(req, "testall")==0){
 			requests.printTestAll();
+		}
+
+		//requests
+
+		if (strcmp(req, "kmer s")==0){
+			requests.printKmerSize();
+		}
+
+		if (strcmp(req, "kmer p")==0){
+
+			char searched_kmer[1024];
+			std::cout << "enter the kmer :" << std::endl << std::endl;
+			gets(searched_kmer);
+			requests.isKmerInData(searched_kmer);
+		}
+
+		if (strcmp(req, "kmer h")==0){
+		}
+
+		if (strcmp(req, "kmer d")==0){
 		}
 
 		if (strcmp(req, "q")==0){
@@ -2206,9 +2249,9 @@ void Leon::executeDecompression(){
 		cout << "\tOutput format: Fastq" << endl;
 		_outputFilename += ".fastq.d";
 	}
-	
+
 	_outputFile = System::file().newFile(_outputFilename, "wb");
-	
+
 	//Get kmer size
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -2228,7 +2271,6 @@ void Leon::executeDecompression(){
 	//		cout << "\tWarning diff version "   << endl;
 	//	}
 	
-	
 	startDecompressionAllStreams();
 	
 	/*
@@ -2246,7 +2288,7 @@ void Leon::executeDecompression(){
 
 void Leon::startDecompressionAllStreams(){
 	
-	
+	cout << "DEBUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUG" << endl;
 	
 	_filePosHeader = 0;
 	_filePosDna = 0;

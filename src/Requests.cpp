@@ -16,12 +16,13 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph, Kmer<>:
 	_graph = graph;
 	_model = model;
 
+	_kmerSize = kmerSize;
+	_kmerModel = new KmerModel(_kmerSize);
+
 	_outputFilename = outputFilename; 
 	_solidFileSize = solidCollection.getNbItems();
 	_nb_kmers_infile = solidCollection.getNbItems();
 	_itKmers = solidCollection.iterator();
-
-	//_kmerSize = kmerSize;
 
 	cout << "nb kmers : " << _nb_kmers_infile << endl;
 
@@ -122,6 +123,25 @@ void Requests::printTestAll(){
 	std::bitset<8>(_color_array[_graph.nodeMPHFIndex(node)]) << "\t" <<
 	std::bitset<8>(_signature_array[_graph.nodeMPHFIndex(node)]) << std::endl;
 
-		
 	} 
+}
+
+void Requests::printKmerSize(){
+	std::cout << "kmer size : " << _kmerSize << std::endl << std::endl;
+}
+
+void Requests::isKmerInData(char* kmer_chars){
+
+
+	kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
+	Node node = Node(Node::Value(kmer));
+
+	if (_graph.contains(node))
+	{
+		std::cout << kmer_chars << " is present" << std::endl;
 	}
+	else{
+		std::cout << kmer_chars << " is not present" << std::endl;
+	}
+
+}

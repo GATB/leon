@@ -1543,7 +1543,7 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 }
 
 void DnaDecoder::execute(){
-	
+		cout << "DEBUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUG" << endl;
 	//decodeFirstHeader();
 		
 	while(_processedSequenceCount < _sequenceCount){
@@ -1599,6 +1599,8 @@ void DnaDecoder::execute(){
 }
 
 void DnaDecoder::decodeAnchorRead(){
+
+
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecode anchor read" << endl;
 	#endif
@@ -1726,6 +1728,7 @@ void DnaDecoder::decodeAnchorRead(){
 
 kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	
+
 	u_int8_t nextNt;
 	//int nextNtBin;
 	kmer_type resultKmer;

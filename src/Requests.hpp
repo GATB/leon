@@ -51,13 +51,18 @@ class Requests
 		//AbstractHeaderCoder(Leon* leon);
 		Requests(IBank* inputBank, string outputFilename, Graph graph, Kmer<>::ModelCanonical model, Partition<kmer_count> & solidCollection, size_t kmerSize);
 		
-
+		//debug
 		void printSignatures();
 		void printColors();
 		void printKmers();
 		void printSequences();
 		void printMPHFIndexes();
 		void printTestAll();
+
+
+		//requests
+		void printKmerSize();
+		void isKmerInData(char* kmer);
 
 		IBank* _inputBank;
 		Iterator<Sequence>* _itBank;
@@ -72,6 +77,7 @@ class Requests
 		Graph _graph;
 		size_t _kmerSize;
 		Kmer<>::ModelCanonical _model;
+		KmerModel* _kmerModel;
 
 		/*Iterator<kmer_count>* _itKmersAll;
 		Kmer<>::ModelCanonical::Iterator _itKmersSubBank;*/
