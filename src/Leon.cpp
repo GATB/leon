@@ -1048,6 +1048,8 @@ void Leon::executeCompression(){
 	u_int8_t infoByte = 0;
 	
 	
+	_kmerModel = new KmerModel(_kmerSize);
+
 	/** We look for the beginnin of the suffix. */
 	int lastindex = _inputFilename.find_last_of (".");
 	
@@ -1151,7 +1153,26 @@ void Leon::executeCompression(){
 	//TODO test modif abundance default value : 4
         _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
 	
+//	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s", _kmerSize, _h5OutputFilename.c_str());
 	
+
+	//string kmer_chars = "GCTCTAGATTTTACAGTTTCT";
+	//string kmer_chars = "GCTCTAGATTTTACAETTTCT";
+	string kmer_chars = "GCTCTAGATTTTACAGTETCTAGTTAGGGGC";
+
+    //kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ;
+    _kmerModel = new KmerModel(_kmerSize);
+    kmer_type kmer = _kmerModel->codeSeed(kmer_chars.c_str(), Data::ASCII).value() ;
+
+    Node node = Node(Node::Value(kmer));
+
+    if (_graph.contains(node))
+    {
+        std::cout << kmer_chars << " is present" << std::endl;
+    }
+    else{
+        std::cout << kmer_chars << " is not present" << std::endl;
+    }
 	
 	coloriage();
 	
@@ -1201,7 +1222,7 @@ void Leon::executeCompression(){
 #endif
 
 //TEST DEBUG
-	cout << "loltest" << endl;
+	/*cout << "loltest" << endl;
 	string kmer_chars = "GGGGGGGGGGGGGGGGGGGGTGARSATGATATATGATCGATCTAGTTTAGTCATGATCTTAG";
 	cout << "loltest1.5" << endl;
 	//kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ;
@@ -1216,7 +1237,7 @@ void Leon::executeCompression(){
 	}
 	else{
 		std::cout << kmer_chars << " is not present" << std::endl;
-	}
+	}*/
 	
 //TMP REQUEST EMPLACEMENT CODE TEST
 	if (_request){
