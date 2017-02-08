@@ -578,7 +578,7 @@ void Leon::coloriage (){
 	
 	
 	
-	Iterator<Sequence>* it = _inputBank->iterator();
+	Iterator<Sequence>* it = _inputBank->iterator(); 
 	std::vector<Iterator<Sequence>*> itBanks =  it->getComposition();
 	int _nbBanks = itBanks.size();
 	
@@ -586,12 +586,10 @@ void Leon::coloriage (){
 	#ifdef PRINT_DEBUG 
 	printf("nb opened banks  %i \n",_nbBanks);
 	#endif
-	
 	Kmer<>::ModelCanonical model (_kmerSize);
 
 	// We declare a kmer iterator
 	Kmer<>::ModelCanonical::Iterator itKmer (model);
-	
 	
 	for (size_t ii=0; ii<_nbBanks; ii++)
 	{
@@ -629,7 +627,6 @@ void Leon::coloriage (){
 //		
 //	}
 	
-	
 	#ifdef PRINT_DEBUG 
 	//test print
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
@@ -650,7 +647,6 @@ void Leon::coloriage (){
       //  for (int i=0; i<3/*solidFileSize*/; ++i){
        //   cout << "sig nb " << i << " : " << _color_array[  i] << endl;
         //}
-
 
 	std::cout <<  "saving signatures" << std::endl;
 	#endif
@@ -728,8 +724,6 @@ void Leon::coloriage (){
         std::bitset<8>(_signature_array2[i]) << "\t" << 
         std::bitset<8>(_color_array2[i]) << endl;
     }
-
-
 
 
 	Iterator<kmer_count>* itKmers_test = createIterator<kmer_count> (
@@ -1151,14 +1145,20 @@ void Leon::executeCompression(){
     /*************************************************/
 
 	//TODO test modif abundance default value : 4
-        _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
-	
+       // _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
+	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s",_kmerSize, _h5OutputFilename.c_str());
 //	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s", _kmerSize, _h5OutputFilename.c_str());
 	
 
-	//string kmer_chars = "GCTCTAGATTTTACAGTTTCT";
-	//string kmer_chars = "GCTCTAGATTTTACAETTTCT";
-	string kmer_chars = "GCTCTAGATTTTACAGTETCTAGTTAGGGGC";
+/* TEST GRAPH CONTAINS (with toy.fasta)
+     //string kmer_chars = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz";
+	cout << "kmer size : " << _kmerSize << endl;
+	//string kmer_chars = "GCTCTAGATTTTACAGTATCT"; // (=k21) not present
+	//string kmer_chars = "GCTCTAGATTTTACAGTTTCT"; // (=k21) present
+	//string kmer_chars = "GCTCTAGATTTTACAGTATCTAGTTAGGGGC"; // (=k31) not present
+	//string kmer_chars = "GCTCTAGATTTTACAGTTTCTAGTTAGGGGC"; // (=k31) present
+	//string kmer_chars = "GCTCTAGATTTTACAGTATCTAGTTAGGGGCAGCTCATATCTATACTG"; // (>k) not present
+	string kmer_chars = "GCTCTAGATTTTACAGTTTCTAGTTAGGGGCAGCTCATATCTTTACTG"; // (>k) present
 
     //kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ;
     _kmerModel = new KmerModel(_kmerSize);
@@ -1173,9 +1173,9 @@ void Leon::executeCompression(){
     else{
         std::cout << kmer_chars << " is not present" << std::endl;
     }
+    */
 	
 	coloriage();
-	
 	u_int64_t nb_kmers = 0;// _graph.iterator().size();
 	//printf("nb kmers %llu \n",nb_kmers);
 	// remove("kcount.h5.h5");
@@ -1184,7 +1184,6 @@ void Leon::executeCompression(){
     /*************************************************/
     // We create the modified file
     /*************************************************/
-    
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
     //_outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
@@ -1212,8 +1211,6 @@ void Leon::executeCompression(){
 	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	
-
-	
 #ifdef PRINT_DEBUG
 	cout << "\tOutput filename: " << _outputFilename << endl;
 	cout << "prefix " << prefix << endl;
@@ -1238,7 +1235,7 @@ void Leon::executeCompression(){
 	else{
 		std::cout << kmer_chars << " is not present" << std::endl;
 	}*/
-	
+
 //TMP REQUEST EMPLACEMENT CODE TEST
 	if (_request){
 
@@ -1280,7 +1277,6 @@ void Leon::executeCompression(){
 		"q \t\tto quit" << endl << endl;
 		gets(req);
 		cout << endl;
-
 
 		//debug
 		if (strcmp(req, "sig")==0){

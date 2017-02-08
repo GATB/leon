@@ -132,6 +132,12 @@ void Requests::printKmerSize(){
 
 void Requests::isKmerInData(char* kmer_chars){
 
+	if (strlen(kmer_chars) != _kmerSize){
+		cout << "error : you gave a kmer of size : " << strlen(kmer_chars) << 
+		" and kmerSize is : " << _kmerSize << endl;
+		return;
+	}
+
 
 	kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
 	Node node = Node(Node::Value(kmer));
