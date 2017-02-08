@@ -69,10 +69,12 @@ class Requests
 		void getKmerAndRequest(Requests req, void (Requests::*f)(char*));
 
 		void printNbBanks();
+		int getNbBanks();
 		void printKmerSize();
+		int getKmerSize();
 		bool isKmerInData(char* kmer);
 		int getNbDataContainingKmer(char* kmer);
-		void getDataContainingKmer(char* kmer);
+		bitset<8> getDataContainingKmer(char* kmer);
 
 		IBank* _inputBank;
 		Iterator<Sequence>* _itBank;

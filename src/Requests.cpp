@@ -130,8 +130,16 @@ void Requests::printNbBanks(){
 	std::cout << "number of data sets : " << _nbBanks << std::endl;
 }
 
+int Requests::getNbBanks(){
+	return _nbBanks;
+}
+
 void Requests::printKmerSize(){
 	std::cout << "kmer size : " << _kmerSize << std::endl << std::endl;
+}
+
+int Requests::getKmerSize(){
+	return _kmerSize;
 }
 
 bool Requests::isKmerInData(char* kmer_chars){
@@ -162,22 +170,24 @@ int Requests::getNbDataContainingKmer(char* kmer_chars)
 	
 }
 
-void Requests::getDataContainingKmer(char* kmer){}
-/*
-void Requests::getKmerAndRequest(Requests req, void (Requests::* f)(char*)){
-	char kmer[1024];
-	std::cout << "enter the kmer :" << std::endl << std::endl;
-	fgets(kmer, 1024, stdin);
-	kmer[strlen(kmer)-1]='\0';
+bitset<8> Requests::getDataContainingKmer(char* kmer_chars){
 
-	if (strlen(kmer) != _kmerSize){
-		cout << "error : you gave a kmer of size : " << strlen(kmer) << 
-		" and kmerSize is : " << _kmerSize << endl;
-		return;
+
+	if (!this->isKmerInData(kmer_chars)){
+		bitset<8> data;
+		return data;
 	}
 
-	(req.*f)(kmer);
-}*/
+	else{
+
+		kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
+		Node node = Node(Node::Value(kmer));
+
+		return _color_array[_graph.nodeMPHFIndex(node)];
+	}
+
+}
+
 
 bool Requests::fgetKmer(char* kmer){
 	std::cout << "enter the kmer :" << std::endl << std::endl;

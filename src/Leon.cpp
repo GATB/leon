@@ -1345,7 +1345,25 @@ void Leon::executeCompression(){
 		}
 
 		if (strcmp(req, "kmer d")==0){
-			//requests.getKmerAndRequest(requests, &Requests::getDataContainingKmer);
+
+			if (requests.fgetKmer(kmer_req)){
+				bitset<8> data = requests.getDataContainingKmer(kmer_req);
+
+				if (data.none()){
+					cout <<  kmer_req << " is not present in any dataset" << endl;
+				}
+
+				else{
+					int nbBanks = requests.getNbBanks();
+
+					cout <<  kmer_req << " is present in the following dataset : " << endl;
+					for (int i=0; i<nbBanks; ++i){
+						if (data.test(i)){
+							cout << i << endl;
+						}
+					}
+				}
+			}
 		}
 
 		if (strcmp(req, "q")==0){
