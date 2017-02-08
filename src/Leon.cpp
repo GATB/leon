@@ -1253,124 +1253,12 @@ void Leon::executeCompression(){
 		
 
 		Requests requests = Requests(_inputBank, baseOutputname, _graph, model, solidCollection, _kmerSize);
-		//Requests * requests = Requests::Requests(_inputBank); 
-		//HeaderDecoder * header_decoder = (HeaderDecoder*) args;
 
-		char req[1024];
-		int req_buffer_size = 1024;
-
-		bool quit_requests = false;
 		do{
-		//scanf(req);
-		cout << endl << endl <<
-		"############# debug #############" << endl << endl <<
-		"sig \t\tto print sinatures" << endl <<
-		"col \t\tto print colors" << endl <<
-		"seq \t\tto print sequences" << endl <<
-		"kmers \t\tto print kmers" << endl <<
-		"mphf \t\tto print mphf indexes" << endl <<
-		"testall \tto print kmers, indexes in mphf, color and signature" << endl << endl << endl <<
-		"############ requests ############" << endl << 
-		"nb ds \t\tto get the number of datasets in the file" << endl << endl <<
-		"kmer s \t\tto get size of kmers" << endl <<
-		"kmer p \t\tto know if the kmer is present in the data" << endl <<
-		"kmer h \t\tto know in how many datasets the kmer is present" << endl <<
-		"kmer d \t\tto know in which datasets the kmer is present" << endl <<
-		"q \t\tto quit" << endl << endl;
 
-		fgets(req, req_buffer_size, stdin);
-		req[strlen(req)-1]='\0';
+		requests.fgetRequests();
 
-		//cout << req << " strlen req : " << strlen(req) << endl;
-		cout << endl;
-
-		//debug
-		if (strcmp(req, "sig")==0){
-			requests.printSignatures();
-		}
-
-		if (strcmp(req, "col")==0){
-			requests.printColors();
-		}
-
-		if (strcmp(req, "seq")==0){
-			requests.printSequences();
-		}
-
-		if (strcmp(req, "kmers")==0){
-			requests.printKmers();
-		}
-
-		if (strcmp(req, "mphf")==0){
-			requests.printMPHFIndexes();
-		}
-
-		if (strcmp(req, "testall")==0){
-			requests.printTestAll();
-		}
-
-		//requests
-
-		char kmer_req[1024];
-		char sequence_req[1024];
-
-		if (strcmp(req, "nb ds")==0){
-			requests.printNbBanks();
-		}
-
-		if (strcmp(req, "kmer s")==0){
-			requests.printKmerSize();
-		}
-
-		if (strcmp(req, "kmer p")==0){
-
-			if(requests.fgetKmer(kmer_req)){
-
-				if (requests.isKmerInData(kmer_req)){
-					std::cout << kmer_req << " is present" << std::endl;
-				}
-				else{
-					std::cout << kmer_req << " is not present" << std::endl;
-				}
-			}
-			kmer_req[0] = '\0';
-		}
-
-		if (strcmp(req, "kmer h")==0){
-
-			if (requests.fgetKmer(kmer_req)){
-				int nbData = requests.getNbDataContainingKmer(kmer_req);
-				cout << nbData << endl;
-			}
-		}
-
-		if (strcmp(req, "kmer d")==0){
-
-			if (requests.fgetKmer(kmer_req)){
-				bitset<8> data = requests.getDataContainingKmer(kmer_req);
-
-				if (data.none()){
-					cout <<  kmer_req << " is not present in any dataset" << endl;
-				}
-
-				else{
-					int nbBanks = requests.getNbBanks();
-
-					cout <<  kmer_req << " is present in the following dataset : " << endl;
-					for (int i=0; i<nbBanks; ++i){
-						if (data.test(i)){
-							cout << i << endl;
-						}
-					}
-				}
-			}
-		}
-
-		if (strcmp(req, "q")==0){
-			quit_requests = true;
-		}
-
-		}while(!quit_requests);
+		}while(!requests.end_requests);
 		return;
 	}
 

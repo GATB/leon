@@ -6,6 +6,9 @@
 Requests::Requests(IBank* inputBank, string outputFilename, Graph graph, Kmer<>::ModelCanonical model, Partition<kmer_count> & solidCollection, size_t kmerSize){
 	cout << "entering requests creator" << endl;
 
+	req_buffer_size = 1024;
+	end_requests = false;
+
 	_inputBank = inputBank;
 	_itBank = _inputBank->iterator();
 	_itBanks =  _itBank->getComposition();
@@ -188,6 +191,126 @@ bitset<8> Requests::getDataContainingKmer(char* kmer_chars){
 
 }
 
+void Requests::fgetRequests(){
+
+
+	cout << endl << endl <<
+		"############# debug #############" << endl << endl <<
+		"sig \t\tto print sinatures" << endl <<
+		"col \t\tto print colors" << endl <<
+		"seq \t\tto print sequences" << endl <<
+		"kmers \t\tto print kmers" << endl <<
+		"mphf \t\tto print mphf indexes" << endl <<
+		"testall \tto print kmers, indexes in mphf, color and signature" << endl << endl << endl <<
+		
+		"############ requests ############" << endl << 
+		
+		"nb ds \t\tto get the number of datasets in the file" << endl << endl <<
+		
+		"kmer s \t\tto get size of kmers" << endl <<
+		"kmer p \t\tto know if the kmer is present in the data" << endl <<
+		"kmer h \t\tto know in how many datasets the kmer is present" << endl <<
+		"kmer d \t\tto know in which datasets the kmer is present" << endl << endl <<
+
+		"seq p \t\tto know if the sequence is present in the data" << endl <<
+		"seq h \t\tto know in how many datasets the sequence is present" << endl <<
+		"seq d \t\tto know in which datasets the sequence is present" << endl << endl <<
+		
+		"q \t\tto quit" << endl << endl;
+
+		fgets(request, req_buffer_size, stdin);
+		request[strlen(request)-1]='\0';
+
+		//cout << req << " strlen req : " << strlen(req) << endl;
+		cout << endl;
+
+		//debug
+		if (strcmp(request, "sig")==0){
+			this->printSignatures();
+		}
+
+		if (strcmp(request, "col")==0){
+			this->printColors();
+		}
+
+		if (strcmp(request, "seq")==0){
+			this->printSequences();
+		}
+
+		if (strcmp(request, "kmers")==0){
+			this->printKmers();
+		}
+
+		if (strcmp(request, "mphf")==0){
+			this->printMPHFIndexes();
+		}
+
+		if (strcmp(request, "testall")==0){
+			this->printTestAll();
+		}
+
+		//requests
+
+		char kmer_req[1024];
+		char sequence_req[1024];
+
+		if (strcmp(request, "nb ds")==0){
+			this->printNbBanks();
+		}
+
+		if (strcmp(request, "kmer s")==0){
+			this->printKmerSize();
+		}
+
+		if (strcmp(request, "kmer p")==0){
+
+			if(this->fgetKmer(kmer_req)){
+
+				if (this->isKmerInData(kmer_req)){
+					std::cout << kmer_req << " is present" << std::endl;
+				}
+				else{
+					std::cout << kmer_req << " is not present" << std::endl;
+				}
+			}
+			kmer_req[0] = '\0';
+		}
+
+		if (strcmp(request, "kmer h")==0){
+
+			if (this->fgetKmer(kmer_req)){
+				int nbData = this->getNbDataContainingKmer(kmer_req);
+				cout << nbData << endl;
+			}
+		}
+
+		if (strcmp(request, "kmer d")==0){
+
+			if (this->fgetKmer(kmer_req)){
+				bitset<8> data = this->getDataContainingKmer(kmer_req);
+
+				if (data.none()){
+					cout <<  kmer_req << " is not present in any dataset" << endl;
+				}
+
+				else{
+					int nbBanks = this->getNbBanks();
+
+					cout <<  kmer_req << " is present in the following dataset : " << endl;
+					for (int i=0; i<nbBanks; ++i){
+						if (data.test(i)){
+							cout << i << endl;
+						}
+					}
+				}
+			}
+		}
+
+		if (strcmp(request, "q")==0){
+			this->end_requests = true;
+		}
+
+}
 
 bool Requests::fgetKmer(char* kmer){
 	std::cout << "enter the kmer :" << std::endl << std::endl;

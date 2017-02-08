@@ -53,6 +53,7 @@ class Requests
 		
 
 		//query
+		void fgetRequests();
 		bool fgetKmer(char* kmer);
 
 		//debug
@@ -75,6 +76,12 @@ class Requests
 		bool isKmerInData(char* kmer);
 		int getNbDataContainingKmer(char* kmer);
 		bitset<8> getDataContainingKmer(char* kmer);
+
+
+
+		char request[1024];
+		int req_buffer_size;
+		bool end_requests;
 
 		IBank* _inputBank;
 		Iterator<Sequence>* _itBank;
