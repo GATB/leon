@@ -126,28 +126,69 @@ void Requests::printTestAll(){
 	} 
 }
 
+void Requests::printNbBanks(){
+	std::cout << "number of data sets : " << _nbBanks << std::endl;
+}
+
 void Requests::printKmerSize(){
 	std::cout << "kmer size : " << _kmerSize << std::endl << std::endl;
 }
 
-void Requests::isKmerInData(char* kmer_chars){
-
-	if (strlen(kmer_chars) != _kmerSize){
-		cout << "error : you gave a kmer of size : " << strlen(kmer_chars) << 
-		" and kmerSize is : " << _kmerSize << endl;
-		return;
-	}
+bool Requests::isKmerInData(char* kmer_chars){
 
 
 	kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
 	Node node = Node(Node::Value(kmer));
 
-	if (_graph.contains(node))
-	{
-		std::cout << kmer_chars << " is present" << std::endl;
-	}
-	else{
-		std::cout << kmer_chars << " is not present" << std::endl;
+	return _graph.contains(node);
+}
+
+int Requests::getNbDataContainingKmer(char* kmer_chars)
+{
+
+	if (!this->isKmerInData(kmer_chars)){
+		//cout << "0" << endl;
+		return 0;
 	}
 
+	else{
+
+		kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
+		Node node = Node(Node::Value(kmer));
+
+		bitset<8> kmer_colors = _color_array[_graph.nodeMPHFIndex(node)];
+		return kmer_colors.count();
+	}
+	
+}
+
+void Requests::getDataContainingKmer(char* kmer){}
+/*
+void Requests::getKmerAndRequest(Requests req, void (Requests::* f)(char*)){
+	char kmer[1024];
+	std::cout << "enter the kmer :" << std::endl << std::endl;
+	fgets(kmer, 1024, stdin);
+	kmer[strlen(kmer)-1]='\0';
+
+	if (strlen(kmer) != _kmerSize){
+		cout << "error : you gave a kmer of size : " << strlen(kmer) << 
+		" and kmerSize is : " << _kmerSize << endl;
+		return;
+	}
+
+	(req.*f)(kmer);
+}*/
+
+bool Requests::fgetKmer(char* kmer){
+	std::cout << "enter the kmer :" << std::endl << std::endl;
+	fgets(kmer, 1024, stdin);
+	kmer[strlen(kmer)-1]='\0';
+
+	if (strlen(kmer) != _kmerSize){
+		cout << "error : you gave a kmer of size : " << strlen(kmer) << 
+		" and kmerSize is : " << _kmerSize << endl;
+		return false;
+	}
+
+	return true;
 }
