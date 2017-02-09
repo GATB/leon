@@ -8,6 +8,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph, Kmer<>:
 
 	req_buffer_size = 1024;
 	end_requests = false;
+	sequenceMaxSize = 1024;
 
 	_inputBank = inputBank;
 	_itBank = _inputBank->iterator();
@@ -145,6 +146,14 @@ int Requests::getKmerSize(){
 	return _kmerSize;
 }
 
+bitset<8> Requests::getKmerColors(char* kmer){
+
+	kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
+	Node node = Node(Node::Value(kmer));
+
+	return _color_array[_graph.nodeMPHFIndex(node)];
+}
+
 bool Requests::isKmerInData(char* kmer_chars){
 
 
@@ -158,7 +167,6 @@ int Requests::getNbDataContainingKmer(char* kmer_chars)
 {
 
 	if (!this->isKmerInData(kmer_chars)){
-		//cout << "0" << endl;
 		return 0;
 	}
 
@@ -191,8 +199,63 @@ bitset<8> Requests::getDataContainingKmer(char* kmer_chars){
 
 }
 
+bool Requests::getNKmer(char* seq, int nbKmer, char* kmer){
+
+	if (nbKmer > strlen(seq)-_kmerSize){
+		return false;
+	}
+
+	strncpy(kmer, seq+nbKmer, _kmerSize);
+	return true;
+}
+
+bool Requests::isSequenceInData(char* sequence){
+
+	int pos = 0;
+	char kmer[_kmerSize+1];
+
+	while (this->getNKmer(sequence, pos, kmer)){
+
+		if (!isKmerInData(kmer)){
+			return false;
+		}
+		++pos;
+	}
+	return true;
+}
+		
+int Requests::getNbDataContainingSequence(char* sequence){
+
+	int pos = 0;
+	char kmer_chars[_kmerSize+1];
+	bitset<8> sequence_colors;
+	//sequence_colors.set();
+	
+	while (this->getNKmer(sequence, pos, kmer_chars)){
+		
+		if (!isKmerInData(kmer_chars)){
+			return 0;
+		}
+
+		kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
+		Node node = Node(Node::Value(kmer));
+
+		sequence_colors |= _color_array[_graph.nodeMPHFIndex(node)];
+
+		++pos;
+	}
+	
+	return sequence_colors.count();
+
+}
+
+bitset<8> Requests::getDataContainingSequence(char* sequence){
+
+}
+
 void Requests::fgetRequests(){
 
+	do{
 
 	cout << endl << endl <<
 		"############# debug #############" << endl << endl <<
@@ -215,7 +278,7 @@ void Requests::fgetRequests(){
 		"seq p \t\tto know if the sequence is present in the data" << endl <<
 		"seq h \t\tto know in how many datasets the sequence is present" << endl <<
 		"seq d \t\tto know in which datasets the sequence is present" << endl << endl <<
-		
+
 		"q \t\tto quit" << endl << endl;
 
 		fgets(request, req_buffer_size, stdin);
@@ -251,8 +314,8 @@ void Requests::fgetRequests(){
 
 		//requests
 
-		char kmer_req[1024];
-		char sequence_req[1024];
+		char kmer_req[_kmerSize+3];
+		char sequence_req[sequenceMaxSize+3];
 
 		if (strcmp(request, "nb ds")==0){
 			this->printNbBanks();
@@ -273,7 +336,6 @@ void Requests::fgetRequests(){
 					std::cout << kmer_req << " is not present" << std::endl;
 				}
 			}
-			kmer_req[0] = '\0';
 		}
 
 		if (strcmp(request, "kmer h")==0){
@@ -306,20 +368,84 @@ void Requests::fgetRequests(){
 			}
 		}
 
+		if (strcmp(request, "seq p")==0){
+
+			if (this->fgetSequence(sequence_req)){
+
+				if(this->isSequenceInData(sequence_req)){
+
+					std::cout << sequence_req << " is present" << std::endl;
+				}
+				else{
+					std::cout << sequence_req << " is not present" << std::endl;
+				}
+			}
+			
+		}
+
+		if (strcmp(request, "seq h")==0){
+
+			if (this->fgetSequence(sequence_req)){
+				int nbData = this->getNbDataContainingSequence(sequence_req);
+				cout << nbData << endl;
+			}
+		}
+
+		if (strcmp(request, "seq d")==0){
+
+			if (this->fgetSequence(sequence_req)){
+				this->getDataContainingSequence(sequence_req);
+			}
+		}
+
 		if (strcmp(request, "q")==0){
 			this->end_requests = true;
 		}
 
+	}while(!this->end_requests);
+
+}
+
+void Requests::fgetString(char* string, int stringLen, char* query){
+
+	std::cout << query << std::endl << std::endl;
+	fgets(string, stringLen, stdin);
+
+	if (string[strlen(string)-1] != '\n'){ //flush buffer
+		int c;
+		while(((c = fgetc(stdin)) != '\n') && (c != EOF));
+	}
+	string[strlen(string)-1]='\0';
 }
 
 bool Requests::fgetKmer(char* kmer){
-	std::cout << "enter the kmer :" << std::endl << std::endl;
-	fgets(kmer, 1024, stdin);
-	kmer[strlen(kmer)-1]='\0';
+
+	this->fgetString(kmer, _kmerSize+3, "enter the kmer : "); 
+	//+3 for \n \0 and if the string is longer than kmer_size
+	//we need to store at least one char to know it	
 
 	if (strlen(kmer) != _kmerSize){
-		cout << "error : you gave a kmer of size : " << strlen(kmer) << 
-		" and kmerSize is : " << _kmerSize << endl;
+		cout << "error : the size of kmer is " << _kmerSize << endl;
+		return false;
+	}
+
+	return true;
+}
+
+bool Requests::fgetSequence(char* sequence){
+
+	this->fgetString(sequence, sequenceMaxSize+3, "enter the sequence : "); 
+	//+3 for \n \0 and if the string is longer than sequenceMaxSize
+	//we need to store at least one char to know it	
+
+	if (strlen(sequence) > sequenceMaxSize){
+		cout << "error : the size of the sequence cannot exceed " << sequenceMaxSize << endl;
+		return false;
+	}
+
+	if (strlen(sequence) < _kmerSize){
+		cout << "error : the size of the sequence cannot be smaller than " << 
+		_kmerSize << " (the kmer's size)" << endl;
 		return false;
 	}
 

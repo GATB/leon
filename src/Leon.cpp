@@ -1254,11 +1254,11 @@ void Leon::executeCompression(){
 
 		Requests requests = Requests(_inputBank, baseOutputname, _graph, model, solidCollection, _kmerSize);
 
-		do{
+		//do{
 
 		requests.fgetRequests();
 
-		}while(!requests.end_requests);
+		//}while(!requests.end_requests);
 		return;
 	}
 

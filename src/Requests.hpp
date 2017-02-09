@@ -51,12 +51,20 @@ class Requests
 		//AbstractHeaderCoder(Leon* leon);
 		Requests(IBank* inputBank, string outputFilename, Graph graph, Kmer<>::ModelCanonical model, Partition<kmer_count> & solidCollection, size_t kmerSize);
 		
+		/*****utilities*****/
+
+		//returns the nth kmer in the sequence
+		//returns false if error
+		bool getNKmer(char* seq, int nbKmer, char* kmer); 
+
 
 		//query
 		void fgetRequests();
+		void fgetString(char* string, int stringLen, char* query);
 		bool fgetKmer(char* kmer);
+		bool fgetSequence(char* sequence);
 
-		//debug
+		/*****debug*****/
 		void printSignatures();
 		void printColors();
 		void printKmers();
@@ -65,23 +73,30 @@ class Requests
 		void printTestAll();
 
 
-		//requests
+		/*****requests*****/
 
 		void getKmerAndRequest(Requests req, void (Requests::*f)(char*));
 
 		void printNbBanks();
 		int getNbBanks();
+
 		void printKmerSize();
 		int getKmerSize();
+
 		bool isKmerInData(char* kmer);
 		int getNbDataContainingKmer(char* kmer);
 		bitset<8> getDataContainingKmer(char* kmer);
+
+		bool isSequenceInData(char* sequence);
+		int getNbDataContainingSequence(char* sequence);
+		bitset<8> getDataContainingSequence(char* sequence);
 
 
 
 		char request[1024];
 		int req_buffer_size;
 		bool end_requests;
+		int sequenceMaxSize;
 
 		IBank* _inputBank;
 		Iterator<Sequence>* _itBank;
