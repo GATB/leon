@@ -146,55 +146,53 @@ int Requests::getKmerSize(){
 	return _kmerSize;
 }
 
-bitset<8> Requests::getKmerColors(char* kmer){
+Node Requests::getKmerNode(char* kmer_chars){
 
 	kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
 	Node node = Node(Node::Value(kmer));
+
+	return node;
+}
+
+bitset<8> Requests::getKmerColors(char* kmer){
+
+	Node node = getKmerNode(kmer);
 
 	return _color_array[_graph.nodeMPHFIndex(node)];
 }
 
-bool Requests::isKmerInData(char* kmer_chars){
+bool Requests::isKmerInData(char* kmer){
 
-
-	kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
-	Node node = Node(Node::Value(kmer));
+	Node node = getKmerNode(kmer);
 
 	return _graph.contains(node);
 }
 
-int Requests::getNbDataContainingKmer(char* kmer_chars)
+int Requests::getNbDataContainingKmer(char* kmer)
 {
 
-	if (!this->isKmerInData(kmer_chars)){
+	if (!this->isKmerInData(kmer)){
 		return 0;
 	}
 
 	else{
 
-		kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
-		Node node = Node(Node::Value(kmer));
-
-		bitset<8> kmer_colors = _color_array[_graph.nodeMPHFIndex(node)];
-		return kmer_colors.count();
+		return this->getKmerColors(kmer).count();
 	}
 	
 }
 
-bitset<8> Requests::getDataContainingKmer(char* kmer_chars){
+bitset<8> Requests::getDataContainingKmer(char* kmer){
 
 
-	if (!this->isKmerInData(kmer_chars)){
+	if (!this->isKmerInData(kmer)){
 		bitset<8> data;
 		return data;
 	}
 
 	else{
 
-		kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
-		Node node = Node(Node::Value(kmer));
-
-		return _color_array[_graph.nodeMPHFIndex(node)];
+		return this->getKmerColors(kmer);
 	}
 
 }
@@ -227,20 +225,17 @@ bool Requests::isSequenceInData(char* sequence){
 int Requests::getNbDataContainingSequence(char* sequence){
 
 	int pos = 0;
-	char kmer_chars[_kmerSize+1];
+	char kmer[_kmerSize+1];
 	bitset<8> sequence_colors;
-	//sequence_colors.set();
+	sequence_colors.set();
 	
-	while (this->getNKmer(sequence, pos, kmer_chars)){
+	while (this->getNKmer(sequence, pos, kmer)){
 		
-		if (!isKmerInData(kmer_chars)){
+		if (!isKmerInData(kmer)){
 			return 0;
 		}
 
-		kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
-		Node node = Node(Node::Value(kmer));
-
-		sequence_colors |= _color_array[_graph.nodeMPHFIndex(node)];
+		sequence_colors &= this->getKmerColors(kmer); 
 
 		++pos;
 	}

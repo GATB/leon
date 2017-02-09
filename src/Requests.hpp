@@ -55,7 +55,10 @@ class Requests
 
 		//returns the nth kmer in the sequence
 		//returns false if error
-		bool getNKmer(char* seq, int nbKmer, char* kmer); 
+		bool getNKmer(char* seq, int nbKmer, char* kmer);
+
+		bitset<8> getKmerColors(char* kmer);
+		Node getKmerNode(char* kmer_chars); 
 
 
 		//query
