@@ -171,14 +171,7 @@ bool Requests::isKmerInData(char* kmer){
 int Requests::getNbDataContainingKmer(char* kmer)
 {
 
-	if (!this->isKmerInData(kmer)){
-		return 0;
-	}
-
-	else{
-
-		return this->getKmerColors(kmer).count();
-	}
+	return this->getDataContainingKmer(kmer).count();
 	
 }
 
@@ -186,8 +179,8 @@ bitset<8> Requests::getDataContainingKmer(char* kmer){
 
 
 	if (!this->isKmerInData(kmer)){
-		bitset<8> data;
-		return data;
+		bitset<8> kmer_colors;
+		return kmer_colors;
 	}
 
 	else{
@@ -224,6 +217,11 @@ bool Requests::isSequenceInData(char* sequence){
 		
 int Requests::getNbDataContainingSequence(char* sequence){
 
+	return this->getDataContainingSequence(sequence).count();
+}
+
+bitset<8> Requests::getDataContainingSequence(char* sequence){
+
 	int pos = 0;
 	char kmer[_kmerSize+1];
 	bitset<8> sequence_colors;
@@ -232,7 +230,8 @@ int Requests::getNbDataContainingSequence(char* sequence){
 	while (this->getNKmer(sequence, pos, kmer)){
 		
 		if (!isKmerInData(kmer)){
-			return 0;
+
+			return sequence_colors.reset();
 		}
 
 		sequence_colors &= this->getKmerColors(kmer); 
@@ -240,11 +239,7 @@ int Requests::getNbDataContainingSequence(char* sequence){
 		++pos;
 	}
 	
-	return sequence_colors.count();
-
-}
-
-bitset<8> Requests::getDataContainingSequence(char* sequence){
+	return sequence_colors;
 
 }
 
@@ -344,9 +339,9 @@ void Requests::fgetRequests(){
 		if (strcmp(request, "kmer d")==0){
 
 			if (this->fgetKmer(kmer_req)){
-				bitset<8> data = this->getDataContainingKmer(kmer_req);
+				bitset<8> kmer_colors = this->getDataContainingKmer(kmer_req);
 
-				if (data.none()){
+				if (kmer_colors.none()){
 					cout <<  kmer_req << " is not present in any dataset" << endl;
 				}
 
@@ -355,7 +350,7 @@ void Requests::fgetRequests(){
 
 					cout <<  kmer_req << " is present in the following dataset : " << endl;
 					for (int i=0; i<nbBanks; ++i){
-						if (data.test(i)){
+						if (kmer_colors.test(i)){
 							cout << i << endl;
 						}
 					}
@@ -389,7 +384,22 @@ void Requests::fgetRequests(){
 		if (strcmp(request, "seq d")==0){
 
 			if (this->fgetSequence(sequence_req)){
-				this->getDataContainingSequence(sequence_req);
+				bitset<8> sequence_colors = this->getDataContainingSequence(sequence_req);
+
+				if (sequence_colors.none()){
+					cout <<  sequence_req << " is not present in any dataset" << endl;
+				}
+
+				else{
+					int nbBanks = this->getNbBanks();
+
+					cout <<  sequence_req << " is present in the following dataset : " << endl;
+					for (int i=0; i<nbBanks; ++i){
+						if (sequence_colors.test(i)){
+							cout << i << endl;
+						}
+					}
+				}
 			}
 		}
 
