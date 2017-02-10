@@ -42,6 +42,8 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 using namespace std;
 class Leon;
+
+#define NB_MAX_COLORS ((size_t) 8)
 //====================================================================================
 // ** AbstractHeaderCoder
 //====================================================================================
@@ -57,7 +59,7 @@ class Requests
 		//returns false if error
 		bool getNKmer(char* seq, int nbKmer, char* kmer);
 
-		bitset<8> getKmerColors(char* kmer);
+		bitset<NB_MAX_COLORS> getKmerColors(char* kmer);
 		Node getKmerNode(char* kmer_chars); 
 
 
@@ -88,11 +90,11 @@ class Requests
 
 		bool isKmerInData(char* kmer);
 		int getNbDataContainingKmer(char* kmer);
-		bitset<8> getDataContainingKmer(char* kmer);
+		bitset<NB_MAX_COLORS> getDataContainingKmer(char* kmer);
 
 		bool isSequenceInData(char* sequence);
 		int getNbDataContainingSequence(char* sequence);
-		bitset<8> getDataContainingSequence(char* sequence);
+		bitset<NB_MAX_COLORS> getDataContainingSequence(char* sequence);
 
 
 
@@ -100,7 +102,8 @@ class Requests
 		int req_buffer_size;
 		bool end_requests;
 		int sequenceMaxSize;
-
+	
+	
 		IBank* _inputBank;
 		Iterator<Sequence>* _itBank;
 		std::vector<Iterator<Sequence>*> _itBanks;

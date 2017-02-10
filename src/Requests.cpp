@@ -70,7 +70,7 @@ void Requests::printSignatures(){
 	cout << "signatures : \n" << endl;
 
 	for (int i=0; i < _nb_kmers_infile; ++i){
-		cout << std::bitset<8>(_signature_array[i]) << endl;
+		cout << std::bitset<NB_MAX_COLORS>(_signature_array[i]) << endl;
 	}
 }
 
@@ -80,7 +80,7 @@ void Requests::printColors(){
 	cout << "colors : \n" << endl;
 
 	for (int i=0; i < _nb_kmers_infile; ++i){
-		cout << std::bitset<8>(_color_array[i]) << endl;
+		cout << std::bitset<NB_MAX_COLORS>(_color_array[i]) << endl;
 	}
 }
 
@@ -124,8 +124,8 @@ void Requests::printTestAll(){
 	printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));
 		
 	std::cout <<  _model.toString (_itKmers->item().getValue())  << "\t" <<
-	std::bitset<8>(_color_array[_graph.nodeMPHFIndex(node)]) << "\t" <<
-	std::bitset<8>(_signature_array[_graph.nodeMPHFIndex(node)]) << std::endl;
+	std::bitset<NB_MAX_COLORS>(_color_array[_graph.nodeMPHFIndex(node)]) << "\t" <<
+	std::bitset<NB_MAX_COLORS>(_signature_array[_graph.nodeMPHFIndex(node)]) << std::endl;
 
 	} 
 }
@@ -224,7 +224,7 @@ bitset<8> Requests::getDataContainingSequence(char* sequence){
 
 	int pos = 0;
 	char kmer[_kmerSize+1];
-	bitset<8> sequence_colors;
+	bitset<NB_MAX_COLORS> sequence_colors;
 	sequence_colors.set();
 	
 	while (this->getNKmer(sequence, pos, kmer)){
@@ -339,17 +339,17 @@ void Requests::fgetRequests(){
 		if (strcmp(request, "kmer d")==0){
 
 			if (this->fgetKmer(kmer_req)){
-				bitset<8> kmer_colors = this->getDataContainingKmer(kmer_req);
+				bitset<NB_MAX_COLORS> kmer_colors = this->getDataContainingKmer(kmer_req);
 
 				if (kmer_colors.none()){
 					cout <<  kmer_req << " is not present in any dataset" << endl;
 				}
 
 				else{
-					int nbBanks = this->getNbBanks();
+					//TODO get nb data sets to minimize the loop on NB_MAX COLORS
 
 					cout <<  kmer_req << " is present in the following dataset : " << endl;
-					for (int i=0; i<nbBanks; ++i){
+					for (int i=0; i<NB_MAX_COLORS; ++i){
 						if (kmer_colors.test(i)){
 							cout << i << endl;
 						}
@@ -384,17 +384,17 @@ void Requests::fgetRequests(){
 		if (strcmp(request, "seq d")==0){
 
 			if (this->fgetSequence(sequence_req)){
-				bitset<8> sequence_colors = this->getDataContainingSequence(sequence_req);
+				bitset<NB_MAX_COLORS> sequence_colors = this->getDataContainingSequence(sequence_req);
 
 				if (sequence_colors.none()){
 					cout <<  sequence_req << " is not present in any dataset" << endl;
 				}
 
 				else{
-					int nbBanks = this->getNbBanks();
+					//TODO get nb data sets to minimize the loop on NB_MAX COLORS
 
 					cout <<  sequence_req << " is present in the following dataset : " << endl;
-					for (int i=0; i<nbBanks; ++i){
+					for (int i=0; i<NB_MAX_COLORS; ++i){
 						if (sequence_colors.test(i)){
 							cout << i << endl;
 						}
