@@ -34,10 +34,13 @@
 //#include "RangeCoder.hpp"
 #include <gatb/gatb_core.hpp>
 #include "Leon.hpp"
+#include "Requests.hpp"
+
 //#include "CompressionUtils.hpp"
 
 using namespace std;
 class Leon;
+class Requests;
 //====================================================================================
 // ** AbstractHeaderCoder
 //====================================================================================
@@ -45,6 +48,7 @@ class AbstractHeaderCoder
 {
 	public:
 		AbstractHeaderCoder(Leon* leon);
+
 		
 	protected:
 		void addFieldColumn();
@@ -147,6 +151,7 @@ class HeaderDecoder : AbstractHeaderCoder
 	public:
 		
 		HeaderDecoder(Leon* leon, const string& inputFilename);
+		HeaderDecoder(Leon* leon, Requests* req, const string& inputFilename);
 		~HeaderDecoder();
 		
 		//void processNextByte(u_int8_t byte);

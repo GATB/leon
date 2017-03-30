@@ -661,7 +661,7 @@ void HeaderEncoder::encodeAscii(){
 		//cout << _currentHeader[j] << flush;
 		_rangeEncoder.encode(_asciiModel[_misIndex], _currentHeader[_currentFieldPos[_fieldIndex]+i]);
 	}
-	//cout << endl;
+
 	_misIndex += 1;
 }
 
@@ -692,6 +692,20 @@ AbstractHeaderCoder(leon)
 	
 }
 
+HeaderDecoder::HeaderDecoder(Leon* leon, Requests* req, const string& inputFilename) :
+AbstractHeaderCoder(leon)
+{
+	//cout << endl << "debug - HeaderDecoder - constructor2 - inputFilename : " << inputFilename << endl;
+	_rangeDecoder = req->_rangeDecoder;
+	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
+	_finished = false;
+	//_outputFile = outputFile;
+	// = new RangeDecoder(inputFile);
+	
+	//_outputFile = new OutputFile(outputFile);
+	
+}
+
 HeaderDecoder::~HeaderDecoder(){
 	//delete _rangeDecoder;
 	//delete _outputFile;
@@ -699,6 +713,13 @@ HeaderDecoder::~HeaderDecoder(){
 }
 
 void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
+	
+	//cout << endl << "debug - HeaderDecoder - setup - blockStartPos : " << blockStartPos << endl;
+	//cout << "debug - HeaderDecoder - setup - blockSize : " << blockSize << endl;
+	//cout << "debug - HeaderDecoder - setup - sequenceCount : " << sequenceCount << endl;
+
+
+
 	startBlock();
 	_rangeDecoder.clear();
 	
@@ -722,9 +743,11 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequ
 	_misIndex = 0;
 	
 	_sequenceCount = sequenceCount;
+	
 }
 
 void HeaderDecoder::execute(){
+	//cout << endl << "DEBUG HEADER CODER EXECUTE BEGIN" << endl;
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
 	
@@ -737,9 +760,12 @@ void HeaderDecoder::execute(){
 	//for(u_int64_t i=0; i<_blockSize; i++){
 		
 	//while(!_inputFile->eof()){
+	//	cout << "debug header decoder : readType before" << endl;
 		u_int8_t type = _rangeDecoder.nextByte(_typeModel[_misIndex]);
+	//	cout << "debug header decoder : readType after" << endl;
+	//	cout << "debug header decoder : type = " << (int) type << endl;
 		#ifdef PRINT_DEBUG_DECODER
-			cout << "\t\tNext type is: " << (int)type << endl;
+			cout << "\t\tNext type is: " << (int) type << endl;
 		#endif
 		//if(_inputFile->eof()) return;
 		//if(type==0){
@@ -755,12 +781,16 @@ void HeaderDecoder::execute(){
 			while(_currentHeader.size() < headerSize){
 				//_currentHeader += _prevHeader
 			}*/
+	//		cout << "debug header decoder : enter endHeader" << endl;
 			endHeader();
+	//		cout << "debug header decoder : exit endHeader" << endl;
 			//i+=1;
 		}
 		else if(type == HEADER_END_MATCH){
 			//decodeMatch();
+	//		cout << "debug header decoder : headerSize before" << endl;
 			u_int8_t headerSize = _rangeDecoder.nextByte(_headerSizeModel);
+	//		cout << "debug header decoder : headerSize before" << endl;
 
 			for(/*_fieldIndex*/; _fieldIndex < _prevFieldCount; _fieldIndex++){
 				#ifdef PRINT_DEBUG_DECODER
@@ -773,8 +803,9 @@ void HeaderDecoder::execute(){
 			endHeader();
 		}
 		else{
-			
+	//		cout << "debug header decoder : enter decodeMatch" << endl;
 			decodeMatch();
+	//		cout << "debug header decoder : enter decodeMatch" << endl;
 			
 			if(type == FIELD_ASCII){
 				decodeAscii();
@@ -828,7 +859,10 @@ void HeaderDecoder::decodeFirstHeader(){
 */
 
 void HeaderDecoder::decodeMatch(){
+	//cout << "debug header decoder : decodeMAtch read misFieldIndex before" << endl;
 	u_int8_t misFieldIndex = _rangeDecoder.nextByte(_fieldIndexModel[_misIndex]);
+	//cout << "debug header decoder : decodeMAtch read misFieldIndex after" << endl;
+	//cout << "debug header decoder : misFieldIndex = " << (int) misFieldIndex << endl;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tMatch to field: " << (int)misFieldIndex << endl;
 	#endif
@@ -972,7 +1006,6 @@ void HeaderDecoder::endHeader(){
 		//for(int i=0; i<_currentPos; i++){
 		//	cout << _currentHeader2[i];
 		//}
-		//cout << endl;
 	#endif
 	
 	

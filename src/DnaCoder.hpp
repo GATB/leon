@@ -25,6 +25,7 @@
 #include <gatb/gatb_core.hpp>
 //#include "RangeCoder.hpp"
 #include "Leon.hpp"
+ #include "Requests.hpp"
 //#include "CompressionUtils.hpp"
 
 //#define PRINT_DISTRIB
@@ -39,6 +40,7 @@
 
 using namespace std;
 class Leon;
+class Requests;
 
 //====================================================================================
 // ** AbstractDnaCoder
@@ -226,6 +228,8 @@ class DnaDecoder : AbstractDnaCoder
 	public:
 		
 		DnaDecoder(Leon* leon, const string& inputFilename);
+		DnaDecoder(Leon* leon, Requests* req, const string& inputFilename);
+
 		~DnaDecoder();
 		
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
@@ -233,6 +237,9 @@ class DnaDecoder : AbstractDnaCoder
 	
 		string _buffer;
 		bool _finished;
+
+		Requests* _requests;
+		bool _decodeReq = false;
 		
 	private:
 	

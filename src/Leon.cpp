@@ -557,10 +557,10 @@ void Leon::coloriage (){
 																"coloriage"
 																);
 	LOCAL (itKmers);
-	
+
 	_signature_array =  (unsigned char  *)  malloc(solidFileSize*sizeof(unsigned char));
 	_color_array = (unsigned char  *)  calloc(solidFileSize,sizeof(unsigned char));
-	
+
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
 	{
 	
@@ -576,12 +576,9 @@ void Leon::coloriage (){
 	
 	
 	
-	
-	
 	Iterator<Sequence>* it = _inputBank->iterator(); 
 	std::vector<Iterator<Sequence>*> itBanks =  it->getComposition();
 	int _nbBanks = itBanks.size();
-	
 
 	#ifdef PRINT_DEBUG 
 	printf("nb opened banks  %i \n",_nbBanks);
@@ -590,11 +587,10 @@ void Leon::coloriage (){
 
 	// We declare a kmer iterator
 	Kmer<>::ModelCanonical::Iterator itKmer (model);
-	
 	for (size_t ii=0; ii<_nbBanks; ii++)
 	{
 		Iterator<Sequence>* itSeq = itBanks[ii];
-
+		cout << "banque : "<< ii << endl;
 		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
 		{
 			Sequence& seq = itSeq->item();
@@ -602,10 +598,8 @@ void Leon::coloriage (){
 			
 			// We set the data from which we want to extract kmers.
 			itKmer.setData ((*itSeq)->getData());
-			
 			for (itKmer.first(); !itKmer.isDone(); itKmer.next())
 			{
-				
 				Node node(Node::Value(itKmer->value()));
 				unsigned long  mphf_index = _graph.nodeMPHFIndex(node) ;
 				unsigned char signature = hash1(itKmer->value(),0) & 255 ;
@@ -618,7 +612,7 @@ void Leon::coloriage (){
 			}
 		}
 	}
-	
+
 	
 //	for(int cc = 0; cc< solidFileSize ; cc++)
 //	{
@@ -744,7 +738,6 @@ void Leon::coloriage (){
 
 	fclose(signature_file);
 	fclose(color_file);
-	
 }
 
 
@@ -1176,6 +1169,7 @@ void Leon::executeCompression(){
     */
 	
 	coloriage();
+
 	u_int64_t nb_kmers = 0;// _graph.iterator().size();
 	//printf("nb kmers %llu \n",nb_kmers);
 	// remove("kcount.h5.h5");
@@ -1236,33 +1230,7 @@ void Leon::executeCompression(){
 		std::cout << kmer_chars << " is not present" << std::endl;
 	}*/
 
-//TMP REQUEST EMPLACEMENT CODE TEST
-	if (_request){
 
-		cout << "option requests catched" << endl;
-
-
-	Kmer<>::ModelCanonical model (_kmerSize);
-
-
-		std::string h5count_file  = "kcount.h5";
-		Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
-		LOCAL (storage);
-		
-		Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
-		
-
-		Requests requests = Requests(_inputBank, baseOutputname, _graph, model, solidCollection, _kmerSize);
-
-		//do{
-
-		requests.fgetRequests();
-
-		//}while(!requests.end_requests);
-		return;
-	}
-
-//END TMP REQUEST EMPLACEMENT CODE TEST
 
     //Compression
 	if(! _noHeader)
@@ -1282,6 +1250,46 @@ void Leon::executeCompression(){
 	
 	
 	endCompression();
+
+	//TMP REQUEST EMPLACEMENT CODE TEST
+
+	//DnaDecoder* dd = new DnaDecoder(this, _inputFilename);
+	
+
+	cout << _anchorKmers->size() << endl;
+	//anchorExist(, anchorAddress);
+	if (_request){
+
+		cout << "option requests catched" << endl;
+
+
+	Kmer<>::ModelCanonical model (_kmerSize);
+
+
+		std::string h5count_file  = "kcount.h5";
+		Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
+		LOCAL (storage);
+		
+		Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
+		
+		DnaDecoder* dd = new DnaDecoder(this, _outputFilename);
+
+		Requests requests = Requests(_inputBank, baseOutputname, _graph, 
+			model, solidCollection, _kmerSize, _anchorKmers, this, dd/*, 
+			_generalModel, _numericModel, _anchorDictModel*/);
+
+		//do{
+
+		requests.fgetRequests();
+
+		//}while(!requests.end_requests);
+		return;
+	}
+
+	//originally in endCompression();
+	delete _anchorKmers;
+
+//END TMP REQUEST EMPLACEMENT CODE TEST
 }
 
 
@@ -1791,7 +1799,9 @@ void Leon::endDnaCompression(){
 	//_anchorKmers.clear();
 	//_anchorKmers->clear();
 	
-	delete _anchorKmers;
+
+	//originally here
+	//delete _anchorKmers;
 
 
 }
@@ -2126,7 +2136,7 @@ void Leon::executeDecompression(){
 	
 
 	string dir = System::file().getDirectory(_inputFilename);
-	
+	cout << "debug Leon::executeDecompression : filename" << _inputFilename << endl;
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	
@@ -2798,7 +2808,7 @@ void Leon::endDecompression(){
 				if(newBankIt->isDone())
 					cout << "\tOK" << endl;
 				else
-					cout << "\tOriginal file end but not the decomrpessed file" << endl;
+					cout << "\tOriginal file end but not the decompressed file" << endl;
 				break;
 			}
 			
