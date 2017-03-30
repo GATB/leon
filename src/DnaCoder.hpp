@@ -233,6 +233,8 @@ class DnaDecoder : AbstractDnaCoder
 		~DnaDecoder();
 		
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
+		//return false if end of file
+		bool getNextRead(string* read);
 		void execute();
 	
 		string _buffer;

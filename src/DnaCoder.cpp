@@ -431,9 +431,7 @@ void DnaEncoder::execute(){
 	
 
 	//_isPrevReadAnchorable = false;
-	cout << "tmptmptmp debug : anchorAddress "<< anchorAddress << endl;
 	int anchorPos = findExistingAnchor(&anchorAddress); //unsynch
-cout << "tmptmptmp debug : anchorPos "<< anchorPos << endl;
 	if(anchorPos == -1)
 		anchorPos = _leon->findAndInsertAnchor(_kmers, &anchorAddress);  //unsynch
 
@@ -1562,6 +1560,40 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 	
 	_sequenceCount = sequenceCount;
 		
+}
+
+bool DnaDecoder::getNextRead(string* read){
+
+	if (_processedSequenceCount < _sequenceCount){
+
+		u_int8_t readType = _rangeDecoder.nextByte(_readTypeModel);
+	
+
+		if(readType == 0)
+			decodeAnchorRead(); //ici
+		else if(readType == 1)
+			decodeNoAnchorRead();
+			
+		endRead();
+
+
+		//cout << "debug dnadecoder - getNextRead - buffer : " << _buffer << endl;
+		//_buffer.copy(read, _buffer.size(), 0);
+		//read[_buffer.size()+1] = '\0';
+		*read = _buffer;
+		//cout << "debug dnadecoder - getNextRead - read : " << *read << endl;
+		_buffer.clear();
+		//cout << "debug dnadecoder - getNextRead - read after clear buffer : " << *read << endl;
+
+		return true;
+
+	}
+
+	else{
+
+		_finished = true;
+		return false;
+	}
 }
 
 void DnaDecoder::execute(){
