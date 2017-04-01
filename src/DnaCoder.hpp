@@ -49,6 +49,16 @@ class AbstractDnaCoder
 		AbstractDnaCoder(Leon* leon);
 		
 	protected:
+		KmerModel _kmerModel;
+
+		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
+
+		Order0Model _noAnchorReadModel;
+
+		Order0Model _bifurcationModel;
+		Order0Model _bifurcationBinaryModel;
+		Order0Model _readAnchorRevcompModel;
+	
 		Leon* _leon;
 		collections::impl::IBloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 		
@@ -58,7 +68,6 @@ class AbstractDnaCoder
 		Order0Model _NposDeltaTypeModel;
 		Order0Model _errorPosDeltaTypeModel;
 		
-		Order0Model _readTypeModel; //only 2 value in this model: with anchor or without anchor
 
 		//Sequence* _prevSequences;
 		//Order0Model _isPrevReadAnchorableModel;
@@ -77,17 +86,13 @@ class AbstractDnaCoder
 		vector<Order0Model> _rightErrorPosModel;
 		
 		vector<Order0Model> _readSizeValueModel;
-		Order0Model _readAnchorRevcompModel;
-		Order0Model _bifurcationModel;
-		Order0Model _bifurcationBinaryModel;
-		
-		Order0Model _noAnchorReadModel;
+
+
 		vector<Order0Model> _noAnchorReadSizeValueModel;
 		
 		size_t _kmerSize;
 		int _readSize;
-		KmerModel _kmerModel;
-		
+	
 		vector<int> _leftErrorPos;
 		vector<int> _rightErrorPos;
 		vector<int> _Npos;
@@ -198,7 +203,7 @@ class DnaEncoder : AbstractDnaCoder
 		//u_int64_t _isPrevReadAnchorablePos;
 
 		vector<int> _solidMutaChain;
-		int _solidMutaChainPos;
+		//int _solidMutaChainPos;
 		u_int64_t _totalDnaSize;
 		u_int64_t _readCount;
 		u_int64_t _MCtotal;
@@ -211,10 +216,9 @@ class DnaEncoder : AbstractDnaCoder
 	
 		int _thread_id;
 
-		int _lala;
-		int _solidMutaChainStartPos;
-		int _solidMutaChainSize;
-		int _solidMutaChainLockTime;
+	//	int _solidMutaChainStartPos;
+	//	int _solidMutaChainSize;
+	//	int _solidMutaChainLockTime;
 };
 
 //====================================================================================
@@ -225,10 +229,10 @@ class DnaDecoder : AbstractDnaCoder
 		
 	public:
 		
-		DnaDecoder(Leon* leon, const string& inputFilename);
+		DnaDecoder(Leon* leon, const string& inputFilename,tools::storage::impl::Group *  group);
 		~DnaDecoder();
 		
-		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
+		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount, int blockID);
 		void execute();
 	
 		string _buffer;
@@ -241,10 +245,10 @@ class DnaDecoder : AbstractDnaCoder
 	
 		RangeDecoder _rangeDecoder;
 		ifstream* _inputFile;
-		ofstream* _outputFile;
+		//ofstream* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;
-		int _decodedSequenceCount;
+	//	int _decodedSequenceCount;
 		string _currentSeq;
 		ifstream* _anchorDictFile;
 		
@@ -255,15 +259,23 @@ class DnaDecoder : AbstractDnaCoder
 		void endRead();
 		
 		int _sequenceCount;
+	
+	tools::storage::impl::Group *  _group;
+	tools::storage::impl::Storage::istream *_inputStream;
+
 };
 
 class QualDecoder
 {
 public:
-	QualDecoder(Leon* leon, const string& inputFilename);
+	//QualDecoder(Leon* leon, const string& inputFilename);
+	QualDecoder(Leon* leon, const string& inputFilename,tools::storage::impl::Group *  group);
+
 	~QualDecoder();
 	
 	void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
+	void setup( int blockID);
+
 	void execute();
 	
 	string _buffer;
@@ -273,12 +285,18 @@ public:
 private:
 	Leon* _leon;
 
+	tools::storage::impl::Group *  _group;
+	
 	char * _inbuffer;
-	ifstream* _inputFile;
-	ofstream* _outputFile;
+	//ifstream* _inputFile;
+	
+	tools::storage::impl::Storage::istream *_inputStream;
+
+	
+	//ofstream* _outputFile;
 	u_int64_t _blockStartPos;
 	u_int64_t _blockSize;
-	int _decodedSequenceCount;
+	//int _decodedSequenceCount;
 	string _currentSeq;
 	int _sequenceCount;
 	int _processedSequenceCount;

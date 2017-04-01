@@ -269,6 +269,7 @@ HeaderEncoder::~HeaderEncoder(){
 	
 	__sync_fetch_and_add(&_leon->_totalHeaderSize, _totalHeaderSize);
 	
+	/*
 #ifndef SERIAL
 	//_leon->_blockwriter->incDone(1);
 	_leon->_blockwriter->waitForWriter();
@@ -278,7 +279,7 @@ HeaderEncoder::~HeaderEncoder(){
 		_leon->_blockwriter->FlushWriter();
 	}
 #endif
-
+*/
 	
 	
 	//if(_rangeEncoder->buffer.size() > 0){
@@ -343,7 +344,7 @@ void HeaderEncoder::writeBlock(){
 
 	//printf("\nheader coder writeblock   bid %i   tid %i \n",blockId, _thread_id);
 	
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId,true);
 	_rangeEncoder.clear();
 }
 
@@ -678,12 +679,15 @@ void HeaderEncoder::encodeAscii(){
 //====================================================================================
 // ** HeaderDecoder
 //====================================================================================
-HeaderDecoder::HeaderDecoder(Leon* leon, const string& inputFilename) :
+HeaderDecoder::HeaderDecoder(Leon* leon,std::string & inputFilename, tools::storage::impl::Group *  group) :
 AbstractHeaderCoder(leon)
 //, _rangeDecoder(inputFile)
 {
-	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
+	_group = group;
+	_inputStream =0;
+	//_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
 	_finished = false;
+	
 	//_outputFile = outputFile;
 	// = new RangeDecoder(inputFile);
 	
@@ -695,18 +699,38 @@ AbstractHeaderCoder(leon)
 HeaderDecoder::~HeaderDecoder(){
 	//delete _rangeDecoder;
 	//delete _outputFile;
-	delete _inputFile;
+	//delete _inputFile;
+	if(_inputStream !=0) delete _inputStream;
+
 }
 
-void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
+void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount,int blockID){
 	startBlock();
 	_rangeDecoder.clear();
 	
-	_inputFile->seekg(blockStartPos, _inputFile->beg);
-	_rangeDecoder.setInputFile(_inputFile);
+	//_inputFile->seekg(blockStartPos, _inputFile->beg);
+	//_rangeDecoder.setInputFile(_inputFile);
+	
+	
+		if(_inputStream !=0) delete _inputStream;
+	std::string datasetname = Stringify::format ("header_%i",blockID);
+	
+	_inputStream = new tools::storage::impl::Storage::istream  (*_group, datasetname);
+	
+	auto _tempcollec = & _group->getCollection<math::NativeInt8> (datasetname);
+	std::string dsize = _tempcollec->getProperty ("size");
+	
+	_blockSize =  std::stoi(dsize); // blockSize;
+	
+	
+	
+	_rangeDecoder.setInputFile(_inputStream);
+
+	
+	
 	
 	_blockStartPos = blockStartPos;
-	_blockSize = blockSize;
+	//_blockSize = blockSize;
 	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t-----------------------" << endl;

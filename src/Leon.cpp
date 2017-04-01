@@ -61,7 +61,7 @@ TODO
  * 
  * 
  */
- 
+ //
  
 #include "Leon.hpp"
 
@@ -82,6 +82,7 @@ const char* Leon::STR_DNA_ONLY = "-seq-only";
 const char* Leon::STR_NOHEADER = "-noheader";
 const char* Leon::STR_NOQUAL = "-noqual";
 
+const char* Leon::STR_DATA_INFO = "Info";
 const int Leon::nt2binTab[128] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -110,6 +111,28 @@ const char Leon::_nt2bin['G'] = {0};
 const char Leon::_nt2bin['N'] = {0};
 const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 */
+
+
+template<typename T>
+void createDataset(tools::storage::impl::Group *  group, std::string datasetname, T data)
+{
+	tools::storage::impl::Storage::ostream os (*group, datasetname);
+	os.write (reinterpret_cast<char const*>(&data), sizeof(data));
+	os.flush();
+}
+
+
+
+template<typename T>
+void readDataset(tools::storage::impl::Group *  group, std::string datasetname, T & data)
+{
+	tools::storage::impl::Storage::istream is (*group, datasetname);
+	is.read (reinterpret_cast<char*> (&data),sizeof(data));
+}
+
+
+
+
 
 //Leon::Leon ( bool compress, bool decompress) :
 Leon::Leon () :
@@ -161,6 +184,7 @@ _isFasta = true;
     decompressionParser->push_back (new OptionNoParam (Leon::STR_TEST_DECOMPRESSED_FILE, "check if decompressed file is the same as original file (both files must be in the same folder)", false));
 	
 
+	_groupLeon = _subgroupQual = _subgroupInfo = _subgroupDict = _subgroupDNA =  _subgroupHeader = NULL;
 
 	
     getParser()->push_back (compressionParser);
@@ -177,6 +201,9 @@ Leon::~Leon ()
 	
 	if(_qualwriter != NULL)
 		delete(_qualwriter);
+	
+//	if(_Qual_outstream != NULL)
+//		delete _Qual_outstream;
 	
 	if (_progress_decode)  { delete _progress_decode; }
 }
@@ -249,7 +276,7 @@ void Leon::createBloom (){
 	
 	//u_int64_t solidFileSize
 	
-	_auto_cutoff = 0 ;
+	int _auto_cutoff = 0 ;
 	u_int64_t nbs = 0 ;
 	u_int64_t nb_kmers_infile;
 	
@@ -289,12 +316,14 @@ void Leon::createBloom (){
 		
 		_nks = _auto_cutoff;
 
+		//printf("\tcutoff auto: %i  \n",_nks);
+
 	}
 	else
 	{
 		_auto_cutoff =0;
 		nbs  = nb_kmers_infile;
-		//printf("\tcutoff user: %i (total solids %lli) \n",_nks,nbs);
+	//	printf("\tcutoff user: %i (total solids %lli) \n",_nks,nbs);
 	}
 	
 	
@@ -347,117 +376,6 @@ void Leon::createBloom (){
 	//modif ici pour virer les kmers < auto cutoff
     BloomBuilder<> builder (estimatedBloomSize, 7,_kmerSize,tools::misc::BLOOM_NEIGHBOR,getInput()->getInt(STR_NB_CORES),_auto_cutoff);
     _bloom = builder.build (itKmers); // BLOOM_NEIGHBOR // BLOOM_CACHE
-
-	//printf ("bloom size %lli  bits per k %f  nbkemrs infile %lli \n",estimatedBloomSize,NBITS_PER_KMER,nbs);
-    //BloomBuilder<> builder (estimatedBloomSize, 7,tools::collections::impl::BloomFactory::CACHE,getInput()->getInt(STR_NB_CORES));
-    //Bloom<kmer_type>* bloom = builder.build (itKmers);
-    
-	/*
-	vector<u_int64_t> tab;
-	
-	for(int i=0; i<256; i++){
-		tab.push_back(0);
-	}
-	
-	for(int i=0; i<_bloom->getSize(); i++){
-		tab[_bloom->getArray()[i]] += 1;
-	}
-	
-	cout << tab.size() << " " << _bloom->getSize() << endl;
-	for(int i=0; i<tab.size(); i++){
-		cout << i << " " << tab[i] << endl;
-	}*/
-	
-	//_rangeEncoder.clear();
-	//_generalModel.clear();
-	//for(int i=0; i<_bloom->getSize(); i++){
-	//	_rangeEncoder.encode(_generalModel, _bloom->getArray()[i]);
-	//}
-
-	/*
-	z_stream zs;                        // z_stream is zlib's control structure
-    memset(&zs, 0, sizeof(zs));
-
-    if (deflateInit(&zs, Z_BEST_COMPRESSION) != Z_OK)
-        throw(std::runtime_error("deflateInit failed while compressing."));
-
-    zs.next_in = (Bytef*)_bloom->getArray();
-    zs.avail_in = _bloom->getSize();           // set the z_stream's input
-
-    int ret;
-    char outbuffer[32768];
-    std::string outstring;
-
-    // retrieve the compressed bytes blockwise
-    do {
-        zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
-        zs.avail_out = sizeof(outbuffer);
-
-        ret = deflate(&zs, Z_FINISH);
-
-        if (outstring.size() < zs.total_out) {
-            // append the block to the output string
-            outstring.append(outbuffer,
-                             zs.total_out - outstring.size());
-        }
-    } while (ret == Z_OK);
-
-    deflateEnd(&zs);
-    
-	cout << "Bloom size: " << _bloom->getSize() << endl;
-	cout << "Compressed Bloom size: " << outstring.size() << endl; */
-	
-
-    /*
-	#ifdef PRINT_DEBUG
-		cout << "\tFilling kmer abundance hash" << endl;
-	#endif
-
-	int ithresholds[4] = {200,50,_nks};
-	vector<int> thresholds(ithresholds, ithresholds + sizeof(ithresholds) / sizeof(int));
-	u_int64_t size = 0;
-	u_int64_t maxSizeMB = 500;
-	u_int64_t maxSizeB = maxSizeMB * MBYTE;
-	//u_int64_t absoluteMaxSize = (maxSize*3)/4;
-    //_kmerAbundance = new OAHash<kmer_type>(maxSize);
-    _kmerAbundance = new Hash16<kmer_type>(maxSizeMB);
-
-
-
-    //itKmers.reset();
-    //itKmers.first();
-    //KmerModel model(_kmerSize);
-
-    //IteratorFile<kmer_count> it(_dskOutputFilename);
-    itKmers = solidCollection.iterator();
-
-    for(int i=0; i<thresholds.size()-1; i++){
-		for (itKmers->first(); !itKmers->isDone(); itKmers->next()){
-			kmer_count count = itKmers->item();
-
-			if(count.abundance >= thresholds[i]){
-				if(i == 0 || count.abundance < thresholds[i-1]){
-					_kmerAbundance->insert(count.value, count.abundance);
-					//cout <<
-					//size += OAHash<kmer_type>::size_entry();
-					size += sizeof(kmer_type) + sizeof(int);
-				}
-			}
-
-			//cout << size << endl;
-			if(size > maxSizeB) break;
-			//if(size > absoluteMaxSize) break;
-		}
-
-		if(size > maxSizeB) break;
-		//if(size > absoluteMaxSize) break;
-	}
-
-	#ifdef PRINT_DEBUG
-		cout << "\t\tNeeded memory: " << size << endl;
-		cout << "\t\tAllocated memory: " << _kmerAbundance->memory_usage() << endl;
-	#endif
-	*/
 
 
 }
@@ -522,6 +440,10 @@ void Leon::createKmerAbundanceHash(){
 
 
 void Leon::executeCompression(){
+	
+	
+	
+	
 	#ifdef PRINT_DEBUG
 		cout << "Start compression" << endl;
 	#endif
@@ -610,19 +532,11 @@ void Leon::executeCompression(){
 		return;
 	}
 	
-	_rangeEncoder.encode(_generalModel, infoByte);
-	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
-	
-	
-	u_int8_t version_major = LEON_VERSION_MAJOR;
-	u_int8_t version_minor = LEON_VERSION_MINOR;
-	u_int8_t version_patch = LEON_VERSION_PATCH;
 
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_major);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_minor);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_patch);
-
+	
+	std::string leonversion = Stringify::format ("%i.%i.%i", LEON_VERSION_MAJOR, LEON_VERSION_MINOR,LEON_VERSION_PATCH);
+	
+	
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     _dskOutputFilename = getInput()->get(STR_URI_OUTPUT) ?
         getInput()->getStr(STR_URI_OUTPUT) + ".h5"  :
@@ -666,16 +580,63 @@ void Leon::executeCompression(){
 	}
 	_outputFilename = baseOutputname + ".leon";
 
-	_outputFile = System::file().newFile(_outputFilename, "wb");
+//	_outputFile = System::file().newFile(_outputFilename, "wb");
+	
+	_storageH5file = StorageFactory(STORAGE_HDF5).create (_outputFilename, true, false);
+
+	_groupLeon    = new tools::storage::impl::Group((*_storageH5file)().getGroup      ("leon"));
+	_subgroupInfo = new tools::storage::impl::Group((*_storageH5file)().getGroup   ("metadata"));
+	_subgroupDict = new tools::storage::impl::Group((*_storageH5file)().getGroup   ("leon/anchors"));
+	_subgroupDNA  = new tools::storage::impl::Group((*_storageH5file)().getGroup    ("leon/dna"));
+
+	if(! _isFasta)
+		_subgroupQual  = new tools::storage::impl::Group((*_storageH5file)().getGroup    ("leon/qual"));
+
+	
+	_subgroupHeader  = new tools::storage::impl::Group((*_storageH5file)().getGroup    ("leon/header"));
+
+	
+	
+	
+	
+	_subgroupInfoCollection = & _subgroupInfo->getCollection<math::NativeInt8> ("infobyte");
+
+	
+	
+	if(_isFasta)
+		_subgroupInfoCollection->addProperty ("type","fasta");
+	else
+		_subgroupInfoCollection->addProperty ("type","fastq");
+	
+	
+	if(_noHeader)
+		_subgroupInfoCollection->addProperty ("header","false");
+	else
+		_subgroupInfoCollection->addProperty ("header","true");
+
+
+	_subgroupInfoCollection->addProperty ("version",leonversion);
+
+	
+	tools::storage::impl::Storage::ostream osInfo (*_subgroupInfo, "infobyte");
+	osInfo.write (reinterpret_cast<char const*>(&infoByte), sizeof(infoByte));
+	osInfo.flush();
+
+	
+	tools::storage::impl::Storage::ostream osk (*_subgroupInfo, "kmerSize");
+	osk.write (reinterpret_cast<char const*>(&_kmerSize), sizeof(_kmerSize));
+	osk.flush();
+	
 	
 	if(! _isFasta)
 	{
-		_FileQualname = baseOutputname + ".qual";
-		_FileQual = System::file().newFile(_FileQualname, "wb");
-		_qualwriter = new OrderedBlocks( _FileQual , _nb_cores ) ;
+		//_FileQualname = baseOutputname + ".qual";
+		//_FileQual = System::file().newFile(_FileQualname, "wb");
+		//_Qual_outstream  =  new tools::storage::impl::Storage::ostream  (*_groupLeon, "qualities");
+		//_qualwriter = new OrderedBlocks( _Qual_outstream , _nb_cores ) ;
 	}
 
-	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
+//	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	
 
@@ -714,11 +675,11 @@ void Leon::endQualCompression(){
 	
 	
 	//append blocks info at the end
-	_FileQual->fwrite(& _qualBlockSizes[0],  sizeof(u_int64_t) , _qualBlockSizes.size());
+	//_FileQual->fwrite(& _qualBlockSizes[0],  sizeof(u_int64_t) , _qualBlockSizes.size());
 
-	u_int64_t val =  _qualBlockSizes.size();
+	//u_int64_t val =  _qualBlockSizes.size();
 	
-	_FileQual->fwrite(& val,  sizeof(u_int64_t) , 1);
+	//_FileQual->fwrite(& val,  sizeof(u_int64_t) , 1);
 
 	_qualCompRate = ((double)_compressed_qualSize / _input_qualSize);
 
@@ -769,23 +730,34 @@ void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCou
 	
 	/////////////////
 	
-	//_qualwriter->insert((u_int8_t*) data, size ,blockID);
 
-	_qualwriter->insert((u_int8_t*) outstring.data(), outstring.size() ,blockID);
-	_qualwriter->incDone(1);
+	///_qualwriter->insert((u_int8_t*) outstring.data(), outstring.size() ,blockID);
+	///_qualwriter->incDone(1);
 	
 	
 	pthread_mutex_lock(&writeblock_mutex);
 	
+	std::string datasetname = Stringify::format ("qual_%i",blockID);
+	
+	tools::storage::impl::Storage::ostream os (*_subgroupQual, datasetname);
+	os.write (reinterpret_cast<char const*>( outstring.data()), outstring.size());
+	os.flush();
+
+	std::string dsize = Stringify::format ("%i",outstring.size());
+	auto _tempcollec = & _subgroupQual->getCollection<math::NativeInt8> (datasetname);
+	_tempcollec->addProperty ("size",dsize);
+
+	
 	_input_qualSize += size;
 	_compressed_qualSize +=  outstring.size();
-	if ((2*(blockID+1)) > _qualBlockSizes.size() )
-	{
-		_qualBlockSizes.resize(2*(blockID+1));
-	}
 	
-	_qualBlockSizes[2*blockID] =  outstring.size();
-	_qualBlockSizes[2*blockID+1] = encodedSequenceCount;
+//	if ((2*(blockID+1)) > _qualBlockSizes.size() )
+//	{
+//		_qualBlockSizes.resize(2*(blockID+1));
+//	}
+//	
+//	_qualBlockSizes[2*blockID] =  outstring.size();
+//	_qualBlockSizes[2*blockID+1] = encodedSequenceCount;
 	
 	
 	pthread_mutex_unlock(&writeblock_mutex);
@@ -794,34 +766,56 @@ void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCou
 	
 }
 
-void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID){
+void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID, bool Header){
 	if(size <= 0) return;
 	
 	
 	//cout << "\t-----------------------" << endl;
+	//printf("____ write block %i ____ \n",blockID);
 	//cout << "\tWrite block " << _blockSizes.size() << endl;
 	//cout << "\tSequence " << encoder->_lastSequenceIndex-READ_PER_BLOCK << " - " << encoder->_lastSequenceIndex << endl;
 	//cout << "Thread id: " << thread_id << endl;
 	//cout << "\tEncoded size (byte): " << size << endl;
 	
 	
-
-	
-	
-	
-	
-#ifdef SERIAL
-	_outputFile->fwrite(data, size, 1);
-	
-#else
-	_blockwriter->insert(data,size,blockID);
-	_blockwriter->incDone(1);
-
-#endif
-	
+//	{
+//#ifdef SERIAL
+//	_outputFile->fwrite(data, size, 1);
+//#else
+//	_blockwriter->insert(data,size,blockID);
+//	_blockwriter->incDone(1);
+//#endif
+//	}
 	
 	pthread_mutex_lock(&writeblock_mutex);
 
+	if(Header)
+	{
+		std::string datasetname = Stringify::format ("header_%i",blockID);
+		
+		tools::storage::impl::Storage::ostream os (*_subgroupHeader, datasetname);
+		os.write (reinterpret_cast<char const*>( data), size);
+		os.flush();
+		
+		std::string dsize = Stringify::format ("%i",size);
+		auto _tempcollec = & _subgroupHeader->getCollection<math::NativeInt8> (datasetname);
+		_tempcollec->addProperty ("size",dsize);
+	}
+	
+	
+	if(!Header)
+	{
+		std::string datasetname = Stringify::format ("dna_%i",blockID);
+		
+		tools::storage::impl::Storage::ostream os (*_subgroupDNA, datasetname);
+		os.write (reinterpret_cast<char const*>( data), size);
+		os.flush();
+		
+		std::string dsize = Stringify::format ("%i",size);
+		auto _tempcollec = & _subgroupDNA->getCollection<math::NativeInt8> (datasetname);
+		_tempcollec->addProperty ("size",dsize);
+	}
+	
 	_compressedSize += size;
 
 	//int thread_id = encoder->getId();
@@ -836,42 +830,22 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	
 	
 	pthread_mutex_unlock(&writeblock_mutex);
-
-
-		
-	/*
-	int thread_id = encoder->getId();
-	cout << "Incoming thread: " << thread_id << endl;
-	pthread_mutex_lock(&writer_mutex);
-	while(thread_id > _next_writer_thread_id){
-		thread_id = encoder->getId();
-		cout << thread_id << " " << _next_writer_thread_id << endl;
-		pthread_cond_wait(&buffer_full_cond, &writer_mutex);
-	}
-	pthread_mutex_unlock(&writer_mutex);
-	
-	cout << "-----------------------" << endl;
-	cout << "Thread id: " << thread_id << endl;
-	cout << "Buffer size: " << encoder->getBufferSize() << endl;
-	
-	_outputFile->fwrite(encoder->getBuffer(), encoder->getBufferSize(), 1);
-	
-	pthread_mutex_lock(&writer_mutex);
-	cout << encoder->_lastSequenceIndex << endl;
-	_next_writer_thread_id = thread_id + 1;
-	if(_next_writer_thread_id == _nb_cores){
-		_next_writer_thread_id = 0;
-	}
-	pthread_mutex_unlock(&writer_mutex);
-	
-	pthread_cond_broadcast(&buffer_full_cond);*/
 	
 }
 		
 void Leon::endCompression(){
-	_rangeEncoder.flush();
-	_outputFile->fwrite(_rangeEncoder.getBuffer(true), _rangeEncoder.getBufferSize(), 1);
-	_outputFile->flush();
+	//_rangeEncoder.flush();
+	//_outputFile->fwrite(_rangeEncoder.getBuffer(true), _rangeEncoder.getBufferSize(), 1);
+	
+	//tools::storage::impl::Storage::ostream osInfo (*_groupLeon, STR_DATA_INFO);
+
+	//osInfo.write (reinterpret_cast<char const*>(_rangeEncoder.getBuffer(true)), _rangeEncoder.getBufferSize()*sizeof(char));
+	//osInfo.flush();
+
+	
+	
+//	printf("_rangeEncoder buffer size %i B \n",_rangeEncoder.getBufferSize());
+//	_outputFile->flush();
 	
 	u_int64_t inputFileSize = System::file().getSize(_inputFilename.c_str());
 	cout << "End compression" << endl;
@@ -881,15 +855,16 @@ void Leon::endCompression(){
 	cout << "\t\tSize: " << inputFileSize <<  "  (" <<  inputFileSize/1024LL/1024LL  << " MB)"<< endl;
 	
 	u_int64_t outputFileSize = System::file().getSize(_outputFilename);
-	if(! _isFasta)
-	{
-		outputFileSize += System::file().getSize(_FileQualname) ;
-	}
+	
+	//if(! _isFasta)
+	//{
+	//	outputFileSize += System::file().getSize(_FileQualname) ;
+	//}
 	
 	cout << "\tOutput: " << endl;
 	cout << "\t\tFilename: " << _outputFilename << endl;
-	if(! _isFasta)
-		cout << "\t\tqualities in : " << _FileQualname << endl;
+//	if(! _isFasta)
+//		cout << "\t\tqualities in : " << _FileQualname << endl;
 	
 	cout << "\t\tTotal Size: " << outputFileSize <<  "  (" <<  outputFileSize/1024LL/1024LL  << " MB)"<< endl;
 	std::cout.precision(4);
@@ -966,10 +941,21 @@ void Leon::startHeaderCompression(){
 	_totalHeaderSize += _firstHeader.size();
 	
 	//encode the size of the first header on 2 byte and the header itself
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
-	for(int i=0; i < _firstHeader.size(); i++){
-		_rangeEncoder.encode(_generalModel, _firstHeader[i]);
-	}
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
+	
+	//for(int i=0; i < _firstHeader.size(); i++){
+	//	_rangeEncoder.encode(_generalModel, _firstHeader[i]);
+	//}
+	
+	
+	createDataset(_subgroupHeader,"firstheadersize",_firstHeader.size());
+	
+	tools::storage::impl::Storage::ostream osH (*_subgroupHeader, "firstheader");
+	osH.write (reinterpret_cast<char const*>(_firstHeader.data()), _firstHeader.size());
+	osH.flush();
+	
+	
+	
 	//_rangeEncoder.flush();
 	//_totalHeaderCompressedSize += _rangeEncoder.getBufferSize();
 	//_outputFile->fwrite(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), 1);
@@ -1000,13 +986,20 @@ void Leon::endHeaderCompression(){
 	//u_int64_t descriptionStartPos = _outputFile->tell();
 	//cout << "Description start pos: " << descriptionStartPos << endl;
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
-	for(int i=0; i<_blockSizes.size(); i++){
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
+	//for(int i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
-		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
-	}
+	//	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
+	//}
 	
 
+	createDataset(_subgroupHeader,"nb_blocks",_blockSizes.size());
+
+	printf("nb blocks header %i \n",_blockSizes.size());
+	tools::storage::impl::Storage::ostream os (*_subgroupHeader, "blocksizes");
+	os.write (reinterpret_cast<char const*>(_blockSizes.data()), _blockSizes.size()*sizeof(u_int64_t));
+	os.flush();
+	
 
 		
 	_headerCompRate = ((double)_compressedSize / _totalHeaderSize);
@@ -1125,11 +1118,63 @@ void Leon::startDnaCompression(){
 
 void Leon::endDnaCompression(){
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
-	for(int i=0; i<_blockSizes.size(); i++){
-		//cout << "block size: " << _blockSizes[i] << endl;
-		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
-	}
+	
+	createDataset(_subgroupDNA,"nb_blocks",_blockSizes.size());
+	
+	
+	
+	////testing interleaved write
+	
+	
+//	tools::storage::impl::Storage::ostream kk1 (*_groupLeon, "kk1");
+//	u_int8_t bbyte=0;
+//	kk1.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk1.flush();
+//	
+//	tools::storage::impl::Storage::ostream kk2 (*_groupLeon, "kk2");
+//	bbyte=1;
+//	kk2.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk2.flush();
+//	
+//	
+//	bbyte=2;
+//	kk1.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk1.flush();
+//	
+//	bbyte=3;
+//	kk2.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk2.flush();
+//	
+//	bbyte=4;
+//	kk1.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk1.flush();
+//	
+//	bbyte=5;
+//	kk2.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk2.flush();
+//	
+//	bbyte=6;
+//	kk1.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk1.flush();
+//	
+//	bbyte=7;
+//	kk2.write (reinterpret_cast<char const*>(&bbyte), sizeof(bbyte));
+//	kk2.flush();
+//	//seems ok  !
+	
+	
+	printf("nb blokcs %i \n",_blockSizes.size());
+	tools::storage::impl::Storage::ostream os (*_subgroupDNA, "blocksizes");
+	os.write (reinterpret_cast<char const*>(_blockSizes.data()), _blockSizes.size()*sizeof(u_int64_t));
+	os.flush();
+	
+	
+//	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
+//	for(int i=0; i<_blockSizes.size(); i++){
+//		//cout << "block size: " << _blockSizes[i] << endl;
+//		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
+//	}
+	
 	_blockSizes.clear();
 	
 	writeBloom();
@@ -1143,6 +1188,12 @@ void Leon::endDnaCompression(){
 	cout << "\tEnd reads compression" << endl;
 	cout << "\t\tReads count: " << _readCount << endl;
 	cout << "\t\tReads size: " << _totalDnaSize << endl;
+	
+
+	createDataset(_subgroupInfo,"readcount",_readCount);
+	createDataset(_subgroupInfo,"totalDnaSize",_totalDnaSize);
+	
+	
 	std::cout.precision(4);
 	cout << "\t\tCompression rate: " << (float)_dnaCompRate << "  (" << _compressedSize << ")"<< endl;
 	std::cout.precision(2);
@@ -1223,44 +1274,43 @@ void Leon::endDnaCompression(){
 }
 
 void Leon::writeBloom(){
-	//_bloom->save(_outputFilename + ".bloom.temp");
-	//cout << _bloom->getBitSize() << endl;
 	_compressedSize += _bloom->getSize();
 	
-	//_outputFile->fwrite(_anchorRangeEncoder.getBuffer(), size, 1);
 
-	//u_int64_t size = _bloom->getSize();
-	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericSizeModel, _numericModel, size);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _bloom->getBitSize());
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _bloom->getNbHash());
-	
-	//u_int8_t*& bloomData = _bloom->getArray();
-	_outputFile->fwrite(_bloom->getArray(), _bloom->getSize(), 1);
-	//cout << "Bloom size: " << _bloom->getSize() << endl;
-	
+	StorageTools::singleton().saveBloom<kmer_type> (_storageH5file->getGroup(this->getName()), "bloom", _bloom, _kmerSize);
 
-	//_outputFile->fwrite(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), 1);
 }
+
+
 
 void Leon::writeAnchorDict(){
 
 	_anchorRangeEncoder.flush();
 	
+	//todo check if the tempfile _dictAnchorFile may be avoided (with the use of hdf5 ?)
 	_dictAnchorFile->write( (const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
 	_dictAnchorFile->flush();
 	_dictAnchorFile->close();
 	_anchorRangeEncoder.clear();
 	
-	//cout << "lololol: " << _outputFile->tell() << endl;
 	
 	u_int64_t size = System::file().getSize(_outputFilename + ".adtemp");
 	_anchorDictSize = size;
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
 	_compressedSize += size;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
 	
+	
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
 	//Encode anchors count
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	
+	
+	createDataset(_subgroupDict,"size",size);
+	createDataset(_subgroupDict,"anchorAdress",_anchorAdress);
+	
+	
+	
+	
 	
 	//printf("should encode %u anchors \n",_anchorAdress);
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
@@ -1272,15 +1322,22 @@ void Leon::writeAnchorDict(){
 	ifstream tempFile((_outputFilename + ".adtemp").c_str(), ios::in|ios::binary);
 	
 	
+	
+	
 	int bufsize = 4096*8;
 	char * buffer = new char [bufsize];
 	
+	tools::storage::impl::Storage::ostream osD (*_subgroupDict, "anchorsDict");
 
     while (tempFile.good()) {
 		tempFile.read(buffer, bufsize);
-        _outputFile->fwrite(buffer, tempFile.gcount(), 1);
+       // _outputFile->fwrite(buffer, tempFile.gcount(), 1);
+		osD.write (reinterpret_cast<char const*>(buffer), tempFile.gcount());
+
     }
-    
+	
+	osD.flush();
+
 	tempFile.close();
 	remove((_outputFilename + ".adtemp").c_str());
 	delete [] buffer;
@@ -1448,18 +1505,6 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 
 void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 
-	/*
-	u_int64_t kmerValue = kmer.getVal();
-	u_int64_t deltaValue = 0;
-
-	int deltaType = CompressionUtils::getDeltaValue(kmerValue, _lastAnchorValue, &deltaValue);
-	_anchorRangeEncoder.encode(_anchorDictModel, deltaType);
-	CompressionUtils::encodeNumeric(_anchorRangeEncoder, _numericModel, deltaValue);
-	_lastAnchorValue = kmerValue;
-
-	cout << deltaValue << endl;
-	*/
-
 	//static int i = 0;
 	
 	string kmerStr = kmer.toString(_kmerSize);
@@ -1537,6 +1582,7 @@ void * decoder_qual_thread(void * args)
 
 void Leon::executeDecompression(){
 	
+
 	_filePos = 0;
 	
 	cout << "Start decompression" << endl;
@@ -1546,17 +1592,30 @@ void Leon::executeDecompression(){
 	cout << "\tInput filename: " << _inputFilename << endl;
 	
 	
+	_storageH5file = StorageFactory(STORAGE_HDF5).load (_inputFilename);
+	_groupLeon = new tools::storage::impl::Group((*_storageH5file)().getGroup   ("leon"));
+	_subgroupInfo = new tools::storage::impl::Group((*_storageH5file)().getGroup   ("metadata"));
+	_subgroupDict = new tools::storage::impl::Group((*_storageH5file)().getGroup   ("leon/anchors"));
+	_subgroupDNA = new tools::storage::impl::Group((*_storageH5file)().getGroup   ("leon/dna"));
+	
+	
+
+	
+	_subgroupInfoCollection = & _subgroupInfo->getCollection<math::NativeInt8> ("infobyte");
+
+	
+	tools::storage::impl::Storage::istream isInfo (*_subgroupInfo, "infobyte");
+	
+	
+	
+	
+	
 	string dir = System::file().getDirectory(_inputFilename);
 	
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	
-	
-	if ( (_inputFile->rdstate() & std::ifstream::failbit ) != 0 )
-	{
-		fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
-		exit( EXIT_FAILURE);
-	}
+
 	
 	//remove .leon at the end :
 	string inputFilename_leon_removed = System::file().getBaseName(_inputFilename);
@@ -1564,44 +1623,78 @@ void Leon::executeDecompression(){
 	
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
+	
+	
 	_descInputFile->seekg(0, _descInputFile->end);
 	_rangeDecoder.setInputFile(_descInputFile, true);
+	
+	
+	
+
+	
 	
 	//_rangeDecoder.setInputFile(_descInputFile);
 	
 	//Output file
 	string prefix = System::file().getBaseName(inputFilename_leon_removed); // for prefix need to remove two dots : .fastq.leon , but not all of them if another dot in the filename (it happened, mail from angry users)
-	//while(prefix.find('.') != string::npos){
-	//	int lastindex = prefix.find_last_of(".");
-	//	prefix = prefix.substr(0, lastindex);
-	//}
-	//printf("dir %s \n",dir.c_str());
 
-	//printf("prefix %s \n",prefix.c_str());
-	//string prefix = System::file().getBaseName(_inputFilename);
 	_outputFilename = dir + "/" + prefix;
 	
 	//printf("_outputFilename %s \n",_outputFilename.c_str());
 
 	//Decode the first byte of the compressed file which is an info byte
-	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
+	u_int8_t infoByte;
+	//infoByte = _rangeDecoder.nextByte(_generalModel);
+	
+	
+	isInfo.read (reinterpret_cast<char*> (&infoByte),sizeof(infoByte));
+
+	
+
+
+
 	
 	//the first bit holds the file format. 0: fastq, 1: fasta
-	_isFasta = ((infoByte & 0x01) == 0x01);
+	//_isFasta = ((infoByte & 0x01) == 0x01);
 	
 	
 	
 	//Second bit : option no header
-	_noHeader = ((infoByte & 0x02) == 0x02);
+	//_noHeader = ((infoByte & 0x02) == 0x02);
+	
+	
+	
+	std::string  filetype = _subgroupInfoCollection->getProperty("type");
+	if(filetype == "fasta")
+		_isFasta = true;
+	else
+		_isFasta = false;
+	
+	std::string  headerinfo = _subgroupInfoCollection->getProperty("header");
+	if(headerinfo == "true")
+		_noHeader = false;
+	else
+		_noHeader = true;
+
+	//printf("%s %s \n",filetype.c_str(),headerinfo.c_str() );
+
+	
+	if(! _isFasta)
+		_subgroupQual  = new tools::storage::impl::Group((*_storageH5file)().getGroup    ("leon/qual"));
+	
+
+	_subgroupHeader  = new tools::storage::impl::Group((*_storageH5file)().getGroup    ("leon/header"));
+
+	
 	
 	//printf("info byte %i  _noHeader %i  _isFasta %i \n",infoByte,_noHeader,_isFasta);
 	
 	if(! _isFasta)
 	{
 		
-		_FileQualname =    dir + "/" +  System::file().getBaseName(inputFilename_leon_removed) + ".fastq.qual";
-		_inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
-		cout << "\tQual filename: " << _FileQualname << endl;
+	//	_FileQualname =    dir + "/" +  System::file().getBaseName(inputFilename_leon_removed) + ".fastq.qual";
+	//	_inputFileQual = new ifstream(_FileQualname.c_str(), ios::in|ios::binary);
+	//	cout << "\tQual filename: " << _FileQualname << endl;
 	}
 	
 	
@@ -1622,17 +1715,20 @@ void Leon::executeDecompression(){
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
 	//Get kmer size
-	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	//_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	
+	tools::storage::impl::Storage::istream isk (*_subgroupInfo, "kmerSize");
+	isk.read (reinterpret_cast<char*> (&_kmerSize),sizeof(_kmerSize));
+	
+	
 	cout << "\tKmer size: " << _kmerSize << endl;
 	cout << endl;
-	
-	//get version
-	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	
-	
-	cout << "\tInput File was compressed with leon version " << version_major << "."  << version_minor << "."  << version_patch  << endl;
+
+	std::string  leonversion =  _subgroupInfoCollection->getProperty ("version");
+
+	cout << "\tInput File was compressed with leon version " << leonversion  << endl;
+
+	//cout << "\tInput File was compressed with leon version " << version_major << "."  << version_minor << "."  << version_patch  << endl;
 	
 	
 	//	if(version_major != LEON_VERSION_MAJOR || version_minor != LEON_VERSION_MINOR  || version_patch != LEON_VERSION_PATCH )
@@ -1642,15 +1738,7 @@ void Leon::executeDecompression(){
 	
 	
 	startDecompressionAllStreams();
-	
-	/*
-	 startHeaderDecompression();
-	 startDnaDecompression();
-	 
-	 if(! _isFasta){
-		startQualDecompression();
-	 }
-	 */
+
 	
 	endDecompression();
 }
@@ -1658,23 +1746,49 @@ void Leon::executeDecompression(){
 
 void Leon::startDecompressionAllStreams(){
 	
-	
+
+
 	
 	_filePosHeader = 0;
 	_filePosDna = 0;
 	
 	if(! _noHeader)
 	{
+		///////// header setup  /////////
+
+		size_t firstHeaderSize;
+		readDataset(_subgroupHeader,"firstheadersize",firstHeaderSize);
 		
-	///////// header setup  /////////
-	//Decode the first header
-	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	for(int i=0; i<firstHeaderSize; i++){
-		_firstHeader += _rangeDecoder.nextByte(_generalModel);
-	}
-	
-	setupNextComponent(_headerBlockSizes);
-	
+		
+		//Decode the first header
+		/*u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel); //pourquoi plante si enleve ca ?
+		
+		for(int i=0; i<firstHeaderSize; i++){
+			_firstHeader += _rangeDecoder.nextByte(_generalModel);
+		}*/
+		
+		char * tempS = (char * ) malloc(firstHeaderSize+1);
+		tools::storage::impl::Storage::istream isH (*_subgroupHeader, "firstheader");
+		isH.read (reinterpret_cast<char *>(tempS), firstHeaderSize);
+		
+		tempS[firstHeaderSize] = '\0';
+		_firstHeader = std::string(tempS);
+		free(tempS);
+		
+		//printf("firstHeaderSize %i \n",firstHeaderSize);
+		//std::cout << _firstHeader << std::endl;
+		
+	//	setupNextComponent(_headerBlockSizes);
+		
+		//setup header block sizes
+		size_t nb_blocks;
+		readDataset(_subgroupHeader,"nb_blocks",nb_blocks);
+		_headerBlockSizes.resize(nb_blocks,0);
+		
+		tools::storage::impl::Storage::istream is (*_subgroupHeader, "blocksizes");
+		is.read (reinterpret_cast<char *>(_headerBlockSizes.data()), _headerBlockSizes.size()*sizeof(u_int64_t));
+		////
+		
 	}
 	
 	
@@ -1686,7 +1800,18 @@ void Leon::startDecompressionAllStreams(){
 		_filePosDna += _headerBlockSizes[ii];
 	}
 	
-	setupNextComponent(_dnaBlockSizes);
+	//setupNextComponent(_dnaBlockSizes);
+	
+	
+	//setup dna block sizes
+	size_t nb_blocks;
+	readDataset(_subgroupDNA,"nb_blocks",nb_blocks);
+	_dnaBlockSizes.resize(nb_blocks,0);
+	
+	tools::storage::impl::Storage::istream is (*_subgroupDNA, "blocksizes");
+	is.read (reinterpret_cast<char *>(_dnaBlockSizes.data()), _dnaBlockSizes.size()*sizeof(u_int64_t));
+	////
+	
 	
 	_kmerModel = new KmerModel(_kmerSize);
 
@@ -1698,21 +1823,8 @@ void Leon::startDecompressionAllStreams(){
 	/////////// qualities setup //////////
 	if(! _isFasta)
 	{
-	_filePosQual =0;
-	
-	//read block sizes and _blockCount
-	_qualBlockSizes.clear();
-	_inputFileQual->seekg(- sizeof(u_int64_t),_inputFileQual->end);
-	
-	_inputFileQual->read((char *)&_blockCount,sizeof(u_int64_t));
-	//cout << "\tBlock count: " << _blockCount/2 << endl;
-	
-	_qualBlockSizes.resize(_blockCount,0);
-	char * databuff = (char * )& _qualBlockSizes[0];
-	
-	_inputFileQual->seekg(- (sizeof(u_int64_t)*(_blockCount+1)),_inputFileQual->end);
-	_inputFileQual->read( databuff ,sizeof(u_int64_t) *  _blockCount);
-	
+		_filePosQual =0;
+
 	}
 	
 	///////////////
@@ -1743,17 +1855,21 @@ void Leon::startDecompressionAllStreams(){
 		
 		if(! _isFasta)
 		{
-			QualDecoder* qd = new QualDecoder(this, _FileQualname);
+			//QualDecoder* qd = new QualDecoder(this, _FileQualname,_groupLeon);
+			QualDecoder* qd = new QualDecoder(this, "qualities",_subgroupQual);
+			
 			qualdecoders.push_back(qd);
 		}
 		
-		DnaDecoder* dd = new DnaDecoder(this, _inputFilename);
+		DnaDecoder* dd = new DnaDecoder(this, _inputFilename, _subgroupDNA);
 		dnadecoders.push_back(dd);
 		
 		if(! _noHeader)
 		{
-		HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename);
-		headerdecoders.push_back(hd);
+			//HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename);
+			HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename, _subgroupHeader);
+
+			headerdecoders.push_back(hd);
 		}
 	}
 	
@@ -1770,11 +1886,12 @@ void Leon::startDecompressionAllStreams(){
 	
 	while(i < _dnaBlockSizes.size()){
 		
+		int blockId = i/2 ;
+
 		for(int j=0; j<_nb_cores; j++){
 			
 
 			if(i >= _dnaBlockSizes.size()) break;
-			
 			
 			u_int64_t blockSize;
 			int sequenceCount;
@@ -1791,7 +1908,7 @@ void Leon::startDecompressionAllStreams(){
 				blockSize = _headerBlockSizes[i];
 				sequenceCount = _headerBlockSizes[i+1];
 				hdecoder = headerdecoders[j];
-				hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
+				hdecoder->setup(_filePosHeader, blockSize, sequenceCount,blockId);
 				_filePosHeader += blockSize;
 			}
 			else
@@ -1803,18 +1920,22 @@ void Leon::startDecompressionAllStreams(){
 			blockSize = _dnaBlockSizes[i];
 			sequenceCount = _dnaBlockSizes[i+1];
 			ddecoder = dnadecoders[j];
-			ddecoder->setup(_filePosDna, blockSize, sequenceCount);
+			ddecoder->setup(_filePosDna, blockSize, sequenceCount,blockId);
 			_filePosDna += blockSize;
 
 			//qual decoder setup
 			//here test if in fastq mode, put null pointer otherwise
 			if(! _isFasta)
 			{
-				blockSize = _qualBlockSizes[i];
-				sequenceCount = _qualBlockSizes[i+1];
+			//	blockSize = _qualBlockSizes[i];
+			//	sequenceCount = _qualBlockSizes[i+1];
+				
+				
 				qdecoder = qualdecoders[j];
-				qdecoder->setup(_filePosQual, blockSize, sequenceCount);
-				_filePosQual += blockSize;
+				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
+				qdecoder->setup( blockId);
+
+				//_filePosQual += blockSize;
 			}
 			else
 			{
@@ -1828,15 +1949,11 @@ void Leon::startDecompressionAllStreams(){
 			
 			pthread_create(&tab_threads[j], NULL, decoder_all_thread, targ + j);
 			
-
 			i += 2;
 			
 			this->_progress_decode->inc(1);
-
 		}
 
-		
-		
 		
 		for(int j=0; j < livingThreadCount; j++){
 			
@@ -1855,7 +1972,6 @@ void Leon::startDecompressionAllStreams(){
 				qdecoder = qualdecoders[j];
 				stream_qual = new std::istringstream (qdecoder->_buffer);
 				qdecoder->_buffer.clear();
-
 			}
 			
 			if(! _noHeader)
@@ -1863,7 +1979,6 @@ void Leon::startDecompressionAllStreams(){
 				hdecoder = headerdecoders[j];
 				stream_header = new std::istringstream (hdecoder->_buffer);
 				hdecoder->_buffer.clear();
-
 			}
 			
 			std::istringstream stream_dna (ddecoder->_buffer);
@@ -2007,11 +2122,14 @@ void Leon::setupNextComponent( 		vector<u_int64_t>   & blockSizes    ){
 
 
 void Leon::decodeBloom(){
-	#ifdef PRINT_DEBUG_DECODER
-		cout << "\tDecode bloom filter" << endl;
-	#endif
-	
+
+	printf("should load bloom \n");
+
+	//to be removed
+	////////
 	//pos = tous les block sizes des header
+	
+	
 	u_int64_t total_header_block_size = 0 ;
 	
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
@@ -2019,50 +2137,31 @@ void Leon::decodeBloom(){
 		total_header_block_size  += _headerBlockSizes[ii];
 	}
 	
-	u_int64_t bloomPos =  total_header_block_size ; // was _inputFile->tellg();
+	u_int64_t bloomPos =  total_header_block_size ;  
 
-	//printf("\npos at beginning of decodebloom %llu  total_header_block_size %llu nb vecblock size %i\n",bloomPos,total_header_block_size,_headerBlockSizes.size());
 	for(int i=0; i<_dnaBlockSizes.size(); i++){
 		bloomPos += _dnaBlockSizes[i];
 		i += 1;
 	}
-	//printf(".. pos after setup %llu \n",bloomPos);
 
-	//cout << "Anchor dict pos: " << dictPos << endl;
 	_inputFile->seekg(bloomPos, _inputFile->beg);
 	
-	//u_int64_t bloomSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericSizeModel, _numericModel);
-	
-	//char* buffer = new char[bloomSize];
-    //_inputFile->read(buffer, bloomSize);
+
     
-    //cout << bloomSize << endl;
-    
-	u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	u_int64_t bloomHashCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	//u_int64_t tai = (bloomSize) * 8LL;
-	
-	
-	//cout << tai << endl;
-	
-	//_bloom->contains("lala");
-	//nchar  = (1+tai/8LL);
-	//_bloom = new BloomCacheCoherent<kmer_type>(bloomBitSize, bloomHashCount);
-	_bloom   =  new BloomNeighborCoherent<kmer_type> (bloomBitSize,_kmerSize,bloomHashCount);
+	//u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	//u_int64_t bloomHashCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	
 
-	_inputFile->read((char*)_bloom->getArray(), _bloom->getSize());
-	//fread(_bloom->getArray(), sizeof(unsigned char), result->getSize(), file);
+	//_bloom   =  new BloomNeighborCoherent<kmer_type> (bloomBitSize,_kmerSize,bloomHashCount);
 	
-	//_dskOutputFilename = "/local/gbenoit/leontest/SRR747737.h5";
-	//createBloom();
-	//cout << _bloom->getSize() << endl;
-	//memcpy(_bloom, buffer, _bloom->getSize());
-	//u_int8_t*& bloomData = _bloom->getArray();
-	//_outputFile->fwrite(bloomData, _bloom->getSize(), 1);
+
+//	_inputFile->read((char*)_bloom->getArray(), _bloom->getSize());
+//////
 	
-	//_inputFile->seekg(_bloom->getSize(), _inputFile->cur);
-	#ifdef PRINT_DEBUG_DECODER
+	_bloom   = StorageTools::singleton().loadBloom<kmer_type>     (*_groupLeon,   "bloom");
+
+
+#ifdef PRINT_DEBUG_DECODER
 		cout << "Bloom size: " << _bloom->getSize() << endl;
 		cout << "Anchor dict pos: " << _inputFile->tellg() << endl;
 	#endif
@@ -2075,25 +2174,24 @@ void Leon::decodeAnchorDict(){
 		cout << "\tDecode anchor dict" << endl;
 	#endif
 	
-	//_anchorDictFilename = _outputFilename + ".temp.dict";
-	//ofstream anchorDictFile(_anchorDictFilename.c_str(), ios::out);
 	
-	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	//cout << anchorDictSize << endl;
+	u_int64_t anchorDictSize;
+	u_int32_t anchorCount;
+	readDataset(_subgroupDict,"size",anchorDictSize);
+	readDataset(_subgroupDict,"anchorAdress",anchorCount);
 	
-	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-
-	_anchorRangeDecoder.setInputFile(_inputFile);
+	
+	tools::storage::impl::Storage::istream isD (*_subgroupDict, "anchorsDict");
+	
+	//_anchorRangeDecoder.setInputFile(_inputFile);
+	_anchorRangeDecoder.setInputFile(&isD); //seems to be working ok
+	
 	string anchorKmer = "";
-	//int lala =0;
 	
-	//_vecAnchorKmers.push_back(kmer_type()); //Insert a random kmer at first pos because adresses start at 1 (OAHash)
-	u_int64_t dictPos = _inputFile->tellg();
+//	u_int64_t dictPos = _inputFile->tellg();
 	
 	//KmerModel model(_kmerSize, KMER_DIRECT);
-	//int i=0;
-	//cout << _inputFile->tellg()  << " " << dictPos+anchorDictSize << endl;
-	//while(_inputFile->tellg() < dictPos+anchorDictSize){
+
 	u_int64_t currentAnchorCount = 0;
 	
 	while(currentAnchorCount < anchorCount){
@@ -2116,12 +2214,8 @@ void Leon::decodeAnchorDict(){
 			//lala += 1;
 			_vecAnchorKmers.push_back(kmer);
 			
-
-			//anchorDictFile << anchorKmer;// + '\n'; //A remettre pour le mode anchor dict sur disk
-			//cout << anchorKmer << endl;
 			anchorKmer.clear();
-			//i++;
-			//if(i > 50) break;
+			
 			currentAnchorCount += 1;
 
 		}
@@ -2131,8 +2225,7 @@ void Leon::decodeAnchorDict(){
 		cout << "\t\tAnchor count: " << _vecAnchorKmers.size() << endl;
 	#endif
 	
-	//anchorDictFile.flush();
-	//anchorDictFile.close();
+
 }
 
 

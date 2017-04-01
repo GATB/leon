@@ -89,6 +89,9 @@ class Leon : public misc::impl::Tool
 		static const char* STR_DNA_ONLY;
 		static const char* STR_NOHEADER;
 		static const char* STR_NOQUAL;
+
+	static const char* STR_DATA_INFO;
+
 	
 		size_t          _kmerSize;
 		string     _dskOutputFilename;
@@ -100,7 +103,7 @@ class Leon : public misc::impl::Tool
 		clock_t _time; //Used to calculate time taken by decompression
 		
 		//Global compression
-		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
+		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID, bool Header);
 	
 		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 
@@ -195,12 +198,29 @@ class Leon : public misc::impl::Tool
 	
 	private:
 
+	
+	//hdf5 stuff
+	Storage* _storageH5file;
+
+	
+	tools::storage::impl::Group *  _groupLeon;
+	tools::storage::impl::Group *  _subgroupInfo;
+	tools::storage::impl::Group * _subgroupDict;
+	tools::storage::impl::Group * _subgroupDNA;
+	tools::storage::impl::Group * _subgroupQual;
+	tools::storage::impl::Group * _subgroupHeader;
+
+	collections::Collection<math::NativeInt8>* _subgroupInfoCollection;
+
 		u_int64_t _lastAnchorValue;
 		
 		 struct timeval _tim;
 		double _wdebut_leon, _wfin_leon;
 		//static const char* STR_GZ;
 		IFile* _outputFile;
+	
+	
+	
 		ofstream* _dictAnchorFile;
 		int _nks;
 		
@@ -214,17 +234,18 @@ class Leon : public misc::impl::Tool
 	
 
 	//quals
-	string _FileQualname;
-	IFile* _FileQual;
+	//string _FileQualname;
+	//IFile* _FileQual;
+	//tools::storage::impl::Storage::ostream * _Qual_outstream ;
+
 	string _qualOutputFilename; //temp file
-	ofstream* _qualOutputFile;
 
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
 	
-		vector<u_int64_t> _qualBlockSizes;
+	//	vector<u_int64_t> _qualBlockSizes;
 		vector<u_int64_t> _headerBlockSizes;
 		vector<u_int64_t> _dnaBlockSizes;
 
@@ -284,9 +305,8 @@ class Leon : public misc::impl::Tool
 		//Header decompression
 	
 		string _headerOutputFilename;
-		ofstream* _headerOutputFile;
-		
-	   	int _auto_cutoff;
+	
+	  // 	int _auto_cutoff;
 		pthread_mutex_t findAndInsert_mutex;
 		pthread_mutex_t writeblock_mutex;
 
@@ -296,7 +316,6 @@ class Leon : public misc::impl::Tool
 		
 		KmerModel* _kmerModel;
 		string _dnaOutputFilename;
-		ofstream* _dnaOutputFile;
 		RangeDecoder _anchorRangeDecoder;
 		vector<kmer_type> _vecAnchorKmers;
 		

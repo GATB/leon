@@ -146,20 +146,23 @@ class HeaderDecoder : AbstractHeaderCoder
 		
 	public:
 		
-		HeaderDecoder(Leon* leon, const string& inputFilename);
+		HeaderDecoder(Leon* leon, std::string & inputFilename, tools::storage::impl::Group *  group);
 		~HeaderDecoder();
 		
 		//void processNextByte(u_int8_t byte);
-		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
+		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount, int blockID);
 		void execute();
 	
 		string _buffer;
 		bool _finished;
 		
 	private:
-		
+	tools::storage::impl::Group *  _group;
+
 		RangeDecoder _rangeDecoder;
 		ifstream* _inputFile;
+	tools::storage::impl::Storage::istream *_inputStream;
+
 		//ofstream* _outputFile;
 		u_int64_t _blockStartPos;
 		u_int64_t _blockSize;

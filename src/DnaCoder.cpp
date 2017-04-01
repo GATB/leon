@@ -284,7 +284,8 @@ DnaEncoder::~DnaEncoder(){
 		_rangeEncoder5.clear();
 		_rangeEncoder6.clear();
 	#endif
-		
+	
+	/*
 #ifndef SERIAL
 	//_leon->_blockwriter->incDone(1);
 	_leon->_blockwriter->waitForWriter();
@@ -295,17 +296,18 @@ DnaEncoder::~DnaEncoder(){
 	}
 	
 	
-	if(! _leon->_isFasta)
-	{
-		//pour quals
-		_leon->_qualwriter->waitForWriter();
-		if(nb_remaining==1)
-		{
-			_leon->_qualwriter->FlushWriter();
-		}
-	}
+//	if(! _leon->_isFasta)
+//	{
+//		//pour quals
+//		//_leon->_qualwriter->waitForWriter();
+//		if(nb_remaining==1)
+//		{
+//		//	_leon->_qualwriter->FlushWriter();
+//		}
+//	}
 #endif
-
+*/
+	
 	//pour quals
 	if(! _leon->_isFasta)
 	{
@@ -360,7 +362,7 @@ void DnaEncoder::writeBlock(){
 	//printf("\nTid %i  WB :  blockid %i sid %llu     size: %llu  _processedSequenceCount %i\n",_thread_id, blockId, _seqId, _rangeEncoder.getBufferSize(),_processedSequenceCount );
 
 	//_leon->_realDnaCompressedSize += _rangeEncoder.getBufferSize();
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId,false);
 	_rangeEncoder.clear();
 	
 	if(! _leon->_isFasta)
@@ -1331,7 +1333,7 @@ int DnaEncoder::voteMutations(int pos, int depth, bool rightExtend){
 	int maxScore = 0;
 	int votes[4];
 	
-	int bestNt;
+	int bestNt = 0;
 	bool isValid[4];
 	
 	//kmer_type mutatedKmers[4];
@@ -1492,14 +1494,15 @@ void DnaEncoder::encodeNoAnchorRead(){
 }
 
 
-QualDecoder::QualDecoder(Leon* leon, const string& inputFilename)
-{
-	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
-	_finished = false;
-	
-	//cout << " qualdecoder will read from " << inputFilename  << endl;
-	_leon = leon;
 
+
+QualDecoder::QualDecoder(Leon* leon, const string& inputFilename,tools::storage::impl::Group *  group)
+//QualDecoder::QualDecoder(Leon* leon, const string& inputFilename)
+{
+	_group = group;
+	_inputStream =0;
+	_finished = false;
+	_leon = leon;
 	_inbuffer = NULL;
 }
 
@@ -1507,25 +1510,49 @@ QualDecoder::QualDecoder(Leon* leon, const string& inputFilename)
 QualDecoder::~QualDecoder(){
 
 	free(_inbuffer);
-	delete _inputFile;
+	if(_inputStream !=0) delete _inputStream;
+
 }
+
+
+
+void QualDecoder::setup( int blockID){
+	
+	_processedSequenceCount = 0;
+	
+	if(_inputStream !=0) delete _inputStream;
+	
+	std::string datasetname = Stringify::format ("qual_%i",blockID);
+
+	_inputStream = new tools::storage::impl::Storage::istream  (*_group, datasetname);
+
+	
+	auto _tempcollec = & _group->getCollection<math::NativeInt8> (datasetname);
+	std::string dsize = _tempcollec->getProperty ("size");
+	
+	_blockSize =  std::stoi(dsize); // blockSize;
+	
+	_inbuffer = (char * ) realloc(_inbuffer, _blockSize* sizeof(char));
+	
+}
+
 
 
 void QualDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
 	
 	_processedSequenceCount = 0;
+
 	
-	_inputFile->seekg(blockStartPos, _inputFile->beg);
-	
+	_inputStream->seekg(blockStartPos, _inputStream->beg);
 	
 	_blockStartPos = blockStartPos;
 	_blockSize = blockSize;
 
 	
-	//_leon->_progress_decode->inc(1);
 
-	//cout << "\t-----------------------" << endl;
-	//cout << "\tDecoding Qual block " << _blockStartPos << " - " << _blockStartPos+_blockSize << endl;
+
+	
+	
 	
 	_inbuffer = (char * ) realloc(_inbuffer, blockSize* sizeof(char));
 	
@@ -1539,8 +1566,11 @@ void QualDecoder::execute(){
 
 //	printf("execute qual decoder _blockStartPos %llu  _blockSize %llu \n",_blockStartPos,_blockSize);
 
+	_inputStream->read(_inbuffer,_blockSize );
 	
-	_inputFile->read(_inbuffer,_blockSize );
+	if(!_inputStream->good()) printf("inputstream E bad \n");
+
+	//_inputFile->read(_inbuffer,_blockSize );
 	
 	//printf("----Begin decomp of Block     ----\n");
 
@@ -1594,29 +1624,48 @@ void QualDecoder::execute(){
 //====================================================================================
 // ** DnaDecoder
 //====================================================================================
-DnaDecoder::DnaDecoder(Leon* leon, const string& inputFilename) :
+DnaDecoder::DnaDecoder(Leon* leon, const string& inputFilename,tools::storage::impl::Group *  group) :
 AbstractDnaCoder(leon)
 {
-	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
+	_group = group;
+	_inputStream =0;
+	
+	//_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
 	_finished = false;
 	
-	_anchorDictFile = new ifstream(_leon->_anchorDictFilename.c_str(), ios::in);
+	//_anchorDictFile = new ifstream(_leon->_anchorDictFilename.c_str(), ios::in);
 	
 }
 
 DnaDecoder::~DnaDecoder(){
 	//delete _rangeDecoder;
 	//delete _outputFile;
-	delete _inputFile;
-	delete _anchorDictFile;
+//	delete _inputFile;
+//	delete _anchorDictFile;
+	
+	if(_inputStream !=0) delete _inputStream;
+
 }
 
-void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
+void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount,int blockID){
 	startBlock();
 	_rangeDecoder.clear();
 	
-	_inputFile->seekg(blockStartPos, _inputFile->beg);
-	_rangeDecoder.setInputFile(_inputFile);
+	//_inputFile->seekg(blockStartPos, _inputFile->beg);
+	//_rangeDecoder.setInputFile(_inputFile);
+	
+	if(_inputStream !=0) delete _inputStream;
+	std::string datasetname = Stringify::format ("dna_%i",blockID);
+	
+	_inputStream = new tools::storage::impl::Storage::istream  (*_group, datasetname);
+	
+	auto _tempcollec = & _group->getCollection<math::NativeInt8> (datasetname);
+	std::string dsize = _tempcollec->getProperty ("size");
+	
+	_blockSize =  std::stoi(dsize); // blockSize;
+	_rangeDecoder.setInputFile(_inputStream);
+
+	
 	
 	_blockStartPos = blockStartPos;
 	_blockSize = blockSize;

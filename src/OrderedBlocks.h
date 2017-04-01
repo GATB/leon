@@ -34,6 +34,8 @@
 #include <gatb/tools/collections/impl/Bloom.hpp>
 #include <gatb/tools/collections/impl/BagFile.hpp>
 #include <gatb/tools/collections/impl/BagCache.hpp>
+#include <gatb/tools/storage/impl/Storage.hpp>
+
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -72,14 +74,14 @@ public:
     
     /** Constructor. */
      OrderedBlocks (IFile*  outputfile, size_t buffsize)
-    : _ref(0), _nbMax(buffsize), _buffWrite (buffsize), _buffReceive (buffsize), _base(0), _writer_available(1), _buffer_full(0), _idx(0),_to_be_written(0)
+    :   _writer_available(1),  _buffer_full(0),_to_be_written(0) ,_buffWrite (buffsize), _buffReceive (buffsize),_ref(0),_os(0)
+	, _nbMax(buffsize), _base(0), _idx(0)
     {
         setRef(outputfile);
         
         //create writer thread
         t_arg.obw = this;
-        
-		// printf ("  t_arg.obw %p    bank %p ",t_arg.obw,_ref);
+		
         pthread_mutex_init(&writer_mutex, NULL);
         pthread_cond_init (&writer_available_cond, NULL);
         pthread_cond_init (&buffer_full_cond, NULL);
@@ -88,7 +90,22 @@ public:
 		//  printf("  .. end   this %p    cond %p   targs %p\n",this,&buffer_full_cond, &t_arg );
 		
     }
-    
+	
+	
+	//constructor with output stream
+	OrderedBlocks (tools::storage::impl::Storage::ostream * outstream, size_t buffsize)
+	:   _writer_available(1),  _buffer_full(0),_to_be_written(0) ,_buffWrite (buffsize), _buffReceive (buffsize),_ref(0),_os(0)
+	, _nbMax(buffsize), _base(0), _idx(0)
+	{
+		_os = outstream;
+		t_arg.obw = this;
+		pthread_mutex_init(&writer_mutex, NULL);
+		pthread_cond_init (&writer_available_cond, NULL);
+		pthread_cond_init (&buffer_full_cond, NULL);
+		pthread_create (&_thread, NULL,  writer, &t_arg);
+		
+	}
+	
     /** Destructor. */
     ~ OrderedBlocks ()
     {
@@ -120,6 +137,10 @@ public:
     
 	
 	IFile* _ref;
+	
+	gatb::core::tools::storage::impl::Storage::ostream * _os;
+	
+	
 
 	
 protected:
@@ -138,9 +159,9 @@ protected:
 	
 	
     size_t      _nbMax; // buffer size
+	size_t      _base;
     size_t      _idx;   //number of sequences stored in the buffer
-    size_t      _base;
-    
+	
     pthread_t  _thread; // the writer thread
 	
 	

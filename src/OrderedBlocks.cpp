@@ -65,7 +65,6 @@ using namespace gatb::core::tools::collections;
 using namespace gatb::core::tools::collections::impl;
 using namespace gatb::core::tools::math;
 
-
 void  OrderedBlocks::insert(u_int8_t* data, u_int64_t size, int blockId)
 {
 	DEBUG(("___ oblock insert bid %i \n",blockId));
@@ -224,6 +223,9 @@ void * writer(void * args)
 	
     IFile* outbank = obw->_ref;
 	
+	tools::storage::impl::Storage::ostream * outstream =  obw->_os;
+
+	
     int  * to_be_written =  &(obw->_to_be_written);
     std::vector< std::vector<u_int8_t> > * _buffWrite = &(obw->_buffWrite);
 	
@@ -249,7 +251,14 @@ void * writer(void * args)
         {
             //outbank->insert((*it));
             //cout << "Size: " << (*it).size() << endl;
-			outbank->fwrite( &(*it)[0] ,(*it).size(), 1);
+			if(outstream==0 && outbank!=0)
+				outbank->fwrite( &(*it)[0] ,(*it).size(), 1);
+
+			// replace file by write to storage group/dataset through outstream
+			if(outstream!=0 )
+				outstream->write(reinterpret_cast<char const*>(&(*it)[0]), (*it).size());
+			
+			
             (*to_be_written) --;
         }
         

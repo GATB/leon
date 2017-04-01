@@ -35,7 +35,7 @@ void displayVersion(std::ostream& os){
 	<< LEON_VERSION_MINOR << "."
 	<< LEON_VERSION_PATCH
 	<< "                      *" << endl; //<< " AGPL licence" <<endl;
-	os << "* Using gatb-core version "<< STR_LIBRARY_VERSION <<  "           *" << endl;
+	os << "* Using gatb-core version "<< System::info().getVersion() <<  "           *" << endl;
 	os << "* * * * * * * * * * * * * * * * * * * * * *" << endl;
 }
 
