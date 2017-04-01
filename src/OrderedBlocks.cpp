@@ -1,3 +1,4 @@
+
 /*****************************************************************************
  *   Leon: reference free compression for NGS reads
  *   A tool from the GATB (Genome Assembly Tool Box)

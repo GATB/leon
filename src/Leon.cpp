@@ -83,6 +83,8 @@ const char* Leon::STR_NOHEADER = "-noheader";
 const char* Leon::STR_NOQUAL = "-noqual";
 
 const char* Leon::STR_DATA_INFO = "Info";
+const char* Leon::STR_INIT_ITER = "-init-iterator";
+
 const int Leon::nt2binTab[128] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -174,7 +176,8 @@ _isFasta = true;
     if (IOptionsParser* input = compressionParser->getParser (STR_KMER_SIZE))  {  input->setVisible (true);  }
 
     compressionParser->push_back (new OptionOneParam(STR_KMER_ABUNDANCE, "abundance threshold for solid kmers (default inferred)", false));
-	
+	compressionParser->push_back (new OptionNoParam  (STR_INIT_ITER, "init iterator for ibank mode", false));
+
 	compressionParser->push_back (new OptionNoParam (Leon::STR_DNA_ONLY, "store dna seq only, header and quals are discarded, will decompress to fasta (same as -noheader -noqual)", false));
 
 	compressionParser->push_back (new OptionNoParam (Leon::STR_NOHEADER, "discard header", false));
@@ -215,7 +218,9 @@ void Leon::execute()
 	gettimeofday(&_tim, NULL);
 	 _wdebut_leon = _tim.tv_sec +(_tim.tv_usec/1000000.0);
 	
-	
+	_iterator_mode=false;
+	if(getParser()->saw (STR_INIT_ITER))
+		_iterator_mode = true;
 	
 	if(getParser()->saw ("-lossless"))
 		_lossless = true;
@@ -262,8 +267,7 @@ void Leon::execute()
     //getInfo()->add (2, "nb solid kmers in reads", "%ld", total_nb_solid_kmers_in_reads);
     
     if(_decompress){
-		delete _inputFile;
-		delete _descInputFile;
+	//	delete _inputFile;
 		delete _outputFile;
 		if(! _isFasta) delete _inputFileQual;
 		delete _bloom;
@@ -1526,12 +1530,6 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 
 
 
-typedef struct
-{
-	QualDecoder * qual_decoder;
-	HeaderDecoder * header_decoder;
-	DnaDecoder * dna_decoder;
-} thread_arg_decoder;
 
 
 
@@ -1612,8 +1610,7 @@ void Leon::executeDecompression(){
 	
 	string dir = System::file().getDirectory(_inputFilename);
 	
-	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
-	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
+	//_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	
 
 	
@@ -1623,17 +1620,8 @@ void Leon::executeDecompression(){
 	
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
-	
-	
-	_descInputFile->seekg(0, _descInputFile->end);
-	_rangeDecoder.setInputFile(_descInputFile, true);
-	
-	
-	
 
 	
-	
-	//_rangeDecoder.setInputFile(_descInputFile);
 	
 	//Output file
 	string prefix = System::file().getBaseName(inputFilename_leon_removed); // for prefix need to remove two dots : .fastq.leon , but not all of them if another dot in the filename (it happened, mail from angry users)
@@ -1736,18 +1724,46 @@ void Leon::executeDecompression(){
 	//		cout << "\tWarning diff version "   << endl;
 	//	}
 	
-	
-	startDecompressionAllStreams();
+	if(! _iterator_mode)
+	{
+		startDecompressionAllStreams();
 
+		endDecompression();
+	}
+	else
+	{
+		testing_iter();
+	}
 	
-	endDecompression();
 }
 
-
-void Leon::startDecompressionAllStreams(){
+void Leon::testing_iter(){
+	//printf("testing iterator \n");
 	
+	tools::dp::Iterator<Sequence>* iterl = new LeonIterator(*this);
+	
+	/*
+	iterl->first();
+	
+	std::cout << "[" << (*iterl)->getDataSize() << "] " << (*iterl)->getComment()  << std::endl;
+	std::cout << (*iterl)->toString() << std::endl;
+	
+	iterl->next();
+	std::cout << "[" << (*iterl)->getDataSize() << "] " << (*iterl)->getComment()  << std::endl;
+	std::cout << (*iterl)->toString() << std::endl;*/
 
+	for(iterl->first();!iterl->isDone();iterl->next())
+	{
+		//std::cout << "[" << (*iterl)->getDataSize() << "] " << (*iterl)->getComment()  << std::endl;
+		std::cout << (*iterl)->getComment() << std::endl;
+		std::cout << (*iterl)->toString() << std::endl;
+		std::cout << (*iterl)->getQuality() << std::endl;
 
+	}
+
+}
+
+void Leon::startDecompression_setup(){
 	
 	_filePosHeader = 0;
 	_filePosDna = 0;
@@ -1755,17 +1771,10 @@ void Leon::startDecompressionAllStreams(){
 	if(! _noHeader)
 	{
 		///////// header setup  /////////
-
+		
 		size_t firstHeaderSize;
 		readDataset(_subgroupHeader,"firstheadersize",firstHeaderSize);
 		
-		
-		//Decode the first header
-		/*u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel); //pourquoi plante si enleve ca ?
-		
-		for(int i=0; i<firstHeaderSize; i++){
-			_firstHeader += _rangeDecoder.nextByte(_generalModel);
-		}*/
 		
 		char * tempS = (char * ) malloc(firstHeaderSize+1);
 		tools::storage::impl::Storage::istream isH (*_subgroupHeader, "firstheader");
@@ -1775,10 +1784,6 @@ void Leon::startDecompressionAllStreams(){
 		_firstHeader = std::string(tempS);
 		free(tempS);
 		
-		//printf("firstHeaderSize %i \n",firstHeaderSize);
-		//std::cout << _firstHeader << std::endl;
-		
-	//	setupNextComponent(_headerBlockSizes);
 		
 		//setup header block sizes
 		size_t nb_blocks;
@@ -1800,34 +1805,132 @@ void Leon::startDecompressionAllStreams(){
 		_filePosDna += _headerBlockSizes[ii];
 	}
 	
-	//setupNextComponent(_dnaBlockSizes);
-	
-	
 	//setup dna block sizes
 	size_t nb_blocks;
 	readDataset(_subgroupDNA,"nb_blocks",nb_blocks);
+	_blockCount = nb_blocks;
 	_dnaBlockSizes.resize(nb_blocks,0);
 	
 	tools::storage::impl::Storage::istream is (*_subgroupDNA, "blocksizes");
 	is.read (reinterpret_cast<char *>(_dnaBlockSizes.data()), _dnaBlockSizes.size()*sizeof(u_int64_t));
 	////
 	
-	
 	_kmerModel = new KmerModel(_kmerSize);
-
 	
 	decodeBloom();
 	decodeAnchorDict();
-	
 	
 	/////////// qualities setup //////////
 	if(! _isFasta)
 	{
 		_filePosQual =0;
+	}
+	///////////////
+	
+}
 
+
+void Leon::decoders_setup(){
+
+
+	
+	for(int i=0; i<_nb_cores; i++){
+		
+		if(! _isFasta)
+		{
+			//QualDecoder* qd = new QualDecoder(this, _FileQualname,_groupLeon);
+			QualDecoder* qd = new QualDecoder(this, "qualities",_subgroupQual);
+			
+			_qualdecoders.push_back(qd);
+		}
+		
+		DnaDecoder* dd = new DnaDecoder(this, _inputFilename, _subgroupDNA);
+		_dnadecoders.push_back(dd);
+		
+		if(! _noHeader)
+		{
+			//HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename);
+			HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename, _subgroupHeader);
+			
+			_headerdecoders.push_back(hd);
+		}
 	}
 	
-	///////////////
+	
+	_tab_threads = new pthread_t [_nb_cores];
+	_targ = new thread_arg_decoder [_nb_cores];
+	
+}
+void Leon::decompressionDecodeBlocks(int & idx, int & livingThreadCount){
+
+
+	for(int j=0; j<_nb_cores; j++){
+		
+
+		if(idx >= _dnaBlockSizes.size()) break;
+		
+		int blockId = idx/2 ;
+
+		
+		u_int64_t blockSize;
+		int sequenceCount;
+		
+		livingThreadCount = j+1;
+		
+		QualDecoder* qdecoder;
+		HeaderDecoder* hdecoder;
+		DnaDecoder* ddecoder;
+		
+		//header decoder
+		if(! _noHeader)
+		{
+			blockSize = _headerBlockSizes[idx];
+			sequenceCount = _headerBlockSizes[idx+1];
+			hdecoder = _headerdecoders[j];
+			hdecoder->setup(_filePosHeader, blockSize, sequenceCount,blockId);
+			_filePosHeader += blockSize;
+		}
+		else
+		{
+			hdecoder= NULL;
+		}
+		
+		//dna decoder
+		blockSize = _dnaBlockSizes[idx];
+		sequenceCount = _dnaBlockSizes[idx+1];
+		ddecoder = _dnadecoders[j];
+		ddecoder->setup(_filePosDna, blockSize, sequenceCount,blockId);
+		_filePosDna += blockSize;
+		
+		//qual decoder setup
+		//here test if in fastq mode, put null pointer otherwise
+		if(! _isFasta)
+		{
+			qdecoder = _qualdecoders[j];
+			qdecoder->setup( blockId);
+		}
+		else
+		{
+			qdecoder= NULL;
+		}
+		
+		
+		_targ[j].qual_decoder = qdecoder;
+		_targ[j].dna_decoder = ddecoder;
+		_targ[j].header_decoder = hdecoder;
+		
+		pthread_create(&_tab_threads[j], NULL, decoder_all_thread, _targ + j);
+		
+		idx += 2;
+		
+		if(! _iterator_mode)
+			this->_progress_decode->inc(1);
+	}
+}
+void Leon::startDecompressionAllStreams(){
+	
+
+	startDecompression_setup();
 	
 	switch (getInput()->getInt(STR_VERBOSE))
 	{
@@ -1841,156 +1944,62 @@ void Leon::startDecompressionAllStreams(){
 	cout << "\tBlock count: " << _blockCount/2 << endl;
 
 
-	//delete _progress_decode;
-	//_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );
+//	delete _progress_decode;
+//	_progress_decode = new ProgressSynchro ( new ProgressTimer ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );
+//	_progress_decode = new ProgressSynchro ( new Progress ( _blockCount/2, "Decompressing all streams"), System::thread().newSynchronizer()   );
+
 	_progress_decode->init();
 	
 	
+	decoders_setup();
 	
-	vector<QualDecoder*> qualdecoders;
-	vector<DnaDecoder*> dnadecoders;
-	vector<HeaderDecoder*> headerdecoders;
-	
-	for(int i=0; i<_nb_cores; i++){
-		
-		if(! _isFasta)
-		{
-			//QualDecoder* qd = new QualDecoder(this, _FileQualname,_groupLeon);
-			QualDecoder* qd = new QualDecoder(this, "qualities",_subgroupQual);
-			
-			qualdecoders.push_back(qd);
-		}
-		
-		DnaDecoder* dd = new DnaDecoder(this, _inputFilename, _subgroupDNA);
-		dnadecoders.push_back(dd);
-		
-		if(! _noHeader)
-		{
-			//HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename);
-			HeaderDecoder* hd = new HeaderDecoder(this, _inputFilename, _subgroupHeader);
 
-			headerdecoders.push_back(hd);
-		}
-	}
-	
-	pthread_t * tab_threads = new pthread_t [_nb_cores];
-	
-	thread_arg_decoder *  targ = new thread_arg_decoder [_nb_cores];
-
-	
 	int i = 0;
 	int livingThreadCount = 0;
 	
 	
-
 	
 	while(i < _dnaBlockSizes.size()){
 		
-		int blockId = i/2 ;
+		//decode blocks
 
-		for(int j=0; j<_nb_cores; j++){
-			
+		decompressionDecodeBlocks(i,livingThreadCount); //this will increment i
 
-			if(i >= _dnaBlockSizes.size()) break;
-			
-			u_int64_t blockSize;
-			int sequenceCount;
-			
-			livingThreadCount = j+1;
-			
-			QualDecoder* qdecoder;
-			HeaderDecoder* hdecoder;
-			DnaDecoder* ddecoder;
-			
-			//header decoder
-			if(! _noHeader)
-			{
-				blockSize = _headerBlockSizes[i];
-				sequenceCount = _headerBlockSizes[i+1];
-				hdecoder = headerdecoders[j];
-				hdecoder->setup(_filePosHeader, blockSize, sequenceCount,blockId);
-				_filePosHeader += blockSize;
-			}
-			else
-			{
-				hdecoder= NULL;
-			}
-			
-			//dna decoder
-			blockSize = _dnaBlockSizes[i];
-			sequenceCount = _dnaBlockSizes[i+1];
-			ddecoder = dnadecoders[j];
-			ddecoder->setup(_filePosDna, blockSize, sequenceCount,blockId);
-			_filePosDna += blockSize;
-
-			//qual decoder setup
-			//here test if in fastq mode, put null pointer otherwise
-			if(! _isFasta)
-			{
-			//	blockSize = _qualBlockSizes[i];
-			//	sequenceCount = _qualBlockSizes[i+1];
-				
-				
-				qdecoder = qualdecoders[j];
-				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
-				qdecoder->setup( blockId);
-
-				//_filePosQual += blockSize;
-			}
-			else
-			{
-				qdecoder= NULL;
-			}
-			
-			
-			targ[j].qual_decoder = qdecoder;
-			targ[j].dna_decoder = ddecoder;
-			targ[j].header_decoder = hdecoder;
-			
-			pthread_create(&tab_threads[j], NULL, decoder_all_thread, targ + j);
-			
-			i += 2;
-			
-			this->_progress_decode->inc(1);
-		}
-
-		
 		for(int j=0; j < livingThreadCount; j++){
 			
-			pthread_join(tab_threads[j], NULL);
+			pthread_join(_tab_threads[j], NULL);
 			
 			HeaderDecoder* hdecoder = NULL;
 			QualDecoder* qdecoder = NULL;
-			DnaDecoder* ddecoder = dnadecoders[j];
+			DnaDecoder* ddecoder = _dnadecoders[j];
 			
 
 			std::istringstream  * stream_qual = NULL;
 			std::istringstream  * stream_header = NULL;
+			std::istringstream  * stream_dna = NULL;
 
 			if(! _isFasta)
 			{
-				qdecoder = qualdecoders[j];
+				qdecoder = _qualdecoders[j];
 				stream_qual = new std::istringstream (qdecoder->_buffer);
 				qdecoder->_buffer.clear();
 			}
 			
 			if(! _noHeader)
 			{
-				hdecoder = headerdecoders[j];
+				hdecoder = _headerdecoders[j];
 				stream_header = new std::istringstream (hdecoder->_buffer);
 				hdecoder->_buffer.clear();
 			}
 			
-			std::istringstream stream_dna (ddecoder->_buffer);
-			
+			stream_dna = new std::istringstream (ddecoder->_buffer);
+
 			ddecoder->_buffer.clear();
 
 			
 			std::string line;
 			std::string output_buff;
 
-			
-			
 			output_buff.reserve(READ_PER_BLOCK * 500);
 			
 			bool reading = true;
@@ -2028,7 +2037,7 @@ void Leon::startDecompressionAllStreams(){
 				 
 				
 				
-				if(getline(stream_dna, line)){
+				if(getline(*stream_dna, line)){
 					output_buff +=  line + '\n';
 				}
 				else
@@ -2052,6 +2061,7 @@ void Leon::startDecompressionAllStreams(){
 
 			if(stream_qual!= NULL) delete  stream_qual;
 			if(stream_header!= NULL) delete  stream_header;
+			if(stream_dna!= NULL) delete  stream_dna;
 			
 			
 		}
@@ -2063,25 +2073,25 @@ void Leon::startDecompressionAllStreams(){
 	
 	_outputFile->flush();
 
-	for(int i=0; i<dnadecoders.size(); i++){
-		delete dnadecoders[i];
+	for(int i=0; i<_dnadecoders.size(); i++){
+		delete _dnadecoders[i];
 	}
-	dnadecoders.clear();
+	_dnadecoders.clear();
 	
-	for(int i=0; i<headerdecoders.size(); i++){
-		delete headerdecoders[i];
+	for(int i=0; i<_headerdecoders.size(); i++){
+		delete _headerdecoders[i];
 	}
-	headerdecoders.clear();
+	_headerdecoders.clear();
 	
-	for(int i=0; i<qualdecoders.size(); i++){
-		delete qualdecoders[i];
+	for(int i=0; i<_qualdecoders.size(); i++){
+		delete _qualdecoders[i];
 	}
-	qualdecoders.clear();
+	_qualdecoders.clear();
 	
 	
 	
-	delete [] tab_threads;
-	delete [] targ;
+	delete [] _tab_threads;
+	delete [] _targ;
 	cout << endl;
 	
 	
@@ -2123,13 +2133,11 @@ void Leon::setupNextComponent( 		vector<u_int64_t>   & blockSizes    ){
 
 void Leon::decodeBloom(){
 
-	printf("should load bloom \n");
-
 	//to be removed
 	////////
 	//pos = tous les block sizes des header
 	
-	
+	/*
 	u_int64_t total_header_block_size = 0 ;
 	
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
@@ -2145,7 +2153,7 @@ void Leon::decodeBloom(){
 	}
 
 	_inputFile->seekg(bloomPos, _inputFile->beg);
-	
+	*/
 
     
 	//u_int64_t bloomBitSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
@@ -2162,8 +2170,8 @@ void Leon::decodeBloom(){
 
 
 #ifdef PRINT_DEBUG_DECODER
-		cout << "Bloom size: " << _bloom->getSize() << endl;
-		cout << "Anchor dict pos: " << _inputFile->tellg() << endl;
+//		cout << "Bloom size: " << _bloom->getSize() << endl;
+//		cout << "Anchor dict pos: " << _inputFile->tellg() << endl;
 	#endif
 	
 
@@ -2341,6 +2349,221 @@ void Leon::endDecompression(){
 }
 
 
+
+Leon::LeonIterator::LeonIterator( Leon& refl)
+: _leon(refl), _isDone(true) , _isInitialized(_isInitialized)
+{
+//	setDataRef (new Data (bank._length, Data::ASCII));
+//	_item->getData().setRef (_dataRef, 0, bank._length);
+	
+}
+
+void Leon::LeonIterator::first()
+{
+	//printf("iter first\n");
+	init  ();
+
+	_idxB=0;
+	_livingThreadCount=0;
+	_currentTID=0;
+	_isDone = false;
+	_readingThreadBlock = false;
+	_readid=0;
+	if(_stream_qual!= NULL) delete  _stream_qual;
+	if(_stream_header!= NULL) delete  _stream_header;
+	if(_stream_dna!= NULL) delete  _stream_dna;
+	
+	next();
+
+}
+
+void Leon::LeonIterator::next()
+{
+//	printf("---------- iter next ------------\n");
+
+	if(_livingThreadCount==0 ||
+	   (( _currentTID>= _livingThreadCount) && !_readingThreadBlock )
+	   )
+	{
+		readNextBlocks();
+		if(_isDone) return;
+	}
+	
+	if(!_readingThreadBlock)
+	{
+		//  assert (_currentTID < _livingThreadCount)
+		readNextThreadBock();
+	}
+	
+	assert(_readingThreadBlock);
+
+	//try to get nex tseq from this thread block
+	
+	std::string line;
+	stringstream sint;
+	sint << _readid;
+	std::string current_comment;
+	std::string current_dna;
+	std::string current_qual;
+	
+	
+	if( ! _leon._noHeader)
+	{
+		if(getline(*_stream_header, line)){
+			current_comment +=  line ;
+		}
+		else
+			_readingThreadBlock = false;
+	}
+	else
+	{
+		current_comment += sint.str() ;
+		
+		_readid++;
+	}
+	
+	
+	
+	if(getline(*_stream_dna, line)){
+		current_dna +=  line ;
+	}
+	else
+		_readingThreadBlock = false;
+	
+	
+	if( ! _leon._isFasta)
+	{
+		if(getline(*_stream_qual, line)){
+			current_qual +=  line ;
+		}
+		else
+			_readingThreadBlock = false;
+	}
+	
+	if(_readingThreadBlock)
+	{
+		Sequence *currentSeq = _item;
+		currentSeq->setComment(current_comment);
+		currentSeq->setQuality(current_qual);
+		
+		//currData.set ((char *)current_dna.c_str(), current_dna.size()  );
+		
+		// huum casting const char * to char *; not nice, could be fixed with strdup but want to avoid unnecessary copy,
+		//the set() method *should* take a const anyway
+		currentSeq->getData().set((char *)current_dna.c_str(), current_dna.size()  );
+	}
+	else  //reached end of current thread block, try to advance to next block
+	{
+		next();
+	
+	}
+
+	
+}
+
+
+void Leon::LeonIterator::readNextBlocks()
+{
+//	printf("--- iter readNextBlocks  %i / %i ---\n",_idxB,_leon._dnaBlockSizes.size());
+
+	if(_idxB >= _leon._dnaBlockSizes.size()){
+		_isDone= true;
+	}
+	if(!_isDone)
+	{
+		_leon.decompressionDecodeBlocks(_idxB,_livingThreadCount); //this will update _idxB and _livingThreadCount
+		_currentTID =0;
+	}
+	
+//	printf("___ done iter readNextBlocks  %i / %i ---\n",_idxB,_leon._dnaBlockSizes.size());
+
+	
+}
+
+
+//put next chunk in stream_qual,stream_header and _stream_dna
+void Leon::LeonIterator::readNextThreadBock()
+{
+//	printf("--- iter readNextThreadBock  %i %i ---\n",_currentTID,_livingThreadCount);
+
+	pthread_join(_leon._tab_threads[_currentTID], NULL);
+	
+ 	_hdecoder = NULL;
+	_qdecoder = NULL;
+	_ddecoder = _leon._dnadecoders[_currentTID];
+	
+	
+	if(_stream_qual!= NULL) delete  _stream_qual;
+	if(_stream_header!= NULL) delete  _stream_header;
+	if(_stream_dna!= NULL) delete  _stream_dna;
+	
+	_stream_qual = NULL;
+	_stream_header = NULL;
+	_stream_dna = NULL;
+	
+	if(! _leon._isFasta)
+	{
+		_qdecoder = _leon._qualdecoders[_currentTID];
+		_stream_qual = new std::istringstream (_qdecoder->_buffer);
+		_qdecoder->_buffer.clear();
+	}
+	
+	if(! _leon._noHeader)
+	{
+		_hdecoder = _leon._headerdecoders[_currentTID];
+		_stream_header = new std::istringstream (_hdecoder->_buffer);
+		_hdecoder->_buffer.clear();
+	}
+	
+	_stream_dna = new std::istringstream (_ddecoder->_buffer);
+	_ddecoder->_buffer.clear();
+	
+	
+	//std::string output_buff;
+	//output_buff.reserve(READ_PER_BLOCK * 500);
+	
+	_readingThreadBlock = true;
+	_currentTID++;
+
+	
+//	printf("___ done iter readNextThreadBock  %i %i ---\n",_currentTID,_livingThreadCount);
+
+
+///	u_int64_t readid=0;
+}
+
+Leon::LeonIterator::~LeonIterator ()
+{
+	
+}
+
+
+void Leon::LeonIterator::estimate(u_int64_t& number, u_int64_t& totalSize, u_int64_t& maxSize)
+{
+	
+	
+}
+
+void Leon::LeonIterator::init()
+{
+	if (_isInitialized == true)  { return ;}
+
+	///printf("iter init\n");
+
+	_leon.startDecompression_setup();
+	_leon.decoders_setup();
+
+	
+	
+	_isInitialized = true;
+}
+
+
+void Leon::LeonIterator::finalize()
+{
+	
+	
+}
 
 
 

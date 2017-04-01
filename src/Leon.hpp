@@ -74,6 +74,16 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 class HeaderEncoder;
 class HeaderDecoder;
 class DnaEncoder;
+class QualDecoder;
+class DnaDecoder;
+
+typedef struct
+{
+	QualDecoder * qual_decoder;
+	HeaderDecoder * header_decoder;
+	DnaDecoder * dna_decoder;
+} thread_arg_decoder;
+
 
 class Leon : public misc::impl::Tool
 {
@@ -89,6 +99,7 @@ class Leon : public misc::impl::Tool
 		static const char* STR_DNA_ONLY;
 		static const char* STR_NOHEADER;
 		static const char* STR_NOQUAL;
+		static const char* STR_INIT_ITER;
 
 	static const char* STR_DATA_INFO;
 
@@ -99,7 +110,8 @@ class Leon : public misc::impl::Tool
 		int _nb_cores;
 		
 		bool _compress, _decompress;
-		
+		bool _iterator_mode;
+
 		clock_t _time; //Used to calculate time taken by decompression
 		
 		//Global compression
@@ -267,7 +279,6 @@ class Leon : public misc::impl::Tool
 		ifstream* _inputFile;
 		ifstream* _inputFileQual;
 
-		ifstream* _descInputFile;
 		u_int64_t _filePos;
 	
 	u_int64_t _filePosHeader;
@@ -323,6 +334,85 @@ class Leon : public misc::impl::Tool
 		void endDecompression();
 		
 		//IFile* _outputFile;
+	
+	void startDecompression_setup();
+	void decoders_setup();
+	
+	vector<QualDecoder*> _qualdecoders;
+	vector<DnaDecoder*> _dnadecoders;
+	vector<HeaderDecoder*> _headerdecoders;
+	
+	pthread_t * _tab_threads;
+	
+	thread_arg_decoder *  _targ;
+	void decompressionDecodeBlocks(int & idx, int & livingThreadCount);
+	
+	void testing_iter();
+	
+	class LeonIterator : public tools::dp::Iterator<Sequence>
+	{
+	public:
+		
+		
+		LeonIterator (Leon& ref);
+		
+		/** Destructor */
+		~LeonIterator ();
+		
+		/** \copydoc tools::dp::Iterator::first */
+		void first();
+		
+		/** \copydoc tools::dp::Iterator::next */
+		void next();
+		
+		/** \copydoc tools::dp::Iterator::isDone */
+		bool isDone ()  { return _isDone; }
+		
+		/** \copydoc tools::dp::Iterator::item */
+		Sequence& item ()     { return *_item; }
+		
+		/** Estimation of the sequences information */
+		void estimate (u_int64_t& number, u_int64_t& totalSize, u_int64_t& maxSize);
+		
+	private:
+		
+		/** Reference to the underlying Leon instance. */
+		Leon&    _leon;
+		
+		/** Tells whether the iteration is finished or not. */
+		bool _isDone;
+		
+		/** Tells whether the instance is initialized. */
+		bool _isInitialized;
+		
+		
+		/** Initialization method. */
+		void init ();
+		
+		/** Finish method. */
+		void finalize ();
+		
+		void readNextBlocks();
+
+		void readNextThreadBock();
+		
+		int _idxB;
+		int _livingThreadCount;
+		int _currentTID;
+		
+		HeaderDecoder* _hdecoder ;
+		QualDecoder* _qdecoder;
+		DnaDecoder* _ddecoder ;
+		
+		
+		std::istringstream  * _stream_qual ;
+		std::istringstream  * _stream_header ;
+		std::istringstream  * _stream_dna;
+		
+		bool _readingThreadBlock;
+		u_int64_t _readid;
+
+	};
 };
 
 
