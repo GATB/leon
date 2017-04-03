@@ -747,7 +747,7 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequ
 }
 
 void HeaderDecoder::execute(){
-	//cout << endl << "DEBUG HEADER CODER EXECUTE BEGIN" << endl;
+	cerr << endl << "DEBUG HEADER CODER EXECUTE BEGIN" << endl;
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
 	
@@ -760,10 +760,10 @@ void HeaderDecoder::execute(){
 	//for(u_int64_t i=0; i<_blockSize; i++){
 		
 	//while(!_inputFile->eof()){
-	//	cout << "debug header decoder : readType before" << endl;
+		cerr << "debug header decoder : readType before" << endl;
 		u_int8_t type = _rangeDecoder.nextByte(_typeModel[_misIndex]);
-	//	cout << "debug header decoder : readType after" << endl;
-	//	cout << "debug header decoder : type = " << (int) type << endl;
+		cerr << "debug header decoder : readType after" << endl;
+		cerr << "debug header decoder : type = " << (int) type << endl;
 		#ifdef PRINT_DEBUG_DECODER
 			cout << "\t\tNext type is: " << (int) type << endl;
 		#endif
@@ -788,9 +788,9 @@ void HeaderDecoder::execute(){
 		}
 		else if(type == HEADER_END_MATCH){
 			//decodeMatch();
-	//		cout << "debug header decoder : headerSize before" << endl;
+			cout << "debug header decoder : headerSize before" << endl;
 			u_int8_t headerSize = _rangeDecoder.nextByte(_headerSizeModel);
-	//		cout << "debug header decoder : headerSize before" << endl;
+			cout << "debug header decoder : headerSize before" << endl;
 
 			for(/*_fieldIndex*/; _fieldIndex < _prevFieldCount; _fieldIndex++){
 				#ifdef PRINT_DEBUG_DECODER

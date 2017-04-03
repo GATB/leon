@@ -130,8 +130,9 @@ class Requests
 		void printIsKmerInSequenceAnchorDict(char* kmer_chars, Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers);
 		void printSequenceAnchorsDict(char* sequence, Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers);
 		void printTestAll();
-		void testPrintReads();
-		void testPrintAllHeadersReads();
+		void testPrintAnchorsFile();
+		void testPrintReadsFile();
+		void testPrintAllHeadersReadsFile();
 
 
 
