@@ -174,8 +174,8 @@ bool Requests::anchorExist(char* kmer_chars, u_int32_t* anchorAddress){
 void Requests::initializeRangeDecoder(){
 
 	_decodeFilename = _outputFilename + ".leon";
-	cout << "debug initializeRangeDecoder : outputFilename : " << _outputFilename << endl;
-	cout << "debug initializeRangeDecoder : filename : " << _decodeFilename << endl;
+	//cout << "debug initializeRangeDecoder : outputFilename : " << _outputFilename << endl;
+	//cout << "debug initializeRangeDecoder : filename : " << _decodeFilename << endl;
 	_descInputFile = new ifstream(_decodeFilename.c_str(), ios::in|ios::binary);
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
@@ -276,34 +276,37 @@ void Requests::fgetRequests(){
 
 	cout << endl << endl <<
 		"############# debug #############" << endl << endl <<
-		"t sig\t\tto print sinatures" << endl <<
-		"t col\t\tto print colors" << endl <<
-		"t seq\tto print sequences" << endl <<
-		"t kmers\t\tto print kmers" << endl <<
-		"t mphf\t\tto print mphf indexes" << endl <<
+		"t sig\t\t\tto print sinatures" << endl <<
+		"t col\t\t\tto print colors" << endl <<
+		"t seq\t\t\tto print sequences" << endl <<
+		"t kmers\t\t\tto print kmers" << endl <<
+		"t mphf\t\t\tto print mphf indexes" << endl << 
 		"t seq anchors\t\tto print sequence's anchors" << endl << 
-		"t seq anchors dict\t\tto print the dictionnary's sequence's anchors" << endl << 
-		"testall\t\tto print kmers, indexes in mphf, color and signature" << endl << 
-		"t read canchors\t\tto print compresses reads in file order" << endl << 
-		"t read creads \t\tto print compresses anchors in file order" << endl << 
-		"t read cfile\t\tto print compressed file in order" << endl << endl << endl <<
+		"t seq anchors dict\tto print the dictionnary's sequence's anchors" << endl << 
+		"testall\t\t\tto print kmers, indexes in mphf, color and signature" << endl << endl <<
+
+		"t read canchors\t\tto print compressed reads' anchors in file order" << endl << 
+		"t read canchors pos\tto print compressed reads' anchors' positions in file order" << endl << 
+		"t read creads\t\tto print compressed reads in file order" << endl << 
+		"t read c-all\t\tto print all three above informations in file order" << endl << 
+		"t read cfile\t\tto print original compressed file" << endl << endl << endl <<
 
 		"############ requests ############" << endl << 
 		
-		"nb ds \t\tto get the number of datasets in the file" << endl << endl <<
+		"nb ds \t\t\tto get the number of datasets in the file" << endl << endl <<
 		
-		"kmer s \t\tto get size of kmers" << endl <<
-		"kmer p \t\tto know if the kmer is present in the data" << endl <<
-		"kmer h \t\tto know in how many datasets the kmer is present" << endl <<
-		"kmer d \t\tto know in which datasets the kmer is present" << endl << endl <<
+		"kmer s \t\t\tto get size of kmers" << endl <<
+		"kmer p \t\t\tto know if the kmer is present in the data" << endl <<
+		"kmer h \t\t\tto know in how many datasets the kmer is present" << endl <<
+		"kmer d \t\t\tto know in which datasets the kmer is present" << endl << endl <<
 
-		"seq pg\t\tto know if the sequence is present in the graph" << endl <<
-		"seq hg\t\tto know in the sequence's colors' number in the graph" << endl <<
-		"seq dg\t\tto know in which datasets the sequence is present in the graph" << endl << endl <<
+		"seq pg\t\t\tto know if the sequence is present in the graph" << endl <<
+		"seq hg\t\t\tto know in the sequence's colors' number in the graph" << endl <<
+		"seq dg\t\t\tto know in which datasets the sequence is present in the graph" << endl << endl <<
 
-		"seq p\t\tto know if the sequence is present in the data" << endl <<
-		"seq h\t\tto know in the sequence's colors' number in the data" << endl <<
-		"seq d\t\tto know in which datasets the sequence is present in the data" << endl << endl <<
+		"seq p\t\t\tto know if the sequence is present in the data" << endl <<
+		"seq h\t\t\tto know in the sequence's colors' number in the data" << endl <<
+		"seq d\t\t\tto know in which datasets the sequence is present in the data" << endl << endl <<
 
 		"q \t\tto quit" << endl << endl;
 
@@ -368,11 +371,19 @@ void Requests::fgetRequests(){
 		}
 
 		if (strcmp(request, "t read canchors")==0){
-			this->testPrintAnchorsFile();
+			this->testPrintReadsFile(false, true, false);
+		}
+
+		if (strcmp(request, "t read canchors pos")==0){
+			this->testPrintReadsFile(false, false, true);
 		}
 
 		if (strcmp(request, "t read creads")==0){
-			this->testPrintReadsFile();
+			this->testPrintReadsFile(true, false, false);
+		}
+
+		if (strcmp(request, "t read c-all")==0){
+			this->testPrintReadsFile(true, true, true);
 		}
 
 		if (strcmp(request, "t read cfile")==0){
@@ -708,119 +719,7 @@ void Requests::printTestAll(){
 	} 
 }
 
-void Requests::testPrintAnchorsFile(){
-
-	initializeRangeDecoder();
-
-	//original decoding order :
-
-	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
-	//the first bit holds the file format. 0: fastq, 1: fasta
-	bool isFasta = ((infoByte & 0x01) == 0x01);
-	//Second bit : option no header
-	bool noHeader = ((infoByte & 0x02) == 0x02);
-
-	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-
-	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-
-	u_int64_t filePosHeader = 0;
-	u_int64_t filePosDna = 0;
-	string firstHeader;
-
-	if(! noHeader)
-	{	
-	///////// header setup  /////////
-	//Decode the first header
-	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	for(int i=0; i<firstHeaderSize; i++){
-		firstHeader += _rangeDecoder.nextByte(_generalModel);
-	}
-	setupNextComponent(_headerBlockSizes);
-	
-	}
-	
-	
-	/////// dna setup ////////////
-	
-	//need to init _filePosDna here
-	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
-	{
-		filePosDna += _headerBlockSizes[ii];
-	}
-	
-	setupNextComponent(_dnaBlockSizes);
-
-	decodeBloom();
-	decodeAnchorDict();
-
-	HeaderDecoder* hdecoder;
-	DnaDecoder* ddecoder;
-
-	if(! isFasta)
-	{
-		cout << " - testPrintReads - temporarily not treating fastq" << endl;
-		//QualDecoder* qd = new QualDecoder(this, _FileQualname);
-		//qualdecoders.push_back(qd);
-	}
-
-	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);	
-	if(! noHeader)
-	{
-	hdecoder = new HeaderDecoder(_leon, this, _decodeFilename);
-	}
-
-
-	int i=0;
-	while(i < _dnaBlockSizes.size()){
-			
-
-		if(i >= _dnaBlockSizes.size()) break;
-			
-			
-		u_int64_t blockSize;
-		int sequenceCount;
-			
-		//dna decoder
-		blockSize = _dnaBlockSizes[i];
-		sequenceCount = _dnaBlockSizes[i+1];
-		ddecoder->setup(filePosDna, blockSize, sequenceCount);
-		filePosDna += blockSize;
-
-			
-		//qual decoder setup
-		//here test if in fastq mode, put null pointer otherwise
-		if(! isFasta)
-		{
-			cout << "testPrintReads - fastq not treated temporarily" << endl;
-				//blockSize = _qualBlockSizes[i];
-				//sequenceCount = _qualBlockSizes[i+1];
-				//qdecoder = qualdecoders[j];
-				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
-				//_filePosQual += blockSize;
-		}
-		else
-		{
-				//qdecoder= NULL;
-		}
-
-		string read;
-		int nbRead = 0;
-		while(ddecoder->getNextAnchor(&read)){
-			cout << "read " << nbRead << " : " << read << endl;
-			++nbRead;
-		}
-		i += 2;
-
-	}	
-	
-	clearRangeDecoder();
-
-}
-
-void Requests::testPrintReadsFile(){
+void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos){
 
 	initializeRangeDecoder();
 
@@ -839,9 +738,9 @@ void Requests::testPrintReadsFile(){
 	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 
-	cout << "\tversion_major: " << version_major << endl;
-	cout << "\tversion_minor: " << version_minor << endl;
-	cout << "\tversion_patch: " << version_patch << endl;
+	//cout << "\tversion_major: " << version_major << endl;
+	//cout << "\tversion_minor: " << version_minor << endl;
+	//cout << "\tversion_patch: " << version_patch << endl;
 
 	u_int64_t filePosHeader = 0;
 	u_int64_t filePosDna = 0;
@@ -858,7 +757,6 @@ void Requests::testPrintReadsFile(){
 	setupNextComponent(_headerBlockSizes);
 	
 	}
-	cout << "ouf"<< endl;
 	
 	/////// dna setup ////////////
 	
@@ -867,10 +765,8 @@ void Requests::testPrintReadsFile(){
 	{
 		filePosDna += _headerBlockSizes[ii];
 	}
-	cout << "ouf2"<< endl;
 	
 	setupNextComponent(_dnaBlockSizes);
-cout << "ouf3"<< endl;
 	
 	decodeBloom();
 	decodeAnchorDict();
@@ -925,9 +821,23 @@ cout << "ouf3"<< endl;
 		}
 
 		string read;
+		string anchor;
+		string anchorPos;
 		int nbRead = 0;
-		while(ddecoder->getNextRead(&read)){
-			cout << "read " << nbRead << " : " << read << endl;
+		while(ddecoder->getNextRead(&read, &anchor, &anchorPos, getReads, getAnchors, getAnchorPos)){
+			
+			cout << "element " << nbRead << endl;
+			
+			if (getReads){
+				cout << "read  : " << read;
+			}
+			if (getAnchors){
+				cout << "anchor : " << anchor << endl;
+			}
+			if (getAnchorPos){
+				cout << "anchorPos : " << anchorPos << endl;
+			}
+			cout << endl;
 			++nbRead;
 		}
 		i += 2;
@@ -945,7 +855,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	//original decoding order :
 
 	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
-	cout << endl << "\tinfoByte : " << bitset<8>(infoByte) << endl;
+	//cout << endl << "\tinfoByte : " << bitset<8>(infoByte) << endl;
 
 	//the first bit holds the file format. 0: fastq, 1: fasta
 	bool isFasta = ((infoByte & 0x01) == 0x01);
@@ -954,7 +864,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	
 	//Second bit : option no header
 	bool noHeader = ((infoByte & 0x02) == 0x02);
-	cout << "testPrintReads - noHeader : " << noHeader << endl;
+	//cout << "testPrintReads - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;

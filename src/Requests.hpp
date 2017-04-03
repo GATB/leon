@@ -50,6 +50,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 using namespace std;
 class Leon;
 class DnaDecoder;
+class HeaderDecoder;
 
 
 //class HeaderEncoder;
@@ -108,6 +109,7 @@ class Requests
 		// - will have to call leon's method before creating requests ??
 		void initializeRangeDecoder();
 		void clearRangeDecoder();
+		void initializeDecodingReads();
 		void setupNextComponent(vector<u_int64_t> & blockSizes);
 		void decodeBloom();
 		void decodeAnchorDict();
@@ -130,8 +132,7 @@ class Requests
 		void printIsKmerInSequenceAnchorDict(char* kmer_chars, Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers);
 		void printSequenceAnchorsDict(char* sequence, Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers);
 		void printTestAll();
-		void testPrintAnchorsFile();
-		void testPrintReadsFile();
+		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
 
 
@@ -207,6 +208,10 @@ class Requests
 		u_int64_t _filePosDna;
 		u_int64_t _blockCount;
 		static const int READ_PER_BLOCK = 50000;
+		bool _isFasta;
+		bool _noHeader;
+		HeaderDecoder* _hdecoder;
+		DnaDecoder* _ddecoder;
 
 		// models :
 		Order0Model _generalModel;

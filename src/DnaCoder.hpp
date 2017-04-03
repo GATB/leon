@@ -234,8 +234,8 @@ class DnaDecoder : AbstractDnaCoder
 		
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
 		//return false if end of file
-		bool getNextAnchor(string* anchor);
-		bool getNextRead(string* read);
+		//bool getNextAnchor(string* anchor);
+		bool getNextRead(string* sanchor, string* sread, string* sanchorPos, bool getAnchor, bool getRead, bool getAnchorPos);
 		void execute();
 	
 		string _buffer;
