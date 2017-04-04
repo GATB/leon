@@ -51,6 +51,7 @@ using namespace std;
 class Leon;
 class DnaDecoder;
 class HeaderDecoder;
+class QualDecoder;
 
 
 //class HeaderEncoder;
@@ -113,6 +114,15 @@ class Requests
 		void setupNextComponent(vector<u_int64_t> & blockSizes);
 		void decodeBloom();
 		void decodeAnchorDict();
+		void decodeInfos();
+		void headerSetUp();
+		void dnaSetUp();
+		void initializeDecoders();
+		void clearDecoders();
+		void headerDecoderSetup(int blockIndice);
+		void dnaDecoderSetup(int blockIndice);
+		void qualDecoderSetup(int blockIndice);	
+
 		kmer_type getAnchor(ifstream* anchorDictFile, u_int32_t adress);
 
 
@@ -134,6 +144,7 @@ class Requests
 		void printTestAll();
 		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
+		void testExtendAnchors();
 
 
 
@@ -204,14 +215,15 @@ class Requests
 		vector<u_int64_t> _dnaBlockSizes;
 		vector<kmer_type> _vecAnchorKmers;
 		u_int64_t _filePos;
-		u_int64_t _filePosHeader;
-		u_int64_t _filePosDna;
 		u_int64_t _blockCount;
 		static const int READ_PER_BLOCK = 50000;
 		bool _isFasta;
 		bool _noHeader;
 		HeaderDecoder* _hdecoder;
 		DnaDecoder* _ddecoder;
+		QualDecoder* _qdecoder;
+		u_int64_t _filePosHeader = 0;
+		u_int64_t _filePosDna = 0;
 
 		// models :
 		Order0Model _generalModel;
