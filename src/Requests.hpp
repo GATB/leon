@@ -102,6 +102,7 @@ class Requests
 		//conversion functions
 		kmer_type getKmerType(char* kmer_chars);
 		char* getKmerChars(kmer_type kmer);
+		string getKmerString(kmer_type kmer);
 		Node getKmerNode(char* kmer_chars);
 
 		// decode functions
@@ -144,7 +145,8 @@ class Requests
 		void printTestAll();
 		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
-		void testExtendAnchors();
+		void testSequenceMatchFile(char* sequence);
+
 
 
 

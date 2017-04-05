@@ -222,6 +222,24 @@ class DnaEncoder : AbstractDnaCoder
 //====================================================================================
 // ** DnaDecoder
 //====================================================================================
+
+struct ReadInfos{
+
+	u_int8_t readType;
+	int readSize;
+	int anchorPos;
+	u_int64_t anchorAddress;
+	kmer_type anchor;
+	kmer_type revAnchor;
+	int revcomp;
+	u_int64_t NposCount;
+	vector<int> Npos;
+	vector<int> leftErrorPos;
+	u_int64_t nbLeftError;
+	string sread;
+
+};
+
 class DnaDecoder : AbstractDnaCoder
 {
 		
@@ -235,7 +253,7 @@ class DnaDecoder : AbstractDnaCoder
 		void setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount);
 		//return false if end of file
 		//bool getNextAnchor(string* anchor);
-		bool getNextRead(string* sanchor, string* sread, string* sanchorPos, bool getAnchor, bool getRead, bool getAnchorPos);
+		bool getNextReadInfos(struct ReadInfos* ri);
 		void execute();
 	
 		string _buffer;

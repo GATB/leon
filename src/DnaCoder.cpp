@@ -1505,6 +1505,7 @@ void QualDecoder::execute(){
 //====================================================================================
 // ** DnaDecoder
 //====================================================================================
+
 DnaDecoder::DnaDecoder(Leon* leon, const string& inputFilename) :
 AbstractDnaCoder(leon)
 {
@@ -1563,95 +1564,97 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 }
 
 //TODO : remove dupplication code with decodeAnchorRead
-bool DnaDecoder::getNextRead(string* sread, string* sanchor, string* sanchorPos, bool getRead, bool getAnchor, bool getAnchorPos){
+bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 
 	if (_processedSequenceCount < _sequenceCount){
+		ri->readType = _rangeDecoder.nextByte(_readTypeModel);
 
-		u_int8_t readType = _rangeDecoder.nextByte(_readTypeModel);
-	
-
-		if(readType == 0){
-
-			u_int8_t deltaType;
-			u_int64_t deltaValue;
-
-			_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeValueModel);
-			int anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosModel);
-			u_int64_t anchorAddress = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressModel);
-
-			if (getAnchorPos){
-				*sanchorPos = std::to_string(anchorPos);
-			}
-
+		if(ri->readType == 0){
+			ri->readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeValueModel);
+			ri->anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosModel);
+			ri->anchorAddress = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressModel);
 			//TODO
 			//suppress the requests method "getAnchor"...
 			kmer_type anchor;
-			if (_decodeReq){
-				anchor = _requests->getAnchor(_anchorDictFile, anchorAddress); //laa
+			if (_decodeReq){//cerr << "\tdebug DnaDecoder::getNextReadInfos - before anchor" << endl;
+				ri->anchor = _requests->getAnchor(_anchorDictFile, ri->anchorAddress); 
 			}
 			else{
-				anchor = _leon->getAnchor(_anchorDictFile, anchorAddress); //laa
+				ri->anchor = _leon->getAnchor(_anchorDictFile, ri->anchorAddress); //laa
 			}
-
-			if (getAnchor){
-				*sanchor = anchor.toString(_kmerSize);
-			}
-
 			//Decode the bit that says if the anchor is revcomp or not
-			if(_rangeDecoder.nextByte(_readAnchorRevcompModel) == 1){
-				anchor = revcomp(anchor, _kmerSize);
+			if((ri->revcomp = _rangeDecoder.nextByte(_readAnchorRevcompModel)) == 1){
+				ri->revAnchor = ri->anchor;
+				ri->anchor = revcomp(ri->anchor, _kmerSize);
 			}
 			
-			_currentSeq = anchor.toString(_kmerSize);	
-			_leftErrorPos.clear();
-			_Npos.clear();
+			_currentSeq = ri->anchor.toString(_kmerSize);	
+			ri->leftErrorPos.clear();
+			ri->Npos.clear();
 			
 			//Decode N pos
 			_prevNpos = 0;
-			u_int64_t NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+			ri->NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 
-			for(int i=0; i<NposCount; i++){
+			for(int i=0; i<ri->NposCount; i++){
 				u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
-
-				_Npos.push_back(nPos);
+				ri->Npos.push_back(nPos);
 				_prevNpos = nPos;
 			}
 			
 			//Decode error pos
-			u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
+			ri->nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
 
 			_prevErrorPos = 0;
-			for(int i=0; i<nbLeftError; i++){
+			for(int i=0; i<ri->nbLeftError; i++){
 				u_int64_t errorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorPosModel) + _prevErrorPos;
-				addErrorPos(errorPos, true);
+				ri->leftErrorPos.push_back(errorPos);
 				_prevErrorPos = errorPos;
 			}
 
 			//Extend anchor to the left
-			kmer_type kmer = anchor;
-			for(int i=anchorPos-1; i>=0; i--){
+			kmer_type kmer = ri->anchor;
+			for(int i=ri->anchorPos-1; i>=0; i--){
 				kmer = extendAnchor(kmer, i, false);
 			}
+
 			//Extend anchor to the right
-			kmer = anchor;
-			for(int i=anchorPos+_kmerSize; i<_readSize; i++){
+			kmer = ri->anchor;
+			for(int i=ri->anchorPos+_kmerSize; i<ri->readSize; i++){
 				kmer = extendAnchor(kmer, i, true);
+
 			}
 			
 			//Inject N in the decoded read sequence
-			for(int i=0; i<_Npos.size(); i++){
+			for(int i=0; i<ri->Npos.size(); i++){
 				_currentSeq[_Npos[i]] = 'N';
 			}
 		}
-		else if(readType == 1){
-			decodeNoAnchorRead();
-			*sanchor = "xxx";
+		else if(ri->readType == 1){
+				
+			_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _noAnchorReadSizeValueModel);
+
+			for(int i=0; i<_readSize; i++){
+				_currentSeq += Leon::bin2nt(_rangeDecoder.nextByte(_noAnchorReadModel));
+			}
+
+			ri->readSize = _readSize;
+			ri->anchorPos = -1;
+			ri->anchorAddress = -1;
+			ri->anchor;
+			ri->revAnchor;
+			ri->revcomp = -1;
+			ri->NposCount = -1;
+			ri->Npos;
+			ri->leftErrorPos;
+			ri->nbLeftError = -1;
+
 		}
-			
+
 		endRead();
-		if (getRead){
-			*sread = _buffer;
-		}
+
+		ri->sread = _buffer;
+
 		_buffer.clear();
 
 		return true;
@@ -1660,6 +1663,7 @@ bool DnaDecoder::getNextRead(string* sread, string* sanchor, string* sanchorPos,
 	else{
 
 		_finished = true;
+
 		return false;
 	}
 }

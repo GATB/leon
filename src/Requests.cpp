@@ -141,6 +141,9 @@ char* Requests::getKmerChars(kmer_type kmer){
 
 	return kmer_chars;
 }
+string Requests::getKmerString(kmer_type kmer){
+	return kmer.toString(_kmerSize);
+}
 
 Node Requests::getKmerNode(char* kmer_chars){
 
@@ -393,7 +396,8 @@ void Requests::fgetRequests(){
 		"t read canchors pos\tto print compressed reads' anchors' positions in file order" << endl << 
 		"t read creads\t\tto print compressed reads in file order" << endl << 
 		"t read c-all\t\tto print all three above informations in file order" << endl << 
-		"t read cfile\t\tto print original compressed file" << endl << endl << endl <<
+		"t read cfile\t\tto print original compressed file" << endl << 
+		"t seq match cfile\t\tto get reads sharing same anchor that sequence" << endl << endl << endl <<
 
 		"############ requests ############" << endl << 
 		
@@ -492,6 +496,12 @@ void Requests::fgetRequests(){
 
 		if (strcmp(request, "t read cfile")==0){
 			this->testPrintAllHeadersReadsFile();
+		}
+
+		if (strcmp(request, "t seq match cfile")==0){
+			if (this->fgetSequence(sequence_req)){
+				this->testSequenceMatchFile(sequence_req);	
+			}
 		}
 
 		//requests
@@ -848,28 +858,32 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 		dnaDecoderSetup(blockIndice);
 		qualDecoderSetup(blockIndice);
 
-		string read;
-		string anchor;
-		string anchorPos;
+		//struct ReadInfos* ri = (struct ReadInfos*)malloc(sizeof(struct ReadInfos));
+		struct ReadInfos* ri = new ReadInfos{};
 		int nbRead = 0;
-		while(_ddecoder->getNextRead(&read, &anchor, &anchorPos, getReads, getAnchors, getAnchorPos)){
+		while(_ddecoder->getNextReadInfos(ri)){
 			
 			cout << "element " << nbRead << endl;
 			
 			if (getReads){
-				cout << "read  : " << read;
+				cout << "read type : " << (int) ri->readType << endl;
+				cout << "read  : " << ri->sread;
 			}
 			if (getAnchors){
-				cout << "anchor : " << anchor << endl;
+				cout << "anchor : " << getKmerString(ri->anchor) << endl;
+				cout << "reversed : " << ri->revcomp << endl;
+				if (ri->revcomp){
+					cout << "reversed anchor : " << getKmerString(ri->revAnchor) << endl;
+				}
 			}
 			if (getAnchorPos){
-				cout << "anchorPos : " << anchorPos << endl;
+				cout << "anchorPos : " << ri->anchorPos << endl;
 			}
 			cout << endl;
 			++nbRead;
 		}
 	}	
-	
+
 	clearRangeDecoder();
 	clearDecoders();
 
@@ -1174,6 +1188,63 @@ void Requests::testPrintAllHeadersReadsFile(){
 	//std::cout << "debug testPrintReads : after clearRangeDecoder()" << endl; 
 	//cout << "debug testPrintReads END" << endl; 
 
+}
+
+void Requests::testSequenceMatchFile(char* sequence){
+
+	//get existing anchors in the sequence
+	u_int64_t dictSize = strlen(sequence);
+	u_int64_t nbcreated;
+	Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers = new Hash16<kmer_type, u_int32_t>(dictSize , &nbcreated);
+	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
+
+	//decode commpressed file, to find matching anchors
+	initializeRangeDecoder();
+
+	decodeInfos();
+	headerSetUp();
+	dnaSetUp();
+	
+	decodeBloom();
+	decodeAnchorDict();
+
+	initializeDecoders();
+
+	for (int blockIndice = 0; 
+		blockIndice < _dnaBlockSizes.size(); 
+		blockIndice += 2){
+			
+
+		if(blockIndice >= _dnaBlockSizes.size()) break;
+			
+		dnaDecoderSetup(blockIndice);
+		qualDecoderSetup(blockIndice);
+
+		struct ReadInfos* ri = new ReadInfos{};
+		int nbRead = 0;
+		while(_ddecoder->getNextReadInfos(ri)){
+			
+			cout << "element " << nbRead << endl;
+			
+			cout << "read  : " << ri->sread;
+
+			cout << "anchor : " << getKmerString(ri->anchor) << endl;
+
+			cout << "anchorPos : " << ri->anchorPos << endl;
+
+
+			if (sequenceAnchorKmers->contains(ri->anchor))
+			{
+				cout << "anchor is in sequence" << endl;
+			}
+		
+		cout << endl;
+		++nbRead;
+		}
+	
+	}
+	clearRangeDecoder();
+	clearDecoders();
 }
 
 /*****requests*****/
