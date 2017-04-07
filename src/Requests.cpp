@@ -78,13 +78,14 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 
 /*****utilities*****/
 
-bool Requests::getNKmer(char* seq, uint nbKmer, char* kmer){
+bool Requests::getSequenceKmer(char* seq, uint pos, char* kmer){
 
-	if (nbKmer > strlen(seq)-_kmerSize){
+	if ((pos < 0) || (pos > strlen(seq)-_kmerSize)){
 		return false;
 	}
 
-	strncpy(kmer, seq+nbKmer, _kmerSize);
+	strncpy(kmer, seq+pos, _kmerSize);
+	kmer[_kmerSize] = '\0';
 	return true;
 }
 
@@ -92,10 +93,10 @@ bool Requests::getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t 
 
 	char kmer[_kmerSize+1];
 
-	while (this->getNKmer(sequence, *pos, kmer)){
+	while (this->getSequenceKmer(sequence, *pos, kmer)){
 
 		if (this->anchorExist(kmer, &anchorAddress)){
-			strncpy(anchor, kmer, _kmerSize);
+			strncpy(anchor, kmer, _kmerSize+1);
 			return true;
 		}
 		(*pos)++;
@@ -108,19 +109,21 @@ void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, u_int32_t >  * sequence
 										char* sequence){
 
 	u_int32_t anchorAddress;
-	uint nbKmer = 0;
+	u_int32_t pos = 0;
 	char kmer_chars[_kmerSize+1];
 	char anchor_chars[_kmerSize+1];
 	
-	while(getNKmer(sequence, nbKmer, kmer_chars))
+	while(getSequenceKmer(sequence, pos, kmer_chars))
 	{	
 
-		if (getNextAnchor(sequence, &nbKmer, anchor_chars, anchorAddress)){
+		if (getNextAnchor(sequence, &pos, anchor_chars, anchorAddress)){
 			kmer_type anchor = getKmerType(anchor_chars);
-			sequenceAnchorKmers->insert(anchor, anchorAddress);
+			sequenceAnchorKmers->insert(anchor, pos);
+			sequenceAnchorKmers->get(anchor, &pos);
+			//cout << "debug Requests::fillSequenceAnchorsDict - getseqachk : " << pos << endl;
 		}
 
-		nbKmer++;
+		pos++;
 	}
 }
 
@@ -147,8 +150,14 @@ string Requests::getKmerString(kmer_type kmer){
 
 Node Requests::getKmerNode(char* kmer_chars){
 
-	//kmer_type kmer = _kmerModel->codeSeed(kmer_chars, Data::ASCII).value() ;
 	kmer_type kmer = this->getKmerType(kmer_chars);
+	Node node = Node(Node::Value(kmer));
+
+	return node;
+}
+
+Node Requests::getKmerNode(kmer_type kmer){
+
 	Node node = Node(Node::Value(kmer));
 
 	return node;
@@ -170,6 +179,14 @@ bool Requests::anchorExist(char* kmer_chars, u_int32_t* anchorAddress){
 	kmerMin = min(kmer, revcomp(kmer, _kmerSize));
 
 	return _leon->anchorExist(kmerMin, anchorAddress);
+}
+
+unsigned char Requests::getKmerSignature(kmer_type kmer){
+	
+	Node node = getKmerNode(kmer);
+	//cout << "test kmerSignature array : " << (unsigned long) _signature_array[_graph.nodeMPHFIndex(node)] << endl;
+	//cout << "test kmerSignature compute :  " << (unsigned long) (hash1(kmer,0) & 255) << endl;
+	return _signature_array[_graph.nodeMPHFIndex(node)];
 }
 
 // decode functions
@@ -519,7 +536,7 @@ void Requests::fgetRequests(){
 
 			if(this->fgetKmer(kmer_req)){
 
-				if (this->isKmerInData(kmer_req)){
+				if (this->isKmerInGraph(kmer_req)){
 					std::cout << kmer_req << " is present in data" << std::endl;
 				}
 				else{
@@ -769,7 +786,7 @@ void Requests::printSequenceAnchors(char* sequence){
 
 	cout << "anchor kmers : " << endl;
 	
-	while(getNKmer(sequence, nbKmer, kmer))
+	while(getSequenceKmer(sequence, nbKmer, kmer))
 	{	
 
 		//cout << "anchor tested : " << kmer << endl;
@@ -798,15 +815,15 @@ void Requests::printSequenceAnchorsDict(char* sequence,
 
 
 	u_int32_t anchorAddress;
-	char anchor_chars[_kmerSize+1];
+	//char anchor_chars[_kmerSize+1];
 	uint nbKmer = 0;
 	char kmer[_kmerSize+1];
 	char anchor[_kmerSize+1];
 
-	while(getNKmer(sequence, nbKmer, kmer))
+	while(getSequenceKmer(sequence, nbKmer, kmer))
 	{	
 		if (getNextAnchor(sequence, &nbKmer, anchor, anchorAddress)){
-			cout << "anchor : " << anchor_chars << endl;
+			cout << "anchor : " << anchor << endl;
 			cout << "test if in dictionnary : " << endl;
 
 			printIsKmerInSequenceAnchorDict(anchor, sequenceAnchorKmers);
@@ -1192,11 +1209,18 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 void Requests::testSequenceMatchFile(char* sequence){
 
-	//get existing anchors in the sequence
+	//the array with colors of each sequence's part of read
+ 	int sequenceSize = strlen(sequence)-1;
+	bitset<NB_MAX_COLORS> sequenceMatchs[sequenceSize];
+
+	//get existing anchors in the sequence and create a dictionnary of <anchor, pos> 
 	u_int64_t dictSize = strlen(sequence);
 	u_int64_t nbcreated;
 	Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers = new Hash16<kmer_type, u_int32_t>(dictSize , &nbcreated);
 	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
+
+	
+
 
 	//decode commpressed file, to find matching anchors
 	initializeRangeDecoder();
@@ -1222,6 +1246,7 @@ void Requests::testSequenceMatchFile(char* sequence){
 
 		struct ReadInfos* ri = new ReadInfos{};
 		int nbRead = 0;
+		u_int32_t anchorSequencePos;
 		while(_ddecoder->getNextReadInfos(ri)){
 			
 			cout << "element " << nbRead << endl;
@@ -1229,13 +1254,36 @@ void Requests::testSequenceMatchFile(char* sequence){
 			cout << "read  : " << ri->sread;
 
 			cout << "anchor : " << getKmerString(ri->anchor) << endl;
+			cout << "revAnchor : " << getKmerString(ri->revAnchor) << endl;
 
 			cout << "anchorPos : " << ri->anchorPos << endl;
 
+			cout << "reversed : " << ri->revcomp << endl;
 
-			if (sequenceAnchorKmers->contains(ri->anchor))
-			{
+			cout <<endl << "norm" << endl;
+			bool exist = sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos);
+			cout << "anchor in seq : " << exist << " ; pos : " << anchorSequencePos << endl;
+			cout << "rev" << endl ;
+			exist = sequenceAnchorKmers->get(ri->revAnchor, &anchorSequencePos);
+			cout << "revAnchor in seq : " << exist << " ; pos : " << anchorSequencePos << endl;
+			cout<<endl;
+
+
+			cout << "colors : " << bitset<8>(getReadColor(ri)) << endl;
+			
+
+			// if read match with the sequence
+			// we add the read's kmers' colors to the sequence's kmer's colors
+			if(sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)){
+				bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
 				cout << "anchor is in sequence" << endl;
+
+				//TODO : 
+				//compare kmer per kmer, 
+				//		start from sequence[anchorSequencePos-anchorReadPos]
+				//			  to sequence[readSize-1]
+				//if match, add color : 
+				//sequenceMatchs[i] |= readColor; 
 			}
 		
 		cout << endl;
@@ -1245,6 +1293,86 @@ void Requests::testSequenceMatchFile(char* sequence){
 	}
 	clearRangeDecoder();
 	clearDecoders();
+}
+
+
+bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
+
+	kmer_type anchor = ri->anchor;
+	int readSize = ri->readSize;
+	int anchorPos = ri->anchorPos;
+	char read_chars[readSize+1];
+	strcpy(read_chars, ri->sread.c_str());
+	read_chars[readSize] = '\0';
+	cout << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
+	cout << "debug Requests::getReadColor - csread : " << read_chars << endl;
+
+	bitset<NB_MAX_COLORS> readColor = getKmerColors(anchor);
+	uint pos = anchorPos;
+	char kmer[_kmerSize+1]; 
+
+	//we search in right direction fisrt (more chance to eliminates wrong colors in one pass)
+	if (anchorPos < (readSize/2)){
+
+		++pos;
+		//we search untill only one color remains (or end of read)
+		while((getSequenceKmer(read_chars, pos, kmer)) && (readColor.count() > 1)){
+			
+			//we only take into acount solid kmers
+			if (isKmerInGraph(kmer)){
+				readColor &= getKmerColors(kmer);
+			}
+			++pos;
+		}
+
+		//we can stop if we have one color in the bitset
+		if (readColor.count() <= 1){
+			return readColor;
+		}
+
+		//else we have to finish the search in the other direction		
+		pos = anchorPos-1;
+		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
+			
+			if (isKmerInGraph(kmer)){
+				readColor &= getKmerColors(kmer);
+			}
+			--pos;
+		}
+		
+
+		return readColor;
+	}
+
+	//we search in the left direction first
+	else{
+
+		--pos;
+		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
+			
+			if (isKmerInGraph(kmer)){
+				readColor &= getKmerColors(kmer);
+			}
+			--pos;
+		}
+
+		if (readColor.count() <= 1){
+			return readColor;
+		}
+
+		pos = anchorPos+1;
+		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
+			
+			if (isKmerInGraph(kmer)){
+				readColor &= getKmerColors(kmer);
+			}
+			++pos;
+		}
+		
+
+		return readColor;
+	}
+
 }
 
 /*****requests*****/
@@ -1265,7 +1393,14 @@ int Requests::getKmerSize(){
 	return _kmerSize;
 }
 
-bool Requests::isKmerInData(char* kmer){
+bool Requests::isKmerInGraph(char* kmer){
+
+	Node node = getKmerNode(kmer);
+
+	return _graph.contains(node);
+}
+
+bool Requests::isKmerInGraph(kmer_type kmer){
 
 	Node node = getKmerNode(kmer);
 
@@ -1274,7 +1409,19 @@ bool Requests::isKmerInData(char* kmer){
 
 bitset<NB_MAX_COLORS> Requests::getKmerColors(char* kmer){
 
-	if (!this->isKmerInData(kmer)){
+	if (!this->isKmerInGraph(kmer)){
+		bitset<8> kmer_colors;
+		return kmer_colors;
+	}
+
+	Node node = getKmerNode(kmer);
+
+	return _color_array[_graph.nodeMPHFIndex(node)];
+}
+
+bitset<NB_MAX_COLORS> Requests::getKmerColors(kmer_type kmer){
+
+	if (!this->isKmerInGraph(kmer)){
 		bitset<8> kmer_colors;
 		return kmer_colors;
 	}
@@ -1294,9 +1441,9 @@ bool Requests::isSequenceInGraph(char* sequence){
 	int pos = 0;
 	char kmer[_kmerSize+1];
 
-	while (this->getNKmer(sequence, pos, kmer)){
+	while (this->getSequenceKmer(sequence, pos, kmer)){
 
-		if (!isKmerInData(kmer)){
+		if (!isKmerInGraph(kmer)){
 			return false;
 		}
 		++pos;
@@ -1311,9 +1458,9 @@ bitset<NB_MAX_COLORS> Requests::getSequenceColorsInGraph(char* sequence){
 	bitset<NB_MAX_COLORS> sequence_colors;
 	sequence_colors.set();
 	
-	while (!sequence_colors.none() && this->getNKmer(sequence, pos, kmer)){
+	while (!sequence_colors.none() && this->getSequenceKmer(sequence, pos, kmer)){
 		
-		if (!isKmerInData(kmer)){
+		if (!isKmerInGraph(kmer)){
 
 			return sequence_colors.reset();
 		}

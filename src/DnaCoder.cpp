@@ -680,7 +680,7 @@ int DnaEncoder::findExistingAnchor(u_int32_t* anchorAddress){
 	for(int i=0; i<_kmers.size(); i++){
 		kmer = _kmers[i];
 		kmerMin = min(kmer, revcomp(kmer, _kmerSize));
-		cout << "kmer : " << kmerMin << endl;
+		//cout << "kmer : " << kmerMin << endl;
 		if(_leon->anchorExist(kmerMin, anchorAddress)){
 			return i;
 		}
@@ -1586,6 +1586,9 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 			if((ri->revcomp = _rangeDecoder.nextByte(_readAnchorRevcompModel)) == 1){
 				ri->revAnchor = ri->anchor;
 				ri->anchor = revcomp(ri->anchor, _kmerSize);
+			}
+			else{
+				ri->revAnchor = revcomp(ri->anchor, _kmerSize);
 			}
 			
 			_currentSeq = ri->anchor.toString(_kmerSize);	

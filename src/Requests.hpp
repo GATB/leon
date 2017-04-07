@@ -86,7 +86,7 @@ class Requests
 		**-writes the nth kmer of the sequence in kmer
 		**-returns false if end of sequence
 		*/
-		bool getNKmer(char* seq, uint nbKmer, char* kmer);
+		bool getSequenceKmer(char* seq, uint n, char* kmer);
 		/*
 		**-writes the next anchor of the sequence in anchor, starting from 
 		**pos to the right extent
@@ -96,14 +96,22 @@ class Requests
 		bool getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t anchorAddress);
 		void fillSequenceAnchorsDict(Hash16<kmer_type, u_int32_t >  * sequenceAnchorKmers,
 										char* sequence);
+		/*
+		**-returns true if kmer is in anchor dictionnary
+		*/
+		bool anchorExist(char* kmer_chars, u_int32_t* anchorAddress);
+		/*
+		**-returns the signature of the kmer
+		*/
+		unsigned char getKmerSignature(kmer_type kmer); 
 
-		bool anchorExist(char* kmer_chars, u_int32_t* anchorAddress); 
 
 		//conversion functions
 		kmer_type getKmerType(char* kmer_chars);
 		char* getKmerChars(kmer_type kmer);
 		string getKmerString(kmer_type kmer);
 		Node getKmerNode(char* kmer_chars);
+		Node getKmerNode(kmer_type kmer);
 
 		// decode functions
 		//leon methods copies
@@ -124,7 +132,11 @@ class Requests
 		void dnaDecoderSetup(int blockIndice);
 		void qualDecoderSetup(int blockIndice);	
 
+		//TODO :
+		//remove this (called in dnadecoder, initially a leon method)
 		kmer_type getAnchor(ifstream* anchorDictFile, u_int32_t adress);
+
+
 
 
 		/*****query*****/
@@ -148,7 +160,7 @@ class Requests
 		void testSequenceMatchFile(char* sequence);
 
 
-
+		bitset<NB_MAX_COLORS> getReadColor(struct ReadInfos* ri);
 
 
 		/*****requests*****/
@@ -162,8 +174,10 @@ class Requests
 		// requests on kmers
 		// (if kmer is in graph, it is on data)
 
-		bool isKmerInData(char* kmer);
+		bool isKmerInGraph(char* kmer);
+		bool isKmerInGraph(kmer_type kmer);
 		bitset<NB_MAX_COLORS> getKmerColors(char* kmer);
+		bitset<NB_MAX_COLORS> getKmerColors(kmer_type kmer);
 		int getKmerNbColors(char* kmer);
 
 		// First step for sequences requests (or rapid search)

@@ -595,7 +595,7 @@ void Leon::coloriage (){
 		{
 			Sequence& seq = itSeq->item();
 			char* data = seq.getDataBuffer();
-			
+
 			// We set the data from which we want to extract kmers.
 			itKmer.setData ((*itSeq)->getData());
 			for (itKmer.first(); !itKmer.isDone(); itKmer.next())
@@ -603,8 +603,16 @@ void Leon::coloriage (){
 				Node node(Node::Value(itKmer->value()));
 				unsigned long  mphf_index = _graph.nodeMPHFIndex(node) ;
 				unsigned char signature = hash1(itKmer->value(),0) & 255 ;
+				//cout << "\tdebug - Leon::coloriage - kmer :" << ((kmer_type)(itKmer->value())).toString(_kmerSize) << endl; 
+				//if (((kmer_type)(itKmer->value())).toString(_kmerSize) == "ATCACTGAATACCCATTGTTGACGACGCCTC"){
+					//cout << "\tdebug - Leon::coloriage - kmer :" << ((kmer_type)(itKmer->value())).toString(_kmerSize) << endl; 
+					//cout << "\tdebug - Leon::coloriage - mphf_index :" << (int) mphf_index << endl;
+					//cout << "\tdebug - Leon::coloriage - signature :" << (int) signature << endl;
+					//cout << "\tdebug - Leon::coloriage - _signature_array[mphf_index] :" << (int) _signature_array[mphf_index] << endl;
+				//}
 				if ( signature ==  _signature_array[mphf_index] )
 				{
+					//cout << "\tdebug - Leon::coloriage - =============" << endl;
 					_color_array[mphf_index] |=   (1 << ii) ;
 					
 				}
@@ -2136,7 +2144,7 @@ void Leon::executeDecompression(){
 	
 
 	string dir = System::file().getDirectory(_inputFilename);
-	cout << "debug Leon::executeDecompression : filename" << _inputFilename << endl;
+	//cout << "debug Leon::executeDecompression : filename" << _inputFilename << endl;
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	
