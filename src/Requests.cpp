@@ -78,14 +78,18 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 
 /*****utilities*****/
 
-bool Requests::getSequenceKmer(char* seq, uint pos, char* kmer){
-
+bool Requests::getSequenceKmer(const char* seq, uint pos, char* kmer){
+	//cout << "\tdebug Requests::getSequenceKmer - before if" << endl;
 	if ((pos < 0) || (pos > strlen(seq)-_kmerSize)){
 		return false;
 	}
+	//cout << "\tdebug Requests::getSequenceKmer - after if" << endl;
+	//cout << "\tdebug Requests::getSequenceKmer - pos : " << pos << endl;
 
 	strncpy(kmer, seq+pos, _kmerSize);
+	//cout << "\tdebug Requests::getSequenceKmer - after strncpy" << endl;
 	kmer[_kmerSize] = '\0';
+	//cout << "\tdebug Requests::getSequenceKmer - after \0 affectation" << endl;
 	return true;
 }
 
@@ -134,7 +138,7 @@ kmer_type Requests::getKmerType(char* kmer_chars){
 	return kmer;
 }
 
-char* Requests::getKmerChars(kmer_type kmer){
+const char* Requests::getKmerChars(kmer_type kmer){
 
 	char kmer_chars[_kmerSize+1];
 	
@@ -144,6 +148,15 @@ char* Requests::getKmerChars(kmer_type kmer){
 
 	return kmer_chars;
 }
+
+void Requests::getSequenceChars(char* sequence_chars, string sequence){
+
+	strcpy(sequence_chars, sequence.c_str());
+	sequence_chars[sequence.size()] = '\0';
+	//cout << "\tdebug Requests::getSequenceChars - sequence_chars : " << sequence_chars << endl;
+	//return sequence_chars;
+}
+
 string Requests::getKmerString(kmer_type kmer){
 	return kmer.toString(_kmerSize);
 }
@@ -188,6 +201,94 @@ unsigned char Requests::getKmerSignature(kmer_type kmer){
 	//cout << "test kmerSignature compute :  " << (unsigned long) (hash1(kmer,0) & 255) << endl;
 	return _signature_array[_graph.nodeMPHFIndex(node)];
 }
+
+bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
+	//cout << "\tdebug  Requests::getReadColor - BEGIN" << endl; 
+	kmer_type anchor = ri->anchor;
+	int readSize = ri->readSize;
+	int anchorPos = ri->anchorPos;
+
+	char read_chars[ri->sread.size()+1];
+	getSequenceChars(read_chars, ri->sread);
+	//cout << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
+	//cout << "debug Requests::getReadColor - csread : " << read_chars << endl;
+
+	bitset<NB_MAX_COLORS> readColor = getKmerColors(anchor);
+	uint pos = anchorPos;
+	char kmer[_kmerSize+1]; 
+
+	//cout << "\tdebug  Requests::getReadColor - before search" << endl; 
+	//we search in right direction fisrt (more chance to eliminates wrong colors in one pass)
+	if (anchorPos < (readSize/2)){
+
+		++pos;
+		//we search untill only one color remains (or end of read)
+		while((getSequenceKmer(read_chars, pos, kmer)) && (readColor.count() > 1)){
+			
+			//we only take into acount solid kmers
+			if (isKmerInGraph(kmer)){
+				//cout << "\tdebug  Requests::getReadColor - before getKmerColors" << endl; 
+				readColor &= getKmerColors(kmer);
+				//cout << "\tdebug  Requests::getReadColor - after getKmerColors" << endl; 
+			}
+			++pos;
+		}
+
+		//we can stop if we have one color in the bitset
+		if (readColor.count() <= 1){
+			//cout << "\tdebug  Requests::getReadColor - END" << endl;
+			return readColor;
+		}
+
+		//else we have to finish the search in the other direction		
+		pos = anchorPos-1;
+		//cout << "\tdebug  Requests::getReadColor - before left search" << endl;
+		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
+			//cout << "\tdebug  Requests::getReadColor - during left search" << endl;
+			if (isKmerInGraph(kmer)){
+				//cout << "\tdebug  Requests::getReadColor - before getKmerColors" << endl; 
+				readColor &= getKmerColors(kmer);
+				//cout << "\tdebug  Requests::getReadColor - before getKmerColors" << endl; 
+			}
+			--pos;
+		}
+		
+		//cout << "\tdebug  Requests::getReadColor - END" << endl;
+		return readColor;
+	}
+
+	//we search in the left direction first
+	else{
+
+		--pos;
+		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
+			
+			if (isKmerInGraph(kmer)){
+				readColor &= getKmerColors(kmer);
+			}
+			--pos;
+		}
+
+		if (readColor.count() <= 1){
+			//cout << "\tdebug  Requests::getReadColor - END" << endl;
+			return readColor;
+		}
+
+		pos = anchorPos+1;
+		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
+			
+			if (isKmerInGraph(kmer)){
+				readColor &= getKmerColors(kmer);
+			}
+			++pos;
+		}
+		
+		//cout << "\tdebug  Requests::getReadColor - END" << endl;
+		return readColor;
+	}
+
+}
+
 
 // decode functions
 
@@ -413,10 +514,10 @@ void Requests::fgetRequests(){
 		"t read canchors pos\tto print compressed reads' anchors' positions in file order" << endl << 
 		"t read creads\t\tto print compressed reads in file order" << endl << 
 		"t read c-all\t\tto print all three above informations in file order" << endl << 
-		"t read cfile\t\tto print original compressed file" << endl << 
-		"t seq match cfile\t\tto get reads sharing same anchor that sequence" << endl << endl << endl <<
+		"t read cfile\t\tto print original compressed file" << endl  << endl <<
+	
 
-		"############ requests ############" << endl << 
+		"############ requests ############" << endl << endl <<
 		
 		"nb ds \t\t\tto get the number of datasets in the file" << endl << endl <<
 		
@@ -431,7 +532,8 @@ void Requests::fgetRequests(){
 
 		"seq p\t\t\tto know if the sequence is present in the data" << endl <<
 		"seq h\t\t\tto know in the sequence's colors' number in the data" << endl <<
-		"seq d\t\t\tto know in which datasets the sequence is present in the data" << endl << endl <<
+		"seq d\t\t\tto know in which datasets the sequence is present in the data" << endl <<
+		"seq m\t\t\tto get the sequence's matches with data" << endl << endl << 
 
 		"q \t\tto quit" << endl << endl;
 
@@ -515,12 +617,6 @@ void Requests::fgetRequests(){
 			this->testPrintAllHeadersReadsFile();
 		}
 
-		if (strcmp(request, "t seq match cfile")==0){
-			if (this->fgetSequence(sequence_req)){
-				this->testSequenceMatchFile(sequence_req);	
-			}
-		}
-
 		//requests
 
 
@@ -537,10 +633,12 @@ void Requests::fgetRequests(){
 			if(this->fgetKmer(kmer_req)){
 
 				if (this->isKmerInGraph(kmer_req)){
-					std::cout << kmer_req << " is present in data" << std::endl;
+					std::cout << kmer_req << endl <<
+					" is present in data" << std::endl;
 				}
 				else{
-					std::cout << kmer_req << " is not present in data" << std::endl;
+					std::cout << kmer_req << endl <<
+					" is not present in data" << std::endl;
 				}
 			}
 		}
@@ -559,13 +657,15 @@ void Requests::fgetRequests(){
 				bitset<NB_MAX_COLORS> kmer_colors = this->getKmerColors(kmer_req);
 
 				if (kmer_colors.none()){
-					cout <<  kmer_req << " is not present in any dataset" << endl;
+					cout <<  kmer_req << endl <<
+					" is not present in any dataset" << endl;
 				}
 
 				else{
 					//TODO get nb data sets to minimize the loop on NB_MAX COLORS
 
-					cout <<  kmer_req << " is present in the following dataset : " << endl;
+					cout <<  kmer_req << endl <<
+					" is present in the following dataset : " << endl;
 					for (int i=0; i<NB_MAX_COLORS; ++i){
 						if (kmer_colors.test(i)){
 							cout << i << endl;
@@ -581,10 +681,12 @@ void Requests::fgetRequests(){
 			{
 				if(this->isSequenceInGraph(sequence_req))
 				{
-					std::cout << sequence_req << " is present in graph" << std::endl;
+					std::cout << sequence_req << endl <<
+					" is present in graph" << std::endl;
 				}
 				else{
-					std::cout << sequence_req << " is not present in graph" << std::endl;
+					std::cout << sequence_req << endl <<
+					" is not present in graph" << std::endl;
 				}
 			}
 			
@@ -604,13 +706,15 @@ void Requests::fgetRequests(){
 				bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInGraph(sequence_req);
 
 				if (sequence_colors.none()){
-					cout <<  sequence_req << " is not present in any dataset" << endl;
+					cout <<  sequence_req << endl <<
+					" is not present in any dataset" << endl;
 				}
 
 				else{
 					//TODO get nb data sets to minimize the loop on NB_MAX COLORS
 
-					cout <<  sequence_req << " is present in the following dataset : " << endl;
+					cout <<  sequence_req << endl <<
+					 " is present in the following dataset : " << endl;
 					for (int i=0; i<NB_MAX_COLORS; ++i){
 						if (sequence_colors.test(i)){
 							cout << i << endl;
@@ -626,11 +730,13 @@ void Requests::fgetRequests(){
 			{
 				if (this->isSequenceInData(sequence_req))
 				{
-					std::cout << sequence_req << " is present in data" << std::endl;
+					std::cout << sequence_req << endl << 
+					" is present in data" << std::endl;
 				}
 				else
 				{
-					std::cout << sequence_req << " is not present in data" << std::endl;
+					std::cout << sequence_req << endl <<
+					 " is not present in data" << std::endl;
 				}
 			}
 		}
@@ -652,14 +758,16 @@ void Requests::fgetRequests(){
 
 				if (sequence_colors.none())
 				{
-					cout <<  sequence_req << " is not present in any dataset" << endl;
+					cout <<  sequence_req << endl <<
+					" is not present in any dataset" << endl;
 				}
 
 				else
 				{
 					//TODO get nb data sets to minimize the loop on NB_MAX COLORS
 
-					cout <<  sequence_req << " is present in the following dataset : " << endl;
+					cout <<  sequence_req << endl <<
+					 " is present in the following dataset : " << endl;
 					for (int i=0; i<NB_MAX_COLORS; ++i)
 					{
 						if (sequence_colors.test(i))
@@ -670,6 +778,21 @@ void Requests::fgetRequests(){
 				}
 			}
 			
+		}
+
+		if (strcmp(request, "seq m")==0){
+			if (this->fgetSequence(sequence_req)){
+
+				int sequenceSize = strlen(sequence_req);
+				bitset<NB_MAX_COLORS> sequenceColors[sequenceSize]; 
+				getSequenceFileMatchesInData(sequence_req, sequenceColors);	
+
+				//tmp print
+				for (int i = 0; i < sequenceSize; ++i)
+				{
+					cout << sequence_req[i] << " : " << bitset<NB_MAX_COLORS>(sequenceColors[i]) << endl;
+				}
+			}
 		}
 
 		if (strcmp(request, "q")==0)
@@ -1207,173 +1330,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 }
 
-void Requests::testSequenceMatchFile(char* sequence){
 
-	//the array with colors of each sequence's part of read
- 	int sequenceSize = strlen(sequence)-1;
-	bitset<NB_MAX_COLORS> sequenceMatchs[sequenceSize];
-
-	//get existing anchors in the sequence and create a dictionnary of <anchor, pos> 
-	u_int64_t dictSize = strlen(sequence);
-	u_int64_t nbcreated;
-	Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers = new Hash16<kmer_type, u_int32_t>(dictSize , &nbcreated);
-	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
-
-	
-
-
-	//decode commpressed file, to find matching anchors
-	initializeRangeDecoder();
-
-	decodeInfos();
-	headerSetUp();
-	dnaSetUp();
-	
-	decodeBloom();
-	decodeAnchorDict();
-
-	initializeDecoders();
-
-	for (int blockIndice = 0; 
-		blockIndice < _dnaBlockSizes.size(); 
-		blockIndice += 2){
-			
-
-		if(blockIndice >= _dnaBlockSizes.size()) break;
-			
-		dnaDecoderSetup(blockIndice);
-		qualDecoderSetup(blockIndice);
-
-		struct ReadInfos* ri = new ReadInfos{};
-		int nbRead = 0;
-		u_int32_t anchorSequencePos;
-		while(_ddecoder->getNextReadInfos(ri)){
-			
-			cout << "element " << nbRead << endl;
-			
-			cout << "read  : " << ri->sread;
-
-			cout << "anchor : " << getKmerString(ri->anchor) << endl;
-			cout << "revAnchor : " << getKmerString(ri->revAnchor) << endl;
-
-			cout << "anchorPos : " << ri->anchorPos << endl;
-
-			cout << "reversed : " << ri->revcomp << endl;
-
-			cout <<endl << "norm" << endl;
-			bool exist = sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos);
-			cout << "anchor in seq : " << exist << " ; pos : " << anchorSequencePos << endl;
-			cout << "rev" << endl ;
-			exist = sequenceAnchorKmers->get(ri->revAnchor, &anchorSequencePos);
-			cout << "revAnchor in seq : " << exist << " ; pos : " << anchorSequencePos << endl;
-			cout<<endl;
-
-
-			cout << "colors : " << bitset<8>(getReadColor(ri)) << endl;
-			
-
-			// if read match with the sequence
-			// we add the read's kmers' colors to the sequence's kmer's colors
-			if(sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)){
-				bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
-				cout << "anchor is in sequence" << endl;
-
-				//TODO : 
-				//compare kmer per kmer, 
-				//		start from sequence[anchorSequencePos-anchorReadPos]
-				//			  to sequence[readSize-1]
-				//if match, add color : 
-				//sequenceMatchs[i] |= readColor; 
-			}
-		
-		cout << endl;
-		++nbRead;
-		}
-	
-	}
-	clearRangeDecoder();
-	clearDecoders();
-}
-
-
-bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
-
-	kmer_type anchor = ri->anchor;
-	int readSize = ri->readSize;
-	int anchorPos = ri->anchorPos;
-	char read_chars[readSize+1];
-	strcpy(read_chars, ri->sread.c_str());
-	read_chars[readSize] = '\0';
-	cout << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
-	cout << "debug Requests::getReadColor - csread : " << read_chars << endl;
-
-	bitset<NB_MAX_COLORS> readColor = getKmerColors(anchor);
-	uint pos = anchorPos;
-	char kmer[_kmerSize+1]; 
-
-	//we search in right direction fisrt (more chance to eliminates wrong colors in one pass)
-	if (anchorPos < (readSize/2)){
-
-		++pos;
-		//we search untill only one color remains (or end of read)
-		while((getSequenceKmer(read_chars, pos, kmer)) && (readColor.count() > 1)){
-			
-			//we only take into acount solid kmers
-			if (isKmerInGraph(kmer)){
-				readColor &= getKmerColors(kmer);
-			}
-			++pos;
-		}
-
-		//we can stop if we have one color in the bitset
-		if (readColor.count() <= 1){
-			return readColor;
-		}
-
-		//else we have to finish the search in the other direction		
-		pos = anchorPos-1;
-		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
-			
-			if (isKmerInGraph(kmer)){
-				readColor &= getKmerColors(kmer);
-			}
-			--pos;
-		}
-		
-
-		return readColor;
-	}
-
-	//we search in the left direction first
-	else{
-
-		--pos;
-		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
-			
-			if (isKmerInGraph(kmer)){
-				readColor &= getKmerColors(kmer);
-			}
-			--pos;
-		}
-
-		if (readColor.count() <= 1){
-			return readColor;
-		}
-
-		pos = anchorPos+1;
-		while(getSequenceKmer(read_chars, pos, kmer) && (readColor.count() > 1)){
-			
-			if (isKmerInGraph(kmer)){
-				readColor &= getKmerColors(kmer);
-			}
-			++pos;
-		}
-		
-
-		return readColor;
-	}
-
-}
 
 /*****requests*****/
 
@@ -1479,12 +1436,126 @@ int Requests::getSequenceNbColorsInGraph(char* sequence){
 	return this->getSequenceColorsInGraph(sequence).count();
 }
 
+//TODO stop the algo when constructing the bitset array in getSequenceFileMatchesInData
+// if not present to limit timeloop
 bool  Requests::isSequenceInData(char* sequence)
 {
-	return true;
+	return !getSequenceColorsInData(sequence).none();
 }
 
-bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){}
+bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){
 
-int  Requests::getSequenceNbColorsInData(char* sequence){}
+	int sequenceSize = strlen(sequence);
+	bitset<NB_MAX_COLORS> sequenceMatches[sequenceSize];
+	getSequenceFileMatchesInData(sequence, sequenceMatches);
+
+	int sequencePos = 0;
+	bitset<NB_MAX_COLORS> sequenceColors;
+	sequenceColors.set();
+	while (!sequenceColors.none() && (sequencePos < sequenceSize)){
+
+		sequenceColors &= sequenceMatches[sequencePos];
+		++sequencePos;
+	}
+
+	return sequenceColors;
+}
+
+//TODO : count nb colors during construction of bitset sequenceColors
+// tolimit time loop
+int  Requests::getSequenceNbColorsInData(char* sequence){
+
+	return getSequenceColorsInData(sequence).count();
+}
+
+void Requests::getSequenceFileMatchesInData(
+						char* sequence, 
+						bitset<NB_MAX_COLORS> sequenceColors[]){
+
+	//the array with colors of each sequence's part of read
+ 	int sequenceSize = strlen(sequence);
+	//bitset<NB_MAX_COLORS> sequenceColors[sequenceSize];
+
+	//get existing anchors in the sequence and create a dictionnary of <anchor, pos> 
+	u_int64_t dictSize = strlen(sequence);
+	u_int64_t nbcreated;
+	Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers = new Hash16<kmer_type, u_int32_t>(dictSize , &nbcreated);
+	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
+
+	//decode commpressed file, to find matching anchors
+	initializeRangeDecoder();
+
+	decodeInfos();
+	headerSetUp();
+	dnaSetUp();
+	
+	decodeBloom();
+	decodeAnchorDict();
+
+	initializeDecoders();
+
+	for (int blockIndice = 0; 
+		blockIndice < _dnaBlockSizes.size(); 
+		blockIndice += 2){
+			
+
+		if(blockIndice >= _dnaBlockSizes.size()) break;
+			
+		dnaDecoderSetup(blockIndice);
+		qualDecoderSetup(blockIndice);
+
+		struct ReadInfos* ri = new ReadInfos{};
+		u_int32_t anchorSequencePos;
+		while(_ddecoder->getNextReadInfos(ri)){
+			
+			if(sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)){
+				
+				bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
+
+				char read_chars[ri->sread.size()+1];
+				getSequenceChars(read_chars, ri->sread);
+
+				int seqPos = max(((int)anchorSequencePos-ri->anchorPos),0);
+				int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
+				int sequenceMatchesLength = 0;
+
+				//compare char per char, 
+				while ((seqPos<sequenceSize)&&(readPos<ri->readSize)){
+
+					// if read match with the sequence for a certain minimal length
+					// we add the read's kmers' colors to the sequence's kmer's colors
+					if(sequence[seqPos] == read_chars[readPos]){
+						++sequenceMatchesLength;
+					}
+					else{
+						
+						if(sequenceMatchesLength >= NB_MIN_MATCHES){
+
+							for (int i = 0; i < sequenceMatchesLength; ++i)
+							{
+								sequenceColors[seqPos-i-1] |= readColor;
+							}
+						}
+						sequenceMatchesLength = 0;
+					}
+
+					++seqPos;
+					++readPos;
+				}
+				if(sequenceMatchesLength >= NB_MIN_MATCHES){
+
+					for (int i = 0; i < sequenceMatchesLength; ++i)
+					{
+						sequenceColors[seqPos-i-1] |= readColor;
+					}
+				}
+			}
+		}		
+	}
+
+	//cleaning decoders objects
+	clearRangeDecoder();
+	clearDecoders();
+}
+
 

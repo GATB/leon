@@ -61,6 +61,8 @@ class QualDecoder;
 //class Requests : public misc::impl::Tool
 
 #define NB_MAX_COLORS ((size_t) 8)
+//the minimum number of required matches with a read 
+#define NB_MIN_MATCHES 0
 //====================================================================================
 // ** AbstractHeaderCoder
 //====================================================================================
@@ -86,7 +88,7 @@ class Requests
 		**-writes the nth kmer of the sequence in kmer
 		**-returns false if end of sequence
 		*/
-		bool getSequenceKmer(char* seq, uint n, char* kmer);
+		bool getSequenceKmer(const char* seq, uint n, char* kmer);
 		/*
 		**-writes the next anchor of the sequence in anchor, starting from 
 		**pos to the right extent
@@ -103,12 +105,14 @@ class Requests
 		/*
 		**-returns the signature of the kmer
 		*/
-		unsigned char getKmerSignature(kmer_type kmer); 
+		unsigned char getKmerSignature(kmer_type kmer);
+		bitset<NB_MAX_COLORS> getReadColor(struct ReadInfos* ri); 
 
 
 		//conversion functions
 		kmer_type getKmerType(char* kmer_chars);
-		char* getKmerChars(kmer_type kmer);
+		const char* getKmerChars(kmer_type kmer);
+		void getSequenceChars(char* sequence_chars, string sequence);
 		string getKmerString(kmer_type kmer);
 		Node getKmerNode(char* kmer_chars);
 		Node getKmerNode(kmer_type kmer);
@@ -157,11 +161,6 @@ class Requests
 		void printTestAll();
 		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
-		void testSequenceMatchFile(char* sequence);
-
-
-		bitset<NB_MAX_COLORS> getReadColor(struct ReadInfos* ri);
-
 
 		/*****requests*****/
 
@@ -193,6 +192,8 @@ class Requests
 		bool isSequenceInData(char* sequence);
 		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence);
 		int getSequenceNbColorsInData(char* sequence);
+		void getSequenceFileMatchesInData(char* sequence, 
+			bitset<NB_MAX_COLORS> sequenceColors[]);
 
 		char request[1024];
 		int req_buffer_size;
