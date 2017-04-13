@@ -63,6 +63,7 @@ class QualDecoder;
 #define NB_MAX_COLORS ((size_t) 8)
 //the minimum number of required matches with a read 
 #define NB_MIN_MATCHES 0
+#define NB_MAX_SNPS 0
 //====================================================================================
 // ** AbstractHeaderCoder
 //====================================================================================

@@ -1474,7 +1474,8 @@ void Requests::getSequenceFileMatchesInData(
 
 	//the array with colors of each sequence's part of read
  	int sequenceSize = strlen(sequence);
-	//bitset<NB_MAX_COLORS> sequenceColors[sequenceSize];
+
+	int mismatches[NB_MAX_SNPS];
 
 	//get existing anchors in the sequence and create a dictionnary of <anchor, pos> 
 	u_int64_t dictSize = strlen(sequence);
@@ -1515,40 +1516,58 @@ void Requests::getSequenceFileMatchesInData(
 				char read_chars[ri->sread.size()+1];
 				getSequenceChars(read_chars, ri->sread);
 
-				int seqPos = max(((int)anchorSequencePos-ri->anchorPos),0);
+				int seqStartPos = max(((int)anchorSequencePos-ri->anchorPos),0);
+				int seqPos = seqStartPos;
 				int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
-				int sequenceMatchesLength = 0;
+				memset(mismatches, -1, NB_MAX_SNPS);
+				int nbMismatches = 0;
 
 				//compare char per char, 
 				while ((seqPos<sequenceSize)&&(readPos<ri->readSize)){
 
-					// if read match with the sequence for a certain minimal length
-					// we add the read's kmers' colors to the sequence's kmer's colors
-					if(sequence[seqPos] == read_chars[readPos]){
-						++sequenceMatchesLength;
-					}
-					else{
-						
-						if(sequenceMatchesLength >= NB_MIN_MATCHES){
+					if(sequence[seqPos] != read_chars[readPos]){
+						cerr << endl << "sequenceSize : " << sequenceSize << endl << "seqPos : " << seqPos << endl << endl;
+						cerr << "readSize : " << ri->readSize << endl << "readPos : " << readPos << endl << endl;
+						cerr << "mismatch : " << endl << 
+								 "sequence[seqPos] : " << sequence[seqPos] << endl <<
+								 "read_chars[readPos] : " << read_chars[readPos] << endl;
 
-							for (int i = 0; i < sequenceMatchesLength; ++i)
-							{
-								sequenceColors[seqPos-i-1] |= readColor;
-							}
+						++nbMismatches;
+						if(nbMismatches > NB_MAX_SNPS){
+							cerr << "nbMismatches > NB_MAX_SNPS" << endl <<endl;
+							break;
 						}
-						sequenceMatchesLength = 0;
+						//we keep the mismatch position on the sequence
+						//for when we'll have to fill the array
+						mismatches[nbMismatches-1] = seqPos;
 					}
 
 					++seqPos;
 					++readPos;
 				}
-				if(sequenceMatchesLength >= NB_MIN_MATCHES){
-
-					for (int i = 0; i < sequenceMatchesLength; ++i)
+				if(nbMismatches <= NB_MAX_SNPS){
+					cerr << "nbMismatches <= NB_MAX_SNPS" << endl;
+					cerr << "read color : " << readColor << endl;
+					int nbMismatch = 0;
+					int alignementEndPos = seqPos;
+					for (seqPos = seqStartPos; (seqPos < alignementEndPos); ++seqPos)
 					{
-						sequenceColors[seqPos-i-1] |= readColor;
+						cerr << sequence[seqPos] << " - seqPos : " << seqPos << endl;
+						//we verify that it isn't a mismatch position
+						
+						if (seqPos != mismatches[nbMismatch]){
+							sequenceColors[seqPos] |= readColor;
+						}
+						else{
+							//we verify that we don't exceed the nbMismatches before increment
+							//to avoid seg fault
+							if (nbMismatch < nbMismatches-1){
+								++nbMismatch;
+							}
+						}
 					}
 				}
+				
 			}
 		}		
 	}
