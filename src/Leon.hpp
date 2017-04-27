@@ -55,6 +55,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 #include <string>
 #include <sstream>
+#include <list>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
 #include "Requests.hpp"
@@ -141,6 +142,10 @@ class Leon : public misc::impl::Tool
 	
 		bool _isFasta;
 		bool _noHeader;
+		bool _orderReads;
+		//list<struct ReadInfos>* anchorsSequences;
+		vector< list< struct ReadInfos > > anchorsSequences;
+
 
 	bool _lossless;
 	//for qual compression
@@ -158,6 +163,7 @@ class Leon : public misc::impl::Tool
 		u_int64_t _MCmultipleSolid;
 		//u_int64_t _MCmultipleNoSolid;
 	
+		int _coverage;
 		u_int64_t _blockCount;
 		//u_int64_t _noAnchor_full_N_kmer_count;
 		//u_int64_t _noAnchor_with_N_kmer_count;

@@ -217,9 +217,7 @@ void Leon::execute()
 	
 	if(getParser()->saw ("-lossless"))
 		_lossless = true;
-	
-	//	if(getParser()->saw ("-order"))....
-	_orderReads = true;
+		
 
     _compress = false;
     _decompress = false;
@@ -559,80 +557,62 @@ void Leon::coloriage (){
 																"coloriage"
 																);
 	LOCAL (itKmers);
-
-	//TODO :
-	//find wright size for signature array and color array
-	_signature_array =  (unsigned char  *)  malloc((solidFileSize*2)*sizeof(unsigned char));
-	_color_array = (unsigned char  *)  calloc(solidFileSize*2,sizeof(unsigned char));
-
-	cerr << "debug Leon::coloriage - before filling signature array" << endl;
-	//test variables
-	int maxIndex = 0;
+	
+	_signature_array =  (unsigned char  *)  malloc(solidFileSize*sizeof(unsigned char));
+	_color_array = (unsigned char  *)  calloc(solidFileSize,sizeof(unsigned char));
+	
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
 	{
-		//cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) << endl;
+	
 		uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
-
+		
 		Node node(Node::Value(itKmers->item().getValue()));
-
-		if (maxIndex < _graph.nodeMPHFIndex(node)){
-			maxIndex = _graph.nodeMPHFIndex(node);
-			cerr << "\t\tmaxIndex : " << maxIndex << endl;
 		
-			cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) << endl;
-			//cerr << "debug Leon::coloriage - _signature_array[  _graph.nodeMPHFIndex(node) ]  = hashvalue  & 255 ; before" << endl;
-			cerr << "debug Leon::coloriage - _graph.nodeMPHFIndex(node) : " << _graph.nodeMPHFIndex(node) << endl;
-			cerr << "debug Leon::coloriage - _signature_array size : " << (solidFileSize*2)*sizeof(unsigned char) << endl;
-		//cerr << "debug Leon::coloriage - graph size : " << _graph.size() << endl;
-		}
 		_signature_array[  _graph.nodeMPHFIndex(node) ]  = hashvalue  & 255 ;
-		//cerr << "debug Leon::coloriage - _signature_array[  _graph.nodeMPHFIndex(node) ]  = hashvalue  & 255 ; after" << endl;
 		
-			//cerr << (unsigned long) _signature_array[  _graph.nodeMPHFIndex(node) ] << endl;
-			//cerr << "test kmerSignature array : " << (unsigned long) _signature_array[_graph.nodeMPHFIndex(node)] << endl;
-			//cerr << "test kmerSignature compute :  " << (unsigned long) (hash1(itKmers->item().getValue(),0) & 255) << endl;
-	
+	//	printf("%u \n",_signature_array[  _graph.nodeMPHFIndex(node) ]);
+		
 	}
-	cerr << "debug Leon::coloriage - after filling signature array" << endl;
 	
 	
-	Iterator<Sequence>* it = _inputBank->iterator(); 
+	
+	
+	
+	Iterator<Sequence>* it = _inputBank->iterator();
 	std::vector<Iterator<Sequence>*> itBanks =  it->getComposition();
 	int _nbBanks = itBanks.size();
+	
 
 	#ifdef PRINT_DEBUG 
 	printf("nb opened banks  %i \n",_nbBanks);
 	#endif
+	
 	Kmer<>::ModelCanonical model (_kmerSize);
 
 	// We declare a kmer iterator
 	Kmer<>::ModelCanonical::Iterator itKmer (model);
+	
+	
 	for (size_t ii=0; ii<_nbBanks; ii++)
 	{
 		Iterator<Sequence>* itSeq = itBanks[ii];
-		cout << "banque : "<< ii << endl;
+
 		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
 		{
 			Sequence& seq = itSeq->item();
 			char* data = seq.getDataBuffer();
-
+			
 			// We set the data from which we want to extract kmers.
 			itKmer.setData ((*itSeq)->getData());
+			
 			for (itKmer.first(); !itKmer.isDone(); itKmer.next())
 			{
+				
 				Node node(Node::Value(itKmer->value()));
 				unsigned long  mphf_index = _graph.nodeMPHFIndex(node) ;
 				unsigned char signature = hash1(itKmer->value(),0) & 255 ;
-				//cout << "\tdebug - Leon::coloriage - kmer :" << ((kmer_type)(itKmer->value())).toString(_kmerSize) << endl; 
-				//if (((kmer_type)(itKmer->value())).toString(_kmerSize) == "ATCACTGAATACCCATTGTTGACGACGCCTC"){
-					//cout << "\tdebug - Leon::coloriage - kmer :" << ((kmer_type)(itKmer->value())).toString(_kmerSize) << endl; 
-					//cout << "\tdebug - Leon::coloriage - mphf_index :" << (int) mphf_index << endl;
-					//cout << "\tdebug - Leon::coloriage - signature :" << (int) signature << endl;
-					//cout << "\tdebug - Leon::coloriage - _signature_array[mphf_index] :" << (int) _signature_array[mphf_index] << endl;
-				//}
 				if ( signature ==  _signature_array[mphf_index] )
 				{
-					//cout << "\tdebug - Leon::coloriage - =============" << endl;
 					_color_array[mphf_index] |=   (1 << ii) ;
 					
 				}
@@ -640,7 +620,7 @@ void Leon::coloriage (){
 			}
 		}
 	}
-
+	
 	
 //	for(int cc = 0; cc< solidFileSize ; cc++)
 //	{
@@ -648,6 +628,7 @@ void Leon::coloriage (){
 //		 std::cout << std::bitset<8>(_color_array[cc]) << std::endl;
 //		
 //	}
+	
 	
 	#ifdef PRINT_DEBUG 
 	//test print
@@ -669,6 +650,7 @@ void Leon::coloriage (){
       //  for (int i=0; i<3/*solidFileSize*/; ++i){
        //   cout << "sig nb " << i << " : " << _color_array[  i] << endl;
         //}
+
 
 	std::cout <<  "saving signatures" << std::endl;
 	#endif
@@ -748,6 +730,8 @@ void Leon::coloriage (){
     }
 
 
+
+
 	Iterator<kmer_count>* itKmers_test = createIterator<kmer_count> (
 																solidCollection.iterator(),
 																nb_kmers_infile
@@ -766,6 +750,7 @@ void Leon::coloriage (){
 
 	fclose(signature_file);
 	fclose(color_file);
+	
 }
 
 
@@ -1166,20 +1151,14 @@ void Leon::executeCompression(){
     /*************************************************/
 
 	//TODO test modif abundance default value : 4
-       // _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
-	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s",_kmerSize, _h5OutputFilename.c_str());
+        _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
+	
 //	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s", _kmerSize, _h5OutputFilename.c_str());
 	
 
-/* TEST GRAPH CONTAINS (with toy.fasta)
-     //string kmer_chars = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz";
-	cout << "kmer size : " << _kmerSize << endl;
-	//string kmer_chars = "GCTCTAGATTTTACAGTATCT"; // (=k21) not present
-	//string kmer_chars = "GCTCTAGATTTTACAGTTTCT"; // (=k21) present
-	//string kmer_chars = "GCTCTAGATTTTACAGTATCTAGTTAGGGGC"; // (=k31) not present
-	//string kmer_chars = "GCTCTAGATTTTACAGTTTCTAGTTAGGGGC"; // (=k31) present
-	//string kmer_chars = "GCTCTAGATTTTACAGTATCTAGTTAGGGGCAGCTCATATCTATACTG"; // (>k) not present
-	string kmer_chars = "GCTCTAGATTTTACAGTTTCTAGTTAGGGGCAGCTCATATCTTTACTG"; // (>k) present
+	//string kmer_chars = "GCTCTAGATTTTACAGTTTCT";
+	//string kmer_chars = "GCTCTAGATTTTACAETTTCT";
+	string kmer_chars = "GCTCTAGATTTTACAGTETCTAGTTAGGGGC";
 
     //kmer_type kmer = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ;
     _kmerModel = new KmerModel(_kmerSize);
@@ -1194,10 +1173,9 @@ void Leon::executeCompression(){
     else{
         std::cout << kmer_chars << " is not present" << std::endl;
     }
-    */
 	
 	coloriage();
-
+	
 	u_int64_t nb_kmers = 0;// _graph.iterator().size();
 	//printf("nb kmers %llu \n",nb_kmers);
 	// remove("kcount.h5.h5");
@@ -1206,6 +1184,7 @@ void Leon::executeCompression(){
     /*************************************************/
     // We create the modified file
     /*************************************************/
+    
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
     //_outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
@@ -1233,6 +1212,8 @@ void Leon::executeCompression(){
 	setBlockWriter (new OrderedBlocks(_outputFile, _nb_cores ));
 
 	
+
+	
 #ifdef PRINT_DEBUG
 	cout << "\tOutput filename: " << _outputFilename << endl;
 	cout << "prefix " << prefix << endl;
@@ -1257,8 +1238,104 @@ void Leon::executeCompression(){
 	else{
 		std::cout << kmer_chars << " is not present" << std::endl;
 	}*/
+	
+//TMP REQUEST EMPLACEMENT CODE TEST
+	if (_request){
+
+		cout << "option requests catched" << endl;
 
 
+	Kmer<>::ModelCanonical model (_kmerSize);
+
+
+		std::string h5count_file  = "kcount.h5";
+		Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
+		LOCAL (storage);
+		
+		Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
+		
+
+		Requests requests = Requests(_inputBank, baseOutputname, _graph, model, solidCollection, _kmerSize);
+		//Requests * requests = Requests::Requests(_inputBank); 
+		//HeaderDecoder * header_decoder = (HeaderDecoder*) args;
+
+		char req[1024];
+
+		bool quit_requests = false;
+		do{
+		//scanf(req);
+		cout <<
+		"############# debug #############" << endl << endl <<
+		"sig \t\tto print sinatures" << endl <<
+		"col \t\tto print colors" << endl <<
+		"seq \t\tto print sequences" << endl <<
+		"kmers \t\tto print kmers" << endl <<
+		"mphf \t\tto print mphf indexes" << endl <<
+		"testall \tto print kmers, indexes in mphf, color and signature" << endl << endl <<
+		"############ requests ############" << endl << 
+		"kmer s \t\tto get size of kmers" << endl <<
+		"kmer p \t\tto know if the kmer is present in the data" << endl <<
+		"kmer h \t\tto know in how many datasets the kmer is present" << endl <<
+		"kmer d \t\tto know in which datasets the kmer is present" << endl <<
+		"q \t\tto quit" << endl << endl;
+		gets(req);
+		cout << endl;
+
+
+		//debug
+		if (strcmp(req, "sig")==0){
+			requests.printSignatures();
+		}
+
+		if (strcmp(req, "col")==0){
+			requests.printColors();
+		}
+
+		if (strcmp(req, "seq")==0){
+			requests.printSequences();
+		}
+
+		if (strcmp(req, "kmers")==0){
+			requests.printKmers();
+		}
+
+		if (strcmp(req, "mphf")==0){
+			requests.printMPHFIndexes();
+		}
+
+		if (strcmp(req, "testall")==0){
+			requests.printTestAll();
+		}
+
+		//requests
+
+		if (strcmp(req, "kmer s")==0){
+			requests.printKmerSize();
+		}
+
+		if (strcmp(req, "kmer p")==0){
+
+			char searched_kmer[1024];
+			std::cout << "enter the kmer :" << std::endl << std::endl;
+			gets(searched_kmer);
+			requests.isKmerInData(searched_kmer);
+		}
+
+		if (strcmp(req, "kmer h")==0){
+		}
+
+		if (strcmp(req, "kmer d")==0){
+		}
+
+		if (strcmp(req, "q")==0){
+			quit_requests = true;
+		}
+
+		}while(!quit_requests);
+		return;
+	}
+
+//END TMP REQUEST EMPLACEMENT CODE TEST
 
     //Compression
 	if(! _noHeader)
@@ -1278,46 +1355,6 @@ void Leon::executeCompression(){
 	
 	
 	endCompression();
-
-	//TMP REQUEST EMPLACEMENT CODE TEST
-
-	//DnaDecoder* dd = new DnaDecoder(this, _inputFilename);
-	
-
-	cout << _anchorKmers->size() << endl;
-	//anchorExist(, anchorAddress);
-	if (_request){
-
-		cout << "option requests catched" << endl;
-
-
-	Kmer<>::ModelCanonical model (_kmerSize);
-
-
-		std::string h5count_file  = "kcount.h5";
-		Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
-		LOCAL (storage);
-		
-		Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
-		
-		DnaDecoder* dd = new DnaDecoder(this, _outputFilename);
-
-		Requests requests = Requests(_inputBank, baseOutputname, _graph, 
-			model, solidCollection, _kmerSize, _anchorKmers, this, dd/*, 
-			_generalModel, _numericModel, _anchorDictModel*/);
-
-		//do{
-
-		requests.fgetRequests();
-
-		//}while(!requests.end_requests);
-		return;
-	}
-
-	//originally in endCompression();
-	delete _anchorKmers;
-
-//END TMP REQUEST EMPLACEMENT CODE TEST
 }
 
 
@@ -1676,31 +1713,21 @@ void Leon::startDnaCompression(){
 	#ifdef PRINT_DEBUG
 		cout << endl << "Start reads compression" << endl;
     #endif
+    
+	
 
 	//Create and fill bloom
     //createBloom ();
    // LOCAL (_bloom); //now we need it later
     
 	int64_t nbestimated = _inputBank->estimateNbItems();
-
-	//TODO : replace the /10 by /x, where x is the real coverage
-	// if x is given in parameters
-	_coverage = nbestimated/10;
 	
-	if (_orderReads){
-	//create ordered read table
 
-		anchorsSequences = vector<list<struct ReadInfos>>(nbestimated/10, list<struct ReadInfos>());
 
-		cerr << "Leon::startDnaCompression - nbestimated = " << nbestimated << endl;
-		for (int i = 0; i<nbestimated/10; ++i){
-			cerr << "Leon::startDnaCompression - i = " << i << endl;
-			anchorsSequences[i] = list<ReadInfos>();
-		}
-	}
-
+//	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( (nbestimated/10) *  sizeof(u_int32_t)  *10LL /1024LL / 1024LL ); // hmm  Hash16 would need a constructor with sizeof main entry //maybe *2 for low coverage dataset
 	u_int64_t nbcreated ;
 	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated ); //creator with nb entries given
+//	printf("asked %lli entries, got %llu \n",nbestimated/10 ,nbcreated);
 	
     Iterator<Sequence>* itSeq = createIterator<Sequence> (
                                                           _inputBank->iterator(),
@@ -1735,27 +1762,6 @@ void Leon::startDnaCompression(){
 	//getDispatcher()->iterate (itSeq,  HeaderEncoder(this, &nb_threads_living), 10000);
 	getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
 	
-	if (_orderReads){
-
-		DnaEncoder* de = new DnaEncoder(this);
-
-		//write the table here ??
-		cerr << "debug Leon::startDnaCompression - ordered reads : " << endl;
-		for (int i = 0; i<anchorsSequences.size(); ++i){
-			list<struct ReadInfos> mylist = anchorsSequences[i];
-			std::cout << "\tdebug Leon::startDnaCompression - index " << i<< " contains:" << endl;
-  			for (std::list<struct ReadInfos>::iterator it=mylist.begin(); it != mylist.end(); ++it)
-   				std::cout << ' ' << it->cread << endl;
-   			cerr << endl;
-		
-			}
-
-		//write ordered dna part
-		de->encodeReadsInfos(anchorsSequences);
-
-		delete de;
-	}
-
 	endDnaCompression();
 	
 	if(! _isFasta)
@@ -1858,9 +1864,7 @@ void Leon::endDnaCompression(){
 	//_anchorKmers.clear();
 	//_anchorKmers->clear();
 	
-
-	//originally here
-	//delete _anchorKmers;
+	delete _anchorKmers;
 
 
 }
@@ -2195,7 +2199,7 @@ void Leon::executeDecompression(){
 	
 
 	string dir = System::file().getDirectory(_inputFilename);
-	//cout << "debug Leon::executeDecompression : filename" << _inputFilename << endl;
+	
 	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
 	
@@ -2867,7 +2871,7 @@ void Leon::endDecompression(){
 				if(newBankIt->isDone())
 					cout << "\tOK" << endl;
 				else
-					cout << "\tOriginal file end but not the decompressed file" << endl;
+					cout << "\tOriginal file end but not the decomrpessed file" << endl;
 				break;
 			}
 			

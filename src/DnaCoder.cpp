@@ -182,6 +182,9 @@ AbstractDnaCoder(leon), _itKmer(_kmerModel), _totalDnaSize(0), _readCount(0), _M
 _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, _MCmultipleNoSolid(0)
 {
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
+	
+	_orderReads = _leon->_orderReads;
+	//cerr << "DnaEncoder::DnaEncoder - _orderReads : " << _orderReads << endl;
 
 #ifdef PRINT_DISTRIB
 	_distrib.resize(maxSequences);
@@ -216,7 +219,7 @@ _MCuniqSolid (0), _MCuniqNoSolid(0), _MCnoAternative(0), _MCmultipleSolid(0)//, 
 #endif
 
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
-
+	_orderReads = copy._orderReads;
 	startBlock();
 
 	
@@ -340,10 +343,14 @@ void DnaEncoder::operator()(Sequence& sequence){
 	_sequences.insert(_sequences.begin(), _sequence);
 #endif
 
-	if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
+	//_orderReads = true;//_leon->_orderReads;
+
+	if (!_orderReads){
+		if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
 		
-		writeBlock();
-		startBlock();
+			writeBlock();
+			startBlock();
+		}
 	}
 
 }
@@ -437,14 +444,63 @@ void DnaEncoder::execute(){
 
 	//cout << anchorPos << endl;
 
+	//cerr << "debug DnaEncoder::execute - orderReads = " << this->_orderReads << endl;
+
 	if(anchorPos == -1)
 		encodeNoAnchorRead();
 	else{
+		if (_orderReads){
+
+			vector< list< struct ReadInfos > >& anchorsSequences = _leon->anchorsSequences;
+
+			/*
+			** create and insert ReadInfos in the wright list of the table
+			** we keep only the minimal read's info needed to minimize
+			** memory use
+			*/
+			struct ReadInfos* ri = new ReadInfos{};
+
+			//ri->sequence = *_sequence;
+			ri->readType = 0;
+			ri->readSize = _readSize;
+			//get read
+
+			ri->cread = (char*)malloc((_readSize+1)*sizeof(char));
+			strncpy(ri->cread, _sequence->getDataBuffer(), _readSize);
+			ri->cread[_readSize] = '\0';
+
+			ri->anchorPos = anchorPos;
+			ri->anchorAddress = anchorAddress;
+			ri->sread = ri->cread;
+			
+			//ri->revcomp =
+			//ri->revAnchor =
+			//ri->revcomp =
+			//ri->NposCount =
+			//ri->Npos =
+			//ri->leftErrorPos =
+			//ri->nbLeftError =
+			
+			
+
+			//insert the read in the ordered table
+
+			cerr << "\tdebug DnaEncoder::execute - anchorAddress = " << anchorAddress << endl;
+
+			if (anchorAddress >= anchorsSequences.size()){
+				anchorsSequences.resize(anchorsSequences.size() + _leon->_coverage);
+			}
+			anchorsSequences[anchorAddress].push_back(*ri);
+		}
+		else{
 		encodeAnchorRead(anchorPos, anchorAddress);
+		}
 	}
 	//}
 	
-	endRead();
+	if (!_orderReads){
+		endRead();
+	}
 
 }
 
@@ -709,6 +765,17 @@ bool DnaEncoder::isReadAnchorable(){
 
 	return nbKmerSolid >= 2;
 
+}
+
+void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences){
+
+	for (int index=0; index<anchorsSequences.size(); index++){
+
+		list<struct ReadInfos> riList = anchorsSequences[index];
+		for (list<struct ReadInfos>::iterator ri=riList.begin(); ri != riList.end(); ++ri){
+   		
+   		}
+	}
 }
 
 void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
@@ -1565,7 +1632,7 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 
 //TODO : remove dupplication code with decodeAnchorRead
 bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
-
+	cerr << "\tdebug DnaDecoder::getNextReadInfos - BEGIN " << endl;
 	if (_processedSequenceCount < _sequenceCount){
 		ri->readType = _rangeDecoder.nextByte(_readTypeModel);
 
@@ -1594,17 +1661,21 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 			_currentSeq = ri->anchor.toString(_kmerSize);	
 			ri->leftErrorPos.clear();
 			ri->Npos.clear();
-			
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - anchor :  " << ri->anchor.toString(_kmerSize) << endl;
+
 			//Decode N pos
 			_prevNpos = 0;
-			ri->NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count before :  " << ri->NposCount << endl;
 
+			ri->NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+cerr << "\tdebug DnaDecoder::getNextReadInfos - GOOD " << endl;
+cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count :  " << ri->NposCount << endl;
 			for(int i=0; i<ri->NposCount; i++){
 				u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
 				ri->Npos.push_back(nPos);
 				_prevNpos = nPos;
 			}
-			
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - CRASH " << endl;
 			//Decode error pos
 			ri->nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
 
@@ -1633,6 +1704,7 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 				_currentSeq[_Npos[i]] = 'N';
 			}
 		}
+		//if not anchored read
 		else if(ri->readType == 1){
 				
 			_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _noAnchorReadSizeValueModel);

@@ -42,6 +42,26 @@ using namespace std;
 class Leon;
 class Requests;
 
+struct ReadInfos{
+
+	Sequence sequence;
+	u_int8_t readType;
+	int readSize;
+	int anchorPos;
+	u_int64_t anchorAddress;
+	kmer_type anchor;
+	kmer_type revAnchor;
+	int revcomp;
+	u_int64_t NposCount;
+	vector<int> Npos;
+	vector<int> leftErrorPos;
+	u_int64_t nbLeftError;
+	char* cread;
+	string sread;
+
+
+};
+
 //====================================================================================
 // ** AbstractDnaCoder
 //====================================================================================
@@ -52,6 +72,7 @@ class AbstractDnaCoder
 		
 	protected:
 		Leon* _leon;
+		bool _orderReads;
 		collections::impl::IBloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 
 		Order0Model _readSizeDeltaTypeModel;
@@ -128,6 +149,8 @@ class DnaEncoder : AbstractDnaCoder
 		~DnaEncoder();
 
 		void operator()(Sequence& sequence);
+
+		void encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences);
 		
 	private:
 	
@@ -179,6 +202,7 @@ class DnaEncoder : AbstractDnaCoder
 		bool isReadAnchorable();
 		int findExistingAnchor(u_int32_t* anchorAddress);
 		
+
 		void encodeAnchorRead(int anchorPos, u_int32_t anchorAddress);
 		kmer_type buildBifurcationList(int pos, kmer_type kmer, bool rightExtend);
 		//int buildBifurcationList(int pos, bool rightExtend);
@@ -223,23 +247,6 @@ class DnaEncoder : AbstractDnaCoder
 // ** DnaDecoder
 //====================================================================================
 
-struct ReadInfos{
-
-	u_int8_t readType;
-	int readSize;
-	int anchorPos;
-	u_int64_t anchorAddress;
-	kmer_type anchor;
-	kmer_type revAnchor;
-	int revcomp;
-	u_int64_t NposCount;
-	vector<int> Npos;
-	vector<int> leftErrorPos;
-	u_int64_t nbLeftError;
-	string sread;
-
-};
-
 class DnaDecoder : AbstractDnaCoder
 {
 		
@@ -261,6 +268,7 @@ class DnaDecoder : AbstractDnaCoder
 
 		Requests* _requests;
 		bool _decodeReq = false;
+
 		
 	private:
 	

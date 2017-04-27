@@ -176,6 +176,18 @@ Node Requests::getKmerNode(kmer_type kmer){
 	return node;
 }
 
+int Requests::getNodeMPHFIndex(kmer_type kmer){
+
+	Node node = getKmerNode(kmer);
+	return _graph.nodeMPHFIndex(node);
+}
+
+int Requests::getNodeMPHFIndex(char* kmer_chars){
+
+	Node node = getKmerNode(kmer_chars);
+	return _graph.nodeMPHFIndex(node);
+}
+
 //convert to leon method
 //TODO : copier find existing anchor (avec revcomp)
 
@@ -1507,7 +1519,10 @@ void Requests::getSequenceFileMatchesInData(
 
 		struct ReadInfos* ri = new ReadInfos{};
 		u_int32_t anchorSequencePos;
+		cerr << "getNextReadInfos before" << endl;
 		while(_ddecoder->getNextReadInfos(ri)){
+
+			cerr << "getNextReadInfos after" << endl;
 			
 			if(sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)){
 				
@@ -1569,6 +1584,7 @@ void Requests::getSequenceFileMatchesInData(
 				}
 				
 			}
+			cerr << "getNextReadInfos before" << endl;
 		}		
 	}
 

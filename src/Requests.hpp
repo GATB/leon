@@ -117,6 +117,8 @@ class Requests
 		string getKmerString(kmer_type kmer);
 		Node getKmerNode(char* kmer_chars);
 		Node getKmerNode(kmer_type kmer);
+		int getNodeMPHFIndex(kmer_type kmer);
+		int getNodeMPHFIndex(char* kmer_chars);
 
 		// decode functions
 		//leon methods copies
