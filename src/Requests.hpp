@@ -34,6 +34,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 #include <string>
 #include <vector>
+#include <list>
 #include <ctype.h>
 #include <cstdio>
 #include <fstream>
@@ -97,8 +98,12 @@ class Requests
 		**-returns false if end of sequence
 		*/
 		bool getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t anchorAddress);
-		void fillSequenceAnchorsDict(Hash16<kmer_type, u_int32_t >  * sequenceAnchorKmers,
+		void fillSequenceAnchorsDict(Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers,
 										char* sequence);
+		/*
+		**delete the created lists of the hash table
+		*/
+		void emptySequenceAnchorDict(Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers, char* sequence);
 		/*
 		**-returns true if kmer is in anchor dictionnary
 		*/
@@ -112,7 +117,7 @@ class Requests
 
 		//conversion functions
 		kmer_type getKmerType(char* kmer_chars);
-		const char* getKmerChars(kmer_type kmer);
+		void getKmerChars(kmer_type kmer, char* kmer_chars);
 		void getSequenceChars(char* sequence_chars, string sequence);
 		string getKmerString(kmer_type kmer);
 		Node getKmerNode(char* kmer_chars);
@@ -159,8 +164,8 @@ class Requests
 		void printSequences();
 		void printMPHFIndexes();
 		void printSequenceAnchors(char* sequence);
-		void printIsKmerInSequenceAnchorDict(char* kmer_chars, Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers);
-		void printSequenceAnchorsDict(char* sequence, Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers);
+		void printIsKmerInSequenceAnchorDict(char* kmer_chars, Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers);
+		void printSequenceAnchorsDict(char* sequence, Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers);
 		void printTestAll();
 		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
@@ -209,6 +214,8 @@ class Requests
 		std::vector<Iterator<Sequence>*> _itBanks;
 		Iterator<Sequence>* _itSubBank;
 		int _nbBanks;
+
+		Hash16<kmer_type, list<u_int32_t>*>* _sequenceAnchorKmers;
 
 		string _outputFilename;
 

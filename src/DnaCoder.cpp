@@ -1632,7 +1632,7 @@ void DnaDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenc
 
 //TODO : remove dupplication code with decodeAnchorRead
 bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
-	cerr << "\tdebug DnaDecoder::getNextReadInfos - BEGIN " << endl;
+	//cerr << "\tdebug DnaDecoder::getNextReadInfos - BEGIN " << endl;
 	if (_processedSequenceCount < _sequenceCount){
 		ri->readType = _rangeDecoder.nextByte(_readTypeModel);
 
@@ -1653,29 +1653,31 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 			if((ri->revcomp = _rangeDecoder.nextByte(_readAnchorRevcompModel)) == 1){
 				ri->revAnchor = ri->anchor;
 				ri->anchor = revcomp(ri->anchor, _kmerSize);
+				//anchor = ri->anchor;
 			}
 			else{
 				ri->revAnchor = revcomp(ri->anchor, _kmerSize);
+				//anchor = ri->anchor;
 			}
 			
 			_currentSeq = ri->anchor.toString(_kmerSize);	
 			ri->leftErrorPos.clear();
 			ri->Npos.clear();
-			cerr << "\tdebug DnaDecoder::getNextReadInfos - anchor :  " << ri->anchor.toString(_kmerSize) << endl;
+			//cerr << "\tdebug DnaDecoder::getNextReadInfos - anchor :  " << ri->anchor.toString(_kmerSize) << endl;
 
 			//Decode N pos
 			_prevNpos = 0;
-			cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count before :  " << ri->NposCount << endl;
+			//cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count before :  " << ri->NposCount << endl;
 
 			ri->NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-cerr << "\tdebug DnaDecoder::getNextReadInfos - GOOD " << endl;
-cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count :  " << ri->NposCount << endl;
+//cerr << "\tdebug DnaDecoder::getNextReadInfos - GOOD " << endl;
+//cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count :  " << ri->NposCount << endl;
 			for(int i=0; i<ri->NposCount; i++){
 				u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
 				ri->Npos.push_back(nPos);
 				_prevNpos = nPos;
 			}
-			cerr << "\tdebug DnaDecoder::getNextReadInfos - CRASH " << endl;
+			//cerr << "\tdebug DnaDecoder::getNextReadInfos - CRASH " << endl;
 			//Decode error pos
 			ri->nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
 

@@ -109,25 +109,63 @@ bool Requests::getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t 
 	return false;
 }
 
-void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, u_int32_t >  * sequenceAnchorKmers,
+void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers,
 										char* sequence){
 
 	u_int32_t anchorAddress;
 	u_int32_t pos = 0;
+	list<u_int32_t>* listPos;
 	char kmer_chars[_kmerSize+1];
 	char anchor_chars[_kmerSize+1];
-	
+
 	while(getSequenceKmer(sequence, pos, kmer_chars))
 	{	
 
 		if (getNextAnchor(sequence, &pos, anchor_chars, anchorAddress)){
+
 			kmer_type anchor = getKmerType(anchor_chars);
-			sequenceAnchorKmers->insert(anchor, pos);
-			sequenceAnchorKmers->get(anchor, &pos);
-			//cout << "debug Requests::fillSequenceAnchorsDict - getseqachk : " << pos << endl;
+	
+			/* if list empty, create the list
+			** the list is empty if the hash table doesn't contain the kmer 
+			** (first time we add it)
+			*/
+			if (!sequenceAnchorKmers->get(anchor, &listPos)){
+
+				listPos = new list<u_int32_t>();	
+			}
+
+			listPos->push_back(pos);
+			sequenceAnchorKmers->insert(anchor, listPos);
 		}
 
 		pos++;
+	}
+}
+
+//TODO
+//iterate on the hash and not on the sequence
+//didn't do it because didn't found how to use cell object
+void Requests::emptySequenceAnchorDict(Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers, char* sequence){
+
+	u_int32_t anchorAddress;
+	list<u_int32_t>* listPos;
+
+	uint nbKmer = 0;
+	char kmer[_kmerSize+1];
+	char anchor[_kmerSize+1];
+
+	while(getSequenceKmer(sequence, nbKmer, kmer))
+	{	
+		if (getNextAnchor(sequence, &nbKmer, anchor, anchorAddress)){		
+
+			if (sequenceAnchorKmers->get(getKmerType(anchor), &listPos)){
+				delete listPos;
+				sequenceAnchorKmers->remove(getKmerType(anchor), &listPos);
+
+			}
+		}
+
+		nbKmer++;
 	}
 }
 
@@ -138,15 +176,15 @@ kmer_type Requests::getKmerType(char* kmer_chars){
 	return kmer;
 }
 
-const char* Requests::getKmerChars(kmer_type kmer){
+void Requests::getKmerChars(kmer_type kmer, char* kmer_chars){
 
-	char kmer_chars[_kmerSize+1];
+	//char kmer_chars[_kmerSize+1];
 	
 	const char* kmerStr = kmer.toString(_kmerSize).c_str();
-	strcpy(kmer_chars, kmerStr);
+	strncpy(kmer_chars, kmerStr, _kmerSize);
 	kmer_chars[_kmerSize] = '\0';
 
-	return kmer_chars;
+	//return kmer_chars;
 }
 
 void Requests::getSequenceChars(char* sequence_chars, string sequence){
@@ -587,10 +625,10 @@ void Requests::fgetRequests(){
 
 				u_int64_t dictSize = strlen(sequence_req);
 				u_int64_t nbcreated;
-				Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers = new Hash16<kmer_type, u_int32_t>(dictSize , &nbcreated);
-				fillSequenceAnchorsDict(sequenceAnchorKmers, sequence_req);
+				_sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
+				fillSequenceAnchorsDict(_sequenceAnchorKmers, sequence_req);
 
-				this->printSequenceAnchorsDict(sequence_req, sequenceAnchorKmers);	
+				this->printSequenceAnchorsDict(sequence_req, _sequenceAnchorKmers);	
 			
 				cout << "enter any kmer to test if in dictionnary" << endl;
 				cout << "enter q to quit" << endl;
@@ -598,9 +636,10 @@ void Requests::fgetRequests(){
 				char kmer_chars[1024];
 				while(strcmp(kmer_chars, "q")!=0){
 					if(this->fgetKmer(kmer_chars)){
-						printIsKmerInSequenceAnchorDict(kmer_chars, sequenceAnchorKmers);
+						printIsKmerInSequenceAnchorDict(kmer_chars, _sequenceAnchorKmers);
 					}
 				}
+				emptySequenceAnchorDict(_sequenceAnchorKmers, sequence_req);
 			}
 
 		}
@@ -934,11 +973,17 @@ void Requests::printSequenceAnchors(char* sequence){
 }
 
 void Requests::printIsKmerInSequenceAnchorDict(char* kmer_chars, 
-				Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers){
+				Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers){
 	
+	list<u_int32_t>* listPos;
+
 	kmer_type kmer = getKmerType(kmer_chars);
-	if (sequenceAnchorKmers->contains(kmer)){
-		cout << "yes" << endl;
+	if (sequenceAnchorKmers->get(kmer, &listPos)){
+		cout << "yes, at position(s) :" << endl;
+
+		for (std::list<u_int32_t>::iterator it=listPos->begin(); it != listPos->end(); ++it){
+			cerr << *it << endl;
+		}
 	}
 	else{
 		cout << "no" << endl;
@@ -946,7 +991,7 @@ void Requests::printIsKmerInSequenceAnchorDict(char* kmer_chars,
 }
 
 void Requests::printSequenceAnchorsDict(char* sequence, 
-								Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers){
+								Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers){
 
 
 	u_int32_t anchorAddress;
@@ -954,7 +999,7 @@ void Requests::printSequenceAnchorsDict(char* sequence,
 	uint nbKmer = 0;
 	char kmer[_kmerSize+1];
 	char anchor[_kmerSize+1];
-
+	cerr << "Requests::printSequenceAnchorsDict - test";
 	while(getSequenceKmer(sequence, nbKmer, kmer))
 	{	
 		if (getNextAnchor(sequence, &nbKmer, anchor, anchorAddress)){
@@ -1461,6 +1506,13 @@ bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){
 	bitset<NB_MAX_COLORS> sequenceMatches[sequenceSize];
 	getSequenceFileMatchesInData(sequence, sequenceMatches);
 
+	//tmp debug
+	cerr << "debug Requests::isSequenceInData" << endl;
+	for (int i = 0; i < sequenceSize; ++i)
+	{
+		cout << sequenceMatches[i] << " : " << bitset<NB_MAX_COLORS>(sequenceMatches[i]) << endl;
+	}
+
 	int sequencePos = 0;
 	bitset<NB_MAX_COLORS> sequenceColors;
 	sequenceColors.set();
@@ -1487,13 +1539,13 @@ void Requests::getSequenceFileMatchesInData(
 	//the array with colors of each sequence's part of read
  	int sequenceSize = strlen(sequence);
 
-	int mismatches[NB_MAX_SNPS];
+	int mismatches[NB_MAX_SNPS+1];
 
 	//get existing anchors in the sequence and create a dictionnary of <anchor, pos> 
 	u_int64_t dictSize = strlen(sequence);
 	u_int64_t nbcreated;
-	Hash16<kmer_type, u_int32_t >* sequenceAnchorKmers = new Hash16<kmer_type, u_int32_t>(dictSize , &nbcreated);
-	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
+	_sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
+	fillSequenceAnchorsDict(_sequenceAnchorKmers, sequence);
 
 	//decode commpressed file, to find matching anchors
 	initializeRangeDecoder();
@@ -1519,78 +1571,112 @@ void Requests::getSequenceFileMatchesInData(
 
 		struct ReadInfos* ri = new ReadInfos{};
 		u_int32_t anchorSequencePos;
-		cerr << "getNextReadInfos before" << endl;
+		list<u_int32_t>* listPos;
+		//cerr << "Requests::getSequenceFileMatchesInData - getNextReadInfos before" << endl;
 		while(_ddecoder->getNextReadInfos(ri)){
 
-			cerr << "getNextReadInfos after" << endl;
-			
-			if(sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)){
+			//cerr << "Requests::getSequenceFileMatchesInData - getNextReadInfos after" << endl;
+			char kmer_chars_test[_kmerSize+1];
+			getKmerChars(ri->anchor, kmer_chars_test);
+			/*cerr << "Requests::getSequenceFileMatchesInData - read anchor : " << 
+			 kmer_chars_test << " in table : " <<
+			 (_sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)) << endl <<
+			 "read : " << ri->sread << endl;*/
+
+
+
+			if(_sequenceAnchorKmers->get(ri->anchor, &listPos)){
 				
-				bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
 
-				char read_chars[ri->sread.size()+1];
-				getSequenceChars(read_chars, ri->sread);
 
-				int seqStartPos = max(((int)anchorSequencePos-ri->anchorPos),0);
-				int seqPos = seqStartPos;
-				int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
-				memset(mismatches, -1, NB_MAX_SNPS);
-				int nbMismatches = 0;
+				//iterate the positions of the list
+				for (std::list<u_int32_t>::iterator it=listPos->begin(); it != listPos->end(); ++it){
 
-				//compare char per char, 
-				while ((seqPos<sequenceSize)&&(readPos<ri->readSize)){
+					anchorSequencePos = *it;
+					bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
 
-					if(sequence[seqPos] != read_chars[readPos]){
-						cerr << endl << "sequenceSize : " << sequenceSize << endl << "seqPos : " << seqPos << endl << endl;
-						cerr << "readSize : " << ri->readSize << endl << "readPos : " << readPos << endl << endl;
-						cerr << "mismatch : " << endl << 
-								 "sequence[seqPos] : " << sequence[seqPos] << endl <<
-								 "read_chars[readPos] : " << read_chars[readPos] << endl;
+					char read_chars[ri->sread.size()+1];
+					getSequenceChars(read_chars, ri->sread);
 
-						++nbMismatches;
-						if(nbMismatches > NB_MAX_SNPS){
-							cerr << "nbMismatches > NB_MAX_SNPS" << endl <<endl;
-							break;
-						}
-						//we keep the mismatch position on the sequence
-						//for when we'll have to fill the array
-						mismatches[nbMismatches-1] = seqPos;
+					int seqStartPos = max(((int)anchorSequencePos-ri->anchorPos),0);
+					int seqPos = seqStartPos;
+					int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
+					//memset(mismatches, -1, NB_MAX_SNPS+1);
+					for (int i=0; i<NB_MAX_SNPS+1; ++i){
+						mismatches[i] = -1;
+						cerr << " mismatches[i] : " << mismatches[i] << endl;
 					}
+					int nbMismatches = 0;
+					cerr << " mismatches[0] : " << mismatches[0] << endl;
 
-					++seqPos;
-					++readPos;
-				}
-				if(nbMismatches <= NB_MAX_SNPS){
-					cerr << "nbMismatches <= NB_MAX_SNPS" << endl;
-					cerr << "read color : " << readColor << endl;
-					int nbMismatch = 0;
-					int alignementEndPos = seqPos;
-					for (seqPos = seqStartPos; (seqPos < alignementEndPos); ++seqPos)
-					{
-						cerr << sequence[seqPos] << " - seqPos : " << seqPos << endl;
-						//we verify that it isn't a mismatch position
-						
-						if (seqPos != mismatches[nbMismatch]){
-							sequenceColors[seqPos] |= readColor;
+					//compare char per char, 
+					while ((seqPos<sequenceSize)&&(readPos<ri->readSize)){
+
+						if(sequence[seqPos] != read_chars[readPos]){
+							cerr << endl << "sequenceSize : " << sequenceSize << endl << "seqPos : " << seqPos << endl << endl;
+							cerr << "readSize : " << ri->readSize << endl << "readPos : " << readPos << endl << endl;
+							cerr << "mismatch at seqPos " << seqPos << ", readPos " << readPos << 
+							" : " << endl << 
+									 "sequence[seqPos] : " << sequence[seqPos] << endl <<
+									 "read_chars[readPos] : " << read_chars[readPos] << endl <<
+									 "read : " << ri->sread << endl;
+
+							++nbMismatches;
+							if(nbMismatches > NB_MAX_SNPS){
+								cerr << "nbMismatches > NB_MAX_SNPS" << endl <<endl;
+								break;
+							}
+							//we keep the mismatch position on the sequence
+							//for when we'll have to fill the array
+							mismatches[nbMismatches-1] = seqPos;
 						}
-						else{
-							//we verify that we don't exceed the nbMismatches before increment
-							//to avoid seg fault
-							if (nbMismatch < nbMismatches-1){
-								++nbMismatch;
+
+						++seqPos;
+						++readPos;
+					}
+					if(nbMismatches <= NB_MAX_SNPS){
+						cerr << "nbMismatches <= NB_MAX_SNPS" << endl;
+						cerr << "read color : " << readColor << endl;
+						int nbMismatch = 0;
+						int alignementEndPos = seqPos;
+						for (seqPos = seqStartPos; (seqPos < alignementEndPos); ++seqPos)
+						{
+							cerr << sequence[seqPos] << " - seqPos : " << seqPos << endl;
+							cerr << " mismatches[nbMismatch] : " << mismatches[nbMismatch] << endl;
+							//we verify that it isn't a mismatch position
+							
+							if (seqPos != mismatches[nbMismatch]){
+								sequenceColors[seqPos] |= readColor;
+								cerr << "read color test : " << readColor << endl;
+								cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
+							}
+							else{
+								//we verify that we don't exceed the nbMismatches before increment
+								//to avoid seg fault
+								if (nbMismatch < nbMismatches-1){
+									++nbMismatch;
+								}
 							}
 						}
 					}
-				}
-				
+				}				
 			}
-			cerr << "getNextReadInfos before" << endl;
+			//cerr << "Requests::getSequenceFileMatchesInData - getNextReadInfos before" << endl;
 		}		
+	}
+
+		//tmp debug
+	cerr << "debug Requests::getSequenceFileMatchesInData" << endl;
+	for (int i = 0; i < sequenceSize; ++i)
+	{
+		cout << sequenceColors[i] << " : " << bitset<NB_MAX_COLORS>(sequenceColors[i]) << endl;
 	}
 
 	//cleaning decoders objects
 	clearRangeDecoder();
 	clearDecoders();
+
+	emptySequenceAnchorDict(_sequenceAnchorKmers, sequence);
 }
 
 
