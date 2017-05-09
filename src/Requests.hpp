@@ -200,22 +200,31 @@ class Requests
 		bool isSequenceInData(char* sequence);
 		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence);
 		int getSequenceNbColorsInData(char* sequence);
-		void getSequenceFileMatchesInData(char* sequence, 
-			bitset<NB_MAX_COLORS> sequenceColors[]);
+		void getSequenceFileMatchesInData(char* sequence);
 
+		//request global variables
 		char request[1024];
 		int req_buffer_size;
 		bool end_requests;
 		int sequenceMaxSize;
-	
+
+		Hash16<kmer_type, list<u_int32_t>*>* _sequenceAnchorKmers;
+		// 1 if a color can be fullfilled using the reads of the dataset of a
+		// same color
+		bitset<NB_MAX_COLORS> _sequenceColors;
+		// 1 if a color may have been filled using the same read at least twice, 0 else
+		bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches;
+		// 1 if a color may have been fullfilled using the same read at least twice, 0 else
+		bitset<NB_MAX_COLORS> _sequenceAmbiguousColors;
+		vector<bitset<NB_MAX_COLORS>>* _sequenceMatches;
+
+		// variables from Leon
 
 		IBank* _inputBank;
 		Iterator<Sequence>* _itBank;
 		std::vector<Iterator<Sequence>*> _itBanks;
 		Iterator<Sequence>* _itSubBank;
 		int _nbBanks;
-
-		Hash16<kmer_type, list<u_int32_t>*>* _sequenceAnchorKmers;
 
 		string _outputFilename;
 
