@@ -1135,7 +1135,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	
 	//Second bit : option no header
 	bool noHeader = ((infoByte & 0x02) == 0x02);
-	//cout << "testPrintReads - noHeader : " << noHeader << endl;
+	cerr << "testPrintReads - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -1158,15 +1158,15 @@ void Requests::testPrintAllHeadersReadsFile(){
 		
 	///////// header setup  /////////
 	//Decode the first header
-	//cout << "debug - testPrintReads - header setup" << endl;
+	cerr << "debug - testPrintReads - header setup" << endl;
 	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	for(int i=0; i<firstHeaderSize; i++){
 		firstHeader += _rangeDecoder.nextByte(_generalModel);
-	//	cout << "debug - testPrintReads - first header : " << firstHeader << endl;
+		cerr << "debug - testPrintReads - first header : " << firstHeader << endl;
 	}
-	//cout << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+	cerr << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 	setupNextComponent(_headerBlockSizes);
-	//cout << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+	cerr << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1174,16 +1174,16 @@ void Requests::testPrintAllHeadersReadsFile(){
 	/////// dna setup ////////////
 	
 	//need to init _filePosDna here
-	//cout << "debug - testPrintReads - dna setup" << endl;
+	cerr << "debug - testPrintReads - dna setup" << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		filePosDna += _headerBlockSizes[ii];
-	//	cout << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
+		cerr << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
 	}
 	
-	//cout << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	setupNextComponent(_dnaBlockSizes);
-	//cout << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 
 	decodeBloom();
 	decodeAnchorDict();
@@ -1221,7 +1221,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	}
 		
 	//DnaDecoder* dd = new DnaDecoder(_leon, _outputFilename);
-	//cout << " debug - testPrintReads - decodeFileName : " << _decodeFilename << endl;
+	cerr << " debug - testPrintReads - decodeFileName : " << _decodeFilename << endl;
 	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
 	//dnadecoders.push_back(dd);
 		
@@ -1234,10 +1234,10 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 
 	int i=0;
-	//cout << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
+	cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-	//	cout << "debug - testPrintReads - block nb : " << i << endl;
+		cerr << "debug - testPrintReads - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -1257,7 +1257,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			if(! noHeader)
 			{
 				blockSize = _headerBlockSizes[i];
-	//			cout << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+				cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
 				sequenceCount = _headerBlockSizes[i+1];
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
@@ -1272,7 +1272,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-	//		cout << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
+			cerr << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
 			sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(filePosDna, blockSize, sequenceCount);
@@ -1296,13 +1296,13 @@ void Requests::testPrintAllHeadersReadsFile(){
 			}
 
 			if(hdecoder!=NULL){
-	//			cout << "debug - testPrintReads - before hdecoder execute" << endl;
+				cerr << "debug - testPrintReads - before hdecoder execute" << endl;
 				hdecoder->execute();
-	//			cout << "debug - testPrintReads - after hdecoder execute" << endl;
+				cerr << "debug - testPrintReads - after hdecoder execute" << endl;
 			}
-	//		cout << "debug - testPrintReads - before dnacoder execute" << endl;
+			cerr << "debug - testPrintReads - before dnacoder execute" << endl;
 			ddecoder->execute();
-	//		cout << "debug - testPrintReads - before dnacoder execute" << endl;
+			cerr << "debug - testPrintReads - before dnacoder execute" << endl;
 			i += 2;
 
 		}	
@@ -1313,7 +1313,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 	if(! isFasta)
 		{
-	//	cout << " - testPrintReads - fastq not treated temporarily" << endl;
+		cout << " - testPrintReads - fastq not treated temporarily" << endl;
 		//qdecoder = qualdecoders[j];
 		//stream_qual = new std::istringstream (qdecoder->_buffer);
 		//qdecoder->_buffer.clear();

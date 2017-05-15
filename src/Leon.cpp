@@ -1745,7 +1745,10 @@ void Leon::startDnaCompression(){
 			list<struct ReadInfos> mylist = anchorsSequences[i];
 			std::cout << "\tdebug Leon::startDnaCompression - index " << i<< " contains:" << endl;
   			for (std::list<struct ReadInfos>::iterator it=mylist.begin(); it != mylist.end(); ++it)
-   				std::cout << ' ' << it->cread << endl;
+   			{
+   				std::cout << "read : " << it->cread << endl;
+   				std::cout << "anchor : "<< it->anchor.toString(_kmerSize) << endl;
+   			}
    			cerr << endl;
 		
 			}

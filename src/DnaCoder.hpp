@@ -45,16 +45,19 @@ class Requests;
 struct ReadInfos{
 
 	Sequence sequence;
-	u_int8_t readType;
-	int readSize;
-	int anchorPos;
-	u_int64_t anchorAddress;
-	kmer_type anchor;
+	u_int8_t readType; //comp
+	int readSize; //comp
+	int anchorPos; //comp
+	u_int64_t anchorAddress; //comp
+	kmer_type anchor; //comp
 	kmer_type revAnchor;
-	int revcomp;
+	int revcomp; //comp
+	vector<u_int8_t> bifurcations; //comp
+	vector<u_int8_t> binaryBifurcations; //comp
+	vector<u_int8_t> bifurcationTypes; //comp
 	u_int64_t NposCount;
-	vector<int> Npos;
-	vector<int> leftErrorPos;
+	vector<int> Npos; //comp
+	vector<int> leftErrorPos; //comp
 	u_int64_t nbLeftError;
 	char* cread;
 	string sread;
