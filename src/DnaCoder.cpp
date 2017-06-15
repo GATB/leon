@@ -452,6 +452,7 @@ void DnaEncoder::execute(){
 		if (_orderReads){
 
 			vector< list< struct ReadInfos > >& anchorsSequences = _leon->anchorsSequences;
+			ofstream& unsortedReads = _leon->unsortedReads;
 
 			/*
 			** create and insert ReadInfos in the wright list of the table
@@ -500,24 +501,24 @@ void DnaEncoder::execute(){
 			
 
 			//copy bifurcationTypes
-			cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
+			//cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
 			for(int i=0; i<_bifurcationTypes.size(); i++){
 				ri->bifurcationTypes.push_back(_bifurcationTypes[i]);
-				cerr << "\ndebug DnaEncoder::execute() - _bifurcationTypes[i] : " << (int) _bifurcationTypes[i] << endl;
+			//	cerr << "\ndebug DnaEncoder::execute() - _bifurcationTypes[i] : " << (int) _bifurcationTypes[i] << endl;
 			}
 
 			//copy bifurcations
-			cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
+			//cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
 			for(int i=0; i<_bifurcations.size(); i++){
 				ri->bifurcations.push_back(_bifurcations[i]);
-				cerr << "\ndebug DnaEncoder::execute() - _bifurcations[i] : " << (int) _bifurcations[i] << endl;
+				//cerr << "\ndebug DnaEncoder::execute() - _bifurcations[i] : " << (int) _bifurcations[i] << endl;
 			}
 
 			//copy binaryBifurcations
-			cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
+			//cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
 			for(int i=0; i<_binaryBifurcations.size(); i++){
 				ri->binaryBifurcations.push_back(_binaryBifurcations[i]);
-				cerr << "\ndebug DnaEncoder::execute() - _binaryBifurcations[i] : " << (int) _binaryBifurcations[i] << endl;
+				//cerr << "\ndebug DnaEncoder::execute() - _binaryBifurcations[i] : " << (int) _binaryBifurcations[i] << endl;
 			}
 
 			//copy leftErrorPos
@@ -535,12 +536,81 @@ void DnaEncoder::execute(){
 
 			//insert the read in the ordered table
 
-			cerr << "\tdebug DnaEncoder::execute - anchorAddress = " << anchorAddress << endl;
+			//cerr << "\tdebug DnaEncoder::execute - anchorAddress = " << anchorAddress << endl;
 
 			if (anchorAddress >= anchorsSequences.size()){
 				anchorsSequences.resize(anchorsSequences.size() + _leon->_coverage);
 			}
 			anchorsSequences[anchorAddress].push_back(*ri);
+
+			unsortedReads << ri->anchor << ";" << 
+							(int) ri->readType << ":" <<
+							ri->readSize << ":" <<
+							ri->anchorPos << ":" <<
+							ri->anchorAddress << ":";
+							
+							/*
+							<< ":" <<
+							int revcomp not necessary, determined at compression
+							*/
+			//TMP01
+			vector<int> Npos = ri->Npos;
+			vector<int> leftErrorPos = ri->leftErrorPos;
+			vector<u_int8_t> bifurcations = ri->bifurcations;
+			vector<u_int8_t> binaryBifurcations = ri->binaryBifurcations;
+			vector<u_int8_t> bifurcationTypes = ri->bifurcationTypes;
+
+			//Save N positions
+			unsortedReads << Npos.size() << ":";
+			int i = 0;
+			for(; i<((int)Npos.size()-1); ++i){
+				//cerr << "\tdebug DnaEncoder::execute - Npos.size() = " << Npos.size() << endl;
+			 	unsortedReads << Npos[i] << ",";
+			}
+			if (i != 0){
+				unsortedReads << Npos[i];
+			}
+			unsortedReads << ":";
+		
+			//Save left errors
+			unsortedReads << leftErrorPos.size() << ":";
+			i = 0;
+			for(; i< ((int)leftErrorPos.size()-1); ++i){
+				unsortedReads << leftErrorPos[i] << ",";
+				//cerr << "debug DnaEncoder::encodeReadsInfos - _prevErrorPos : " << _leftErrorPos[i] << endl;
+			}
+			if (i != 0){
+				unsortedReads << leftErrorPos[i];
+			}
+			unsortedReads << ":";
+			
+			
+			//Save bifurcation types
+			u_int64_t bifType0 = 0;
+			u_int64_t bifType1 = 0;
+			//cerr << "\ndebug DnaEncoder::encodeReadsInfos - bifurcations : " << endl;
+			for(int i=0; i<bifurcationTypes.size(); i++){
+
+				u_int8_t type = bifurcationTypes[i];
+				//to save some place, type is merged with bif type here
+				//unsortedReads << (int) type;
+
+				if(type == 0){
+					unsortedReads << (int) bifurcations[bifType0];
+					bifType0 += 1;
+			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType0 : " << bifType0 << endl;
+				}
+				else{
+
+					unsortedReads << (int) (4+binaryBifurcations[bifType1]);
+					bifType1 += 1;
+			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType1 : " << bifType1 << endl;
+				}
+			}
+			unsortedReads << endl;
+			//unsortedReads << ri->cread << endl;
+
+
 		}
 		else{
 		encodeAnchorRead(anchorPos, anchorAddress);
@@ -830,15 +900,15 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 
 
 			_rangeEncoder.encode(_readTypeModel, 0);
-			//cerr << "debug DnaEncoder::encodeAnchorRead - _rangeEncoder.encode(_readTypeModel, 0);" << endl;
+			//cerr << "debug DnaEncoder::encodeReadsInfos - _rangeEncoder.encode(_readTypeModel, 0);" << endl;
 			
 			//Encode read size x
 			CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeValueModel, _readSize);
-			//cerr << "debug DnaEncoder::encodeAnchorRead - encodeNumeric(_rangeEncoder, _readSizeValueModel, _readSize)" << endl;
+			//cerr << "debug DnaEncoder::encodeReadsInfos - encodeNumeric(_rangeEncoder, _readSizeValueModel, _readSize)" << endl;
 	
 			//Encode anchor pos x
 			CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);
-			//cerr << "debug DnaEncoder::encodeAnchorRead - encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);" << endl;
+			//cerr << "debug DnaEncoder::encodeReadsInfos - encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);" << endl;
 
 			//Encode anchor address x
 			CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressModel, anchorAddress);
@@ -846,11 +916,11 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 			//Encode a bit that says if the anchor is normal or revcomp
 			if(anchor == min(anchor, revcomp(anchor, _kmerSize))){
 				_rangeEncoder.encode(_readAnchorRevcompModel, 0);
-				//cerr << "debug DnaEncoder::encodeAnchorRead - revcomp : " << 0 << endl;
+				//cerr << "debug DnaEncoder::encodeReadsInfos - revcomp : " << 0 << endl;
 			}
 			else{
 				_rangeEncoder.encode(_readAnchorRevcompModel, 1);
-				//cerr << "debug DnaEncoder::encodeAnchorRead - revcomp : " << 1 << endl;
+				//cerr << "debug DnaEncoder::encodeReadsInfos - revcomp : " << 1 << endl;
 			}
 
 
@@ -884,7 +954,7 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 			for(int i=0; i<_Npos.size(); i++){
 				CompressionUtils::encodeNumeric(_rangeEncoder, _NposModel, _Npos[i]-_prevNpos);
 				_prevNpos = _Npos[i];
-				cerr << "debug DnaEncoder::encodeAnchorRead - _prevNpos : " << _Npos[i] << endl;
+				//cerr << "debug DnaEncoder::encodeReadsInfos - _prevNpos : " << _Npos[i] << endl;
 			}
 			
 			//Encode left errors
@@ -894,26 +964,26 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 			for(int i=0; i<_leftErrorPos.size(); i++){
 				CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, _leftErrorPos[i]-_prevErrorPos);
 				_prevErrorPos = _leftErrorPos[i];
-				cerr << "debug DnaEncoder::encodeAnchorRead - _prevErrorPos : " << _leftErrorPos[i] << endl;
+				//cerr << "debug DnaEncoder::encodeReadsInfos - _prevErrorPos : " << _leftErrorPos[i] << endl;
 			}
 			
 			//encode bifurcation types
 			u_int64_t bifType0 = 0;
 			u_int64_t bifType1 = 0;
-			cerr << "\ndebug DnaEncoder::encodeAnchorRead - bifurcations : " << endl;
+			//cerr << "\ndebug DnaEncoder::encodeReadsInfos - bifurcations : " << endl;
 			for(int i=0; i<bifurcationTypes.size(); i++){
-				cerr << "lol1" << endl;
+				//cerr << "lol1" << endl;
 				u_int8_t type = bifurcationTypes[i];
-				cerr << "lol2" << endl;
+				//cerr << "lol2" << endl;
 				if(type == 0){
 					_rangeEncoder.encode(_bifurcationModel, bifurcations[bifType0]);
 					bifType0 += 1;
-					cerr << "debug DnaEncoder::encodeAnchorRead - bifType0 : " << bifType0 << endl;
+			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType0 : " << bifType0 << endl;
 				}
 				else{
 					_rangeEncoder.encode(_bifurcationBinaryModel, binaryBifurcations[bifType1]);
 					bifType1 += 1;
-					cerr << "debug DnaEncoder::encodeAnchorRead - bifType1 : " << bifType1 << endl;
+			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType1 : " << bifType1 << endl;
 				}
 			}
 			/*

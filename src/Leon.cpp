@@ -219,7 +219,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = false;
+	_orderReads = true;
 
     _compress = false;
     _decompress = false;
@@ -535,7 +535,8 @@ void Leon::coloriage (){
 	TIME_INFO (getTimeInfo(), "fill colors");
 	
 	//u_int64_t solidFileSize
-	cout << "lol coloriage" << endl;
+	cout << "debug Leon::coloriage - begin" << endl;
+
 	_auto_cutoff = 0 ;
 	u_int64_t nbs = 0 ;
 	u_int64_t nb_kmers_infile;
@@ -544,6 +545,7 @@ void Leon::coloriage (){
 	//cout << _h5OutputFilename << endl;
 	Storage* storage = StorageFactory(STORAGE_HDF5).load (h5count_file);
 	LOCAL (storage);
+
 	
 	Partition<kmer_count> & solidCollection = storage->root().getGroup("dsk").getPartition<kmer_count> ("solid");
 	
@@ -560,16 +562,30 @@ void Leon::coloriage (){
 																);
 	LOCAL (itKmers);
 
+
 	//TODO :
 	//find wright size for signature array and color array
 	_signature_array =  (unsigned char  *)  malloc((solidFileSize*2)*sizeof(unsigned char));
 	_color_array = (unsigned char  *)  calloc(solidFileSize*2,sizeof(unsigned char));
+
+
+
+	Collection<NativeInt64>& cutoff  = storage->getGroup("histogram").getCollection<NativeInt64> ("cutoff");
+	Iterator<NativeInt64>* iter = cutoff.iterator();
+	LOCAL (iter);
+	for (iter->first(); !iter->isDone(); iter->next())  {
+		_auto_cutoff = iter->item().toInt();
+		cout << "threshold = " << _auto_cutoff << endl;
+	}
+
+	cout << "threshold : " << _auto_cutoff << endl;
 
 	cerr << "debug Leon::coloriage - before filling signature array" << endl;
 	//test variables
 	int maxIndex = 0;
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
 	{
+		cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) <<  " abundance "  << itKmers->item().getAbundance() <<  endl;
 		//cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) << endl;
 		uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
 
@@ -1221,8 +1237,16 @@ void Leon::executeCompression(){
 	}
 	_outputFilename = baseOutputname + ".leon";
 
+	if (_orderReads){
+		_outputFileRequestsName = baseOutputname + ".paon";
+	}
+
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
+	if (_orderReads){
+		_outputFileRequests = System::file().newFile(_outputFileRequestsName, "wb");
+	}
+
 	if(! _isFasta)
 	{
 		_FileQualname = baseOutputname + ".qual";
@@ -1690,6 +1714,7 @@ void Leon::startDnaCompression(){
 	if (_orderReads){
 	//create ordered read table
 
+		//old version : ordering structures of ReadInfos
 		anchorsSequences = vector<list<struct ReadInfos>>(nbestimated/10, list<struct ReadInfos>());
 
 		cerr << "Leon::startDnaCompression - nbestimated = " << nbestimated << endl;
@@ -1697,6 +1722,14 @@ void Leon::startDnaCompression(){
 			cerr << "Leon::startDnaCompression - i = " << i << endl;
 			anchorsSequences[i] = list<ReadInfos>();
 		}
+
+		//actual version : write a file and send it to a map reduce platform
+		//TODO : use tmpFile ?
+		//std::string tmpNameFile = std::tmpnam(nullptr);
+		std::string baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
+		std::string unsortedReadsFilePath = baseOutputname + ".ars.tosort";
+  		unsortedReads.open (unsortedReadsFilePath);
+  		//unsortedReads << "test" << endl;
 	}
 
 	u_int64_t nbcreated ;
@@ -1739,6 +1772,9 @@ void Leon::startDnaCompression(){
 
 		DnaEncoder* de = new DnaEncoder(this);
 
+
+		//old sort
+		/*
 		//write the table here ??
 		cerr << "debug Leon::startDnaCompression - ordered reads : " << endl;
 		for (int i = 0; i<anchorsSequences.size(); ++i){
@@ -1752,6 +1788,10 @@ void Leon::startDnaCompression(){
    			cerr << endl;
 		
 			}
+		*/
+
+
+		//Map Reduce Sort
 
 		//write ordered dna part
 		de->encodeReadsInfos(anchorsSequences);
@@ -1778,8 +1818,14 @@ void Leon::endDnaCompression(){
 	_blockSizes.clear();
 	
 	//writeBloom();
-	writeAnchorDict();
-	
+
+	if (_orderReads){
+		unsortedReads.close();
+	}
+
+	else{
+		writeAnchorDict();
+	}
 	_dnaCompRate = ((double)_compressedSize / _totalDnaSize);
 	
 	//#ifdef PRINT_DEBUG
@@ -2818,8 +2864,7 @@ void Leon::endDecompression(){
 	
 	printf("\tTime: %.2fs\n", (  _wfin_leon - _wdebut_leon) );
 	printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_outputFilename)/1000000.0) / (  _wfin_leon - _wdebut_leon) );
-	
-	
+
 	//Test decompressed file against original reads file (decompressed and original read file must be in the same dir)
 	if(getParser()->saw (Leon::STR_TEST_DECOMPRESSED_FILE)){
 		

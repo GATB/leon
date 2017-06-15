@@ -52,7 +52,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 
 
-
+#include <cstdio>
 #include <string>
 #include <sstream>
 #include <list>
@@ -143,6 +143,10 @@ class Leon : public misc::impl::Tool
 		bool _isFasta;
 		bool _noHeader;
 		bool _orderReads;
+		//tmp tests bool
+		bool _readSortedFile;
+
+		ofstream unsortedReads;
 		//list<struct ReadInfos>* anchorsSequences;
 		vector< list< struct ReadInfos > > anchorsSequences;
 
@@ -224,6 +228,7 @@ class Leon : public misc::impl::Tool
 		double _wdebut_leon, _wfin_leon;
 		//static const char* STR_GZ;
 		IFile* _outputFile;
+		IFile* _outputFileRequests;
 		ofstream* _dictAnchorFile;
 		int _nks;
 		
@@ -235,6 +240,7 @@ class Leon : public misc::impl::Tool
 		//Global compression
 		string _inputFilename;
 		string _outputFilename;
+		string _outputFileRequestsName;
 	
 
 	//quals
@@ -305,6 +311,7 @@ class Leon : public misc::impl::Tool
 		//map<kmer_type, u_int32_t> _anchorKmers; //uses 46 B per elem inserted
 		//OAHash<kmer_type> _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
+		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
 
 		//Header decompression
 	
