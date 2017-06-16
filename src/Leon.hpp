@@ -55,6 +55,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 #include <cstdio>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <list>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
@@ -144,7 +145,7 @@ class Leon : public misc::impl::Tool
 		bool _noHeader;
 		bool _orderReads;
 		//tmp tests bool
-		bool _readSortedFile;
+		bool _readSortedFileTest;
 
 		ofstream unsortedReads;
 		//list<struct ReadInfos>* anchorsSequences;
@@ -239,6 +240,7 @@ class Leon : public misc::impl::Tool
 		
 		//Global compression
 		string _inputFilename;
+		string _baseOutputname;
 		string _outputFilename;
 		string _outputFileRequestsName;
 	

@@ -220,6 +220,7 @@ void Leon::execute()
 	
 	//	if(getParser()->saw ("-order"))....
 	_orderReads = true;
+	_readSortedFileTest = true;
 
     _compress = false;
     _decompress = false;
@@ -585,8 +586,7 @@ void Leon::coloriage (){
 	int maxIndex = 0;
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
 	{
-		cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) <<  " abundance "  << itKmers->item().getAbundance() <<  endl;
-		//cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) << endl;
+		//cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) <<  " abundance "  << itKmers->item().getAbundance() <<  endl;
 		uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
 
 		Node node(Node::Value(itKmers->item().getValue()));
@@ -1225,20 +1225,20 @@ void Leon::executeCompression(){
     string dir = System::file().getDirectory(_inputFilename);
     string prefix = System::file().getBaseName(_inputFilename);
     //_outputFilename = dir + "/" + System::file().getBaseName(prefix) + ".leon";
-	string baseOutputname;
+	string _baseOutputname;
 	if(extension.find("gz") !=string::npos)
 	{
-		baseOutputname = dir + "/" + System::file().getBaseName(_inputFilename) ;
+		_baseOutputname = dir + "/" + System::file().getBaseName(_inputFilename) ;
 	}
 	else
 	{
-		//baseOutputname = _inputFilename;
-		baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
+		//_baseOutputname = _inputFilename;
+		_baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
 	}
-	_outputFilename = baseOutputname + ".leon";
+	_outputFilename = _baseOutputname + ".leon";
 
 	if (_orderReads){
-		_outputFileRequestsName = baseOutputname + ".paon";
+		_outputFileRequestsName = _baseOutputname + ".paon";
 	}
 
 	_outputFile = System::file().newFile(_outputFilename, "wb");
@@ -1249,7 +1249,7 @@ void Leon::executeCompression(){
 
 	if(! _isFasta)
 	{
-		_FileQualname = baseOutputname + ".qual";
+		_FileQualname = _baseOutputname + ".qual";
 		_FileQual = System::file().newFile(_FileQualname, "wb");
 		_qualwriter = new OrderedBlocks( _FileQual , _nb_cores ) ;
 	}
@@ -1326,8 +1326,8 @@ void Leon::executeCompression(){
 		
 		DnaDecoder* dd = new DnaDecoder(this, _outputFilename);
 
-		Requests requests = Requests(_inputBank, baseOutputname, _graph, 
-			model, solidCollection, _kmerSize, _anchorKmers, this, dd/*, 
+		Requests requests = Requests(_inputBank, _baseOutputname, _graph, 
+			model, solidCollection, _kmerSize, _anchorKmers,  _anchorKmersSorted, this, dd/*, 
 			_generalModel, _numericModel, _anchorDictModel*/);
 
 		//do{
@@ -1726,8 +1726,9 @@ void Leon::startDnaCompression(){
 		//actual version : write a file and send it to a map reduce platform
 		//TODO : use tmpFile ?
 		//std::string tmpNameFile = std::tmpnam(nullptr);
-		std::string baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
-		std::string unsortedReadsFilePath = baseOutputname + ".ars.tosort";
+
+		_baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
+		std::string unsortedReadsFilePath = _baseOutputname + ".ars.tosort";
   		unsortedReads.open (unsortedReadsFilePath);
   		//unsortedReads << "test" << endl;
 	}
@@ -1792,6 +1793,48 @@ void Leon::startDnaCompression(){
 
 
 		//Map Reduce Sort
+
+		if (_readSortedFileTest){
+
+			_anchorKmersSorted = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated );
+
+			std::string sortedReadsFilePath = _baseOutputname + ".ars";
+			std::ifstream sortedReads(sortedReadsFilePath);
+
+			//cerr << "Leon::startDnaCompression - sortedReadsFilePath: " << sortedReadsFilePath << endl;
+
+			std::string line;
+			bool readingNewAnchor = true;
+			kmer_type anchor;
+			u_int32_t nbReads = 0;
+			while (std::getline(sortedReads, line))
+			{
+				if (readingNewAnchor){
+					cerr << "\tdebug Leon::startDnaCompression - anchor : " << line  << endl;
+					long kmer_long = std::stol (line,nullptr,16);
+					//cerr << "readSortedFileTest : " << kmer_long << endl;
+					anchor.setVal((u_int64_t) kmer_long);	
+					cerr << "\tdebug Leon::startDnaCompression - kmer_type anchor : " << anchor.toString(_kmerSize) << endl;
+					readingNewAnchor = false;
+				}
+				else{
+
+					if (line != "\0"){
+						cerr << "\tdebug Leon::startDnaCompression - read-infos : " << line << endl;
+						++nbReads;
+					}
+					else{
+						cerr << "\tdebug Leon::startDnaCompression - anchors has : " << nbReads << " reads" << endl;
+						
+						//BUG ICIIIIIII
+						_anchorKmersSorted->insert(anchor, nbReads);
+
+						readingNewAnchor = true;
+						nbReads = 0;
+					}
+				}
+			}
+		}
 
 		//write ordered dna part
 		de->encodeReadsInfos(anchorsSequences);

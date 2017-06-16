@@ -5,6 +5,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	Kmer<>::ModelCanonical model, 
 	Partition<kmer_count> & solidCollection, size_t kmerSize, 
 	Hash16<kmer_type, u_int32_t >  * anchorKmers,
+	Hash16<kmer_type, u_int32_t >  * anchorKmersSorted,
 	Leon* leon,
 	DnaDecoder* dnadec): _generalModel(256), _anchorDictModel(5){
 	
@@ -28,6 +29,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	_kmerSize = kmerSize;
 	_kmerModel = new KmerModel(_kmerSize);
 	_anchorKmers = anchorKmers;
+	_anchorKmersSorted = anchorKmersSorted;
 	_anchorAdress = 0;
 
 	_outputFilename = outputFilename; 
@@ -558,14 +560,14 @@ void Requests::fgetRequests(){
 		"t mphf\t\t\tto print mphf indexes" << endl << 
 		"t seq anchors\t\tto print sequence's anchors" << endl << 
 		"t seq anchors dict\tto print the dictionnary's sequence's anchors" << endl << 
+		"t anchors dict sd\tto print the dictionnary's sequence's anchors sorted" << endl  <<
 		"testall\t\t\tto print kmers, indexes in mphf, color and signature" << endl << endl <<
 
 		"t read canchors\t\tto print compressed reads' anchors in file order" << endl << 
 		"t read canchors pos\tto print compressed reads' anchors' positions in file order" << endl << 
 		"t read creads\t\tto print compressed reads in file order" << endl << 
 		"t read c-all\t\tto print all three above informations in file order" << endl << 
-		"t read cfile\t\tto print original compressed file" << endl  << endl <<
-	
+		"t read cfile\t\tto print original compressed file" << endl <<  endl <<
 
 		"############ requests ############" << endl << endl <<
 		
@@ -642,6 +644,28 @@ void Requests::fgetRequests(){
 				emptySequenceAnchorDict(_sequenceAnchorKmers, sequence_req);
 			}
 
+		}
+
+		if (strcmp(request, "t anchors dict sd")==0){
+			
+			cout << "enter any kmer to test if in sorted dictionnary" << endl;
+			cout << "enter q to quit" << endl;
+
+			char kmer_chars[1024];
+			kmer_type anchor;
+			u_int32_t nbReads; 
+			while(strcmp(kmer_chars, "q")!=0){
+				if(this->fgetKmer(kmer_chars)){
+					anchor = getKmerType(kmer_chars);
+					
+					if(_anchorKmersSorted->get(anchor, &nbReads)){
+						cout << "present, nbReads for this anchor : " << nbReads << endl;
+					}
+					else{
+						cout << "not present" << endl;
+					}
+				}
+			}
 		}
 
 		if (strcmp(request, "testall")==0){

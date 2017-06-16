@@ -78,6 +78,8 @@ class Requests
 			Partition<kmer_count> & solidCollection, size_t kmerSize, 
 			Hash16<kmer_type, 
 			u_int32_t >  * anchorKmers,
+			Hash16<kmer_type, 
+			u_int32_t >  * anchorKmersSorted,
 			Leon* leon,
 			DnaDecoder* dnadec/*, 
 			Order0Model generalModel,
@@ -236,6 +238,7 @@ class Requests
 		Kmer<>::ModelCanonical _model;
 		KmerModel* _kmerModel;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers;
+		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
 		u_int32_t _anchorAdress;
 		ifstream* _anchorDictFile;
 
