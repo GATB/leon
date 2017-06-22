@@ -451,36 +451,38 @@ void DnaEncoder::execute(){
 	else{
 		if (_orderReads){
 
-			vector< list< struct ReadInfos > >& anchorsSequences = _leon->anchorsSequences;
 			ofstream& unsortedReads = _leon->unsortedReads;
 
 			/*
-			** create and insert ReadInfos in the wright list of the table
-			** we keep only the minimal read's info needed to minimize
-			** memory use
-			*/
+			//old version
+			vector< list< struct ReadInfos > >& anchorsSequences = _leon->anchorsSequences;
+			// create and insert ReadInfos in the wright list of the table
+			// we keep only the minimal read's info needed to minimize
+			// memory use
+			
 			struct ReadInfos* ri = new ReadInfos{};
+			*/
 
 			//ri->sequence = *_sequence;
-			ri->readType = 0;
-			ri->readSize = _readSize;
+			int readType = 0;
+			//int readSize = _readSize;
 			//get read
 
-			ri->cread = (char*)malloc((_readSize+1)*sizeof(char));
-			strncpy(ri->cread, _sequence->getDataBuffer(), _readSize);
-			ri->cread[_readSize] = '\0';
+			//ri->cread = (char*)malloc((_readSize+1)*sizeof(char));
+			//strncpy(ri->cread, _sequence->getDataBuffer(), _readSize);
+			//ri->cread[_readSize] = '\0';
 
-			ri->anchorPos = anchorPos;
-			ri->anchorAddress = anchorAddress;
-			ri->anchor = _kmers[anchorPos];
+			//int anchorPos = anchorPos;
+			//ri->anchorAddress = anchorAddress;
+			kmer_type anchor = _kmers[anchorPos];
 
 			//copy Npos in ri
-			for(int i=0; i<_Npos.size(); i++){
+			/*for(int i=0; i<_Npos.size(); i++){
 				ri->Npos.push_back(_Npos[i]);
-			}
+			}*/
 			
 
-			ri->sread = ri->cread;
+			//ri->sread = ri->cread;
 
 			//get the info to encode bifurcation list
 
@@ -489,98 +491,92 @@ void DnaEncoder::execute(){
 			_bifurcationTypes.clear();
 			_leftErrorPos.clear();
 			
-			kmer_type kmer = ri->anchor;
+			kmer_type kmer = anchor;
 			for(int i=anchorPos-1; i>=0; i--){
 				kmer = buildBifurcationList(i, kmer, false);
 			}
 
-			kmer = ri->anchor;
+			kmer = anchor;
 			for(int i=anchorPos+_kmerSize; i<_readSize; i++){
 				kmer = buildBifurcationList(i, kmer, true);
 			}
-			
 
 			//copy bifurcationTypes
 			//cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
-			for(int i=0; i<_bifurcationTypes.size(); i++){
+			/*for(int i=0; i<_bifurcationTypes.size(); i++){
 				ri->bifurcationTypes.push_back(_bifurcationTypes[i]);
 			//	cerr << "\ndebug DnaEncoder::execute() - _bifurcationTypes[i] : " << (int) _bifurcationTypes[i] << endl;
-			}
+			}*/
 
 			//copy bifurcations
 			//cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
-			for(int i=0; i<_bifurcations.size(); i++){
+			/*for(int i=0; i<_bifurcations.size(); i++){
 				ri->bifurcations.push_back(_bifurcations[i]);
 				//cerr << "\ndebug DnaEncoder::execute() - _bifurcations[i] : " << (int) _bifurcations[i] << endl;
-			}
+			}*/
 
 			//copy binaryBifurcations
 			//cerr << "\ndebug DnaEncoder::execute() - bifurcations : " << endl;
-			for(int i=0; i<_binaryBifurcations.size(); i++){
+			/*for(int i=0; i<_binaryBifurcations.size(); i++){
 				ri->binaryBifurcations.push_back(_binaryBifurcations[i]);
 				//cerr << "\ndebug DnaEncoder::execute() - _binaryBifurcations[i] : " << (int) _binaryBifurcations[i] << endl;
-			}
+			}*/
 
 			//copy leftErrorPos
-			for(int i=0; i<_leftErrorPos.size(); i++){
+			/*for(int i=0; i<_leftErrorPos.size(); i++){
 				ri->leftErrorPos.push_back(_leftErrorPos[i]);
-			}
+			}*/
 
 			//ri->revcomp =
 			//ri->revAnchor =
 			//ri->revcomp =
 			//ri->NposCount =
 			//ri->nbLeftError =
-			
-			endRead();
 
 			//insert the read in the ordered table
 
 			//cerr << "\tdebug DnaEncoder::execute - anchorAddress = " << anchorAddress << endl;
 
-			if (anchorAddress >= anchorsSequences.size()){
+			/*if (anchorAddress >= anchorsSequences.size()){
 				anchorsSequences.resize(anchorsSequences.size() + _leon->_coverage);
-			}
-			anchorsSequences[anchorAddress].push_back(*ri);
+			}*/
+			//anchorsSequences[anchorAddress].push_back(*ri);
 
-			unsortedReads << ri->anchor << ";" << 
-							(int) ri->readType << ":" <<
-							ri->readSize << ":" <<
-							ri->anchorPos << ":" <<
-							ri->anchorAddress << ":";
+
+			//write on the file to sort	
+
+			unsortedReads << anchor << ";" << 
+							readType << ":" <<
+							_readSize << ":" <<
+							anchorPos << ":" <<
+							anchorAddress << ":";
 							
 							/*
 							<< ":" <<
 							int revcomp not necessary, determined at compression
 							*/
-			//TMP01
-			vector<int> Npos = ri->Npos;
-			vector<int> leftErrorPos = ri->leftErrorPos;
-			vector<u_int8_t> bifurcations = ri->bifurcations;
-			vector<u_int8_t> binaryBifurcations = ri->binaryBifurcations;
-			vector<u_int8_t> bifurcationTypes = ri->bifurcationTypes;
-
+	
 			//Save N positions
-			unsortedReads << Npos.size() << ":";
+			unsortedReads << _Npos.size() << ":";
 			int i = 0;
-			for(; i<((int)Npos.size()-1); ++i){
+			for(; i<((int)_Npos.size()-1); ++i){
 				//cerr << "\tdebug DnaEncoder::execute - Npos.size() = " << Npos.size() << endl;
-			 	unsortedReads << Npos[i] << ",";
+			 	unsortedReads << _Npos[i] << ",";
 			}
 			if (i != 0){
-				unsortedReads << Npos[i];
+				unsortedReads << _Npos[i];
 			}
 			unsortedReads << ":";
 		
 			//Save left errors
-			unsortedReads << leftErrorPos.size() << ":";
+			unsortedReads << _leftErrorPos.size() << ":";
 			i = 0;
-			for(; i< ((int)leftErrorPos.size()-1); ++i){
-				unsortedReads << leftErrorPos[i] << ",";
+			for(; i< ((int)_leftErrorPos.size()-1); ++i){
+				unsortedReads << _leftErrorPos[i] << ",";
 				//cerr << "debug DnaEncoder::encodeReadsInfos - _prevErrorPos : " << _leftErrorPos[i] << endl;
 			}
 			if (i != 0){
-				unsortedReads << leftErrorPos[i];
+				unsortedReads << _leftErrorPos[i];
 			}
 			unsortedReads << ":";
 			
@@ -588,27 +584,32 @@ void DnaEncoder::execute(){
 			//Save bifurcation types
 			u_int64_t bifType0 = 0;
 			u_int64_t bifType1 = 0;
-			//cerr << "\ndebug DnaEncoder::encodeReadsInfos - bifurcations : " << endl;
-			for(int i=0; i<bifurcationTypes.size(); i++){
+			//cerr << "\ndebug DnaEncoder::encodeReadsInfos - bifurcations : \n"<< endl <<
+			//"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl <<
+			//"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+			for(int i=0; i<_bifurcationTypes.size(); i++){
 
-				u_int8_t type = bifurcationTypes[i];
+				u_int8_t type = _bifurcationTypes[i];
 				//to save some place, type is merged with bif type here
 				//unsortedReads << (int) type;
+				//cerr << "debug DnaEncoder::encodeReadsInfos -  _bifurcationTypes[i] : " <<  (int) _bifurcationTypes[i] << endl;
 
 				if(type == 0){
-					unsortedReads << (int) bifurcations[bifType0];
+					unsortedReads << (int) _bifurcations[bifType0];
+					//cerr << "debug DnaEncoder::encodeReadsInfos - _bifurcations[bifType0] : " << (int) _bifurcations[bifType0] << endl;
 					bifType0 += 1;
-			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType0 : " << bifType0 << endl;
 				}
 				else{
 
-					unsortedReads << (int) (4+binaryBifurcations[bifType1]);
+					unsortedReads << (int) (4+_binaryBifurcations[bifType1]);
+					//cerr << "debug DnaEncoder::encodeReadsInfos - _binaryBifurcations[bifType1] : " << (int) _binaryBifurcations[bifType1] << endl;
 					bifType1 += 1;
-			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType1 : " << bifType1 << endl;
 				}
 			}
 			unsortedReads << endl;
 			//unsortedReads << ri->cread << endl;
+
+			endRead();
 
 
 		}
@@ -887,6 +888,9 @@ bool DnaEncoder::isReadAnchorable(){
 
 }
 
+
+//old version of ordering reads
+/*
 void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences){
 
 	for (int index=0; index<anchorsSequences.size(); index++){
@@ -926,21 +930,21 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 
 			//Do this before the sort
 			//just keep the info to compress
-			/*
-			_bifurcations.clear();
-			_binaryBifurcations.clear();
-			_bifurcationTypes.clear();
-			_leftErrorPos.clear();
 			
-			kmer_type kmer = anchor;
-			for(int i=anchorPos-1; i>=0; i--){
-				kmer = buildBifurcationList(i, kmer, false);
-			}
+			//_bifurcations.clear();
+			//_binaryBifurcations.clear();
+			//_bifurcationTypes.clear();
+			//_leftErrorPos.clear();
+			
+			//kmer_type kmer = anchor;
+			//for(int i=anchorPos-1; i>=0; i--){
+			//	kmer = buildBifurcationList(i, kmer, false);
+			//}
 
-			kmer = anchor;
-			for(int i=anchorPos+_kmerSize; i<_readSize; i++){
-				kmer = buildBifurcationList(i, kmer, true);
-			}*/
+			//kmer = anchor;
+			//for(int i=anchorPos+_kmerSize; i<_readSize; i++){
+			//	kmer = buildBifurcationList(i, kmer, true);
+			//}
 				
 			vector<int> _Npos = ri->Npos;
 			vector<int> leftErrorPos = ri->leftErrorPos;
@@ -986,10 +990,10 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 			//		cerr << "debug DnaEncoder::encodeReadsInfos - bifType1 : " << bifType1 << endl;
 				}
 			}
-			/*
-			endRead();
+			
+			//endRead();
 
-			*/
+			
    		}
 	}
 
@@ -997,6 +1001,8 @@ void DnaEncoder::encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequ
 	startBlock();
 
 }
+*/
+
 
 void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef PRINT_DEBUG_ENCODER
@@ -1209,6 +1215,12 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	
 	
 }
+
+void DnaEncoder::encodeSortedFileAnchor(kmer_type anchor){}
+
+void DnaEncoder::encodeSortedFileRead(int readType, int readSize, int anchorPos, int anchorAddress, vector<int> Npos,
+									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
+									vector<u_int8_t> binaryBifurcations, vector<u_int8_t> bifurcationTypes){}
 	
 kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightExtend){
 		

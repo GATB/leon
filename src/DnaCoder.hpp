@@ -153,7 +153,13 @@ class DnaEncoder : AbstractDnaCoder
 
 		void operator()(Sequence& sequence);
 
-		void encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences);
+		void encodeSortedFileAnchor(kmer_type anchor);
+		void encodeSortedFileRead(int readType, int readSize, int anchorPos, int anchorAddress, vector<int> Npos,
+									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
+									vector<u_int8_t> binaryBifurcations, vector<u_int8_t> bifurcationTypes);
+
+		//old version for ordering reads
+		//void encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences);
 		
 	private:
 	
@@ -207,6 +213,7 @@ class DnaEncoder : AbstractDnaCoder
 		
 
 		void encodeAnchorRead(int anchorPos, u_int32_t anchorAddress);
+
 		kmer_type buildBifurcationList(int pos, kmer_type kmer, bool rightExtend);
 		//int buildBifurcationList(int pos, bool rightExtend);
 		int voteMutations(int pos, int depth, bool rightExtend);
