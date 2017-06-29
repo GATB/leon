@@ -91,6 +91,8 @@ class AbstractDnaCoder
 		//vector<Order0Model> _isPrevReadAnchorablePosModel;
 		
 		vector<Order0Model> _anchorAddressModel;
+		//same use but for for sorted reads
+		vector<Order0Model> _anchorKmerTypeModel;
 		
 		vector<Order0Model> _anchorPosModel;
 		
@@ -154,10 +156,10 @@ class DnaEncoder : AbstractDnaCoder
 		void operator()(Sequence& sequence);
 
 		void encodeSortedFileAnchor(kmer_type anchor);
-		void encodeSortedFileRead(int readType, int readSize, int anchorPos, int anchorAddress, vector<int> Npos,
+		void encodeSortedFileRead(kmer_type anchor, int readType, int readSize, int anchorPos, int anchorAddress, vector<int> Npos,
 									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
 									vector<u_int8_t> binaryBifurcations, vector<u_int8_t> bifurcationTypes);
-
+		void encodeSortedFileWriteBlock();
 		//old version for ordering reads
 		//void encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences);
 		

@@ -115,6 +115,9 @@ class Leon : public misc::impl::Tool
 	
 		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 
+		//Paon file Compression (for requests)
+		//void writePaonBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
+
 		//Header compression
 		string _firstHeader;
 		u_int64_t _totalHeaderSize;
@@ -235,7 +238,7 @@ class Leon : public misc::impl::Tool
 		
 		void execute ();
 		void createBloom ();
-	void coloriage();
+		void coloriage();
 		//void createKmerAbundanceHash();
 		
 		//Global compression
@@ -269,6 +272,7 @@ class Leon : public misc::impl::Tool
 		void executeDecompression();
 		void executeRequest();
 		void endCompression();
+		//void endPaonCompression();
 		void endQualCompression();
 	
 		//Global decompression

@@ -346,7 +346,13 @@ bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
 
 void Requests::initializeRangeDecoder(){
 
-	_decodeFilename = _outputFilename + ".leon";
+	if (_leon->_orderReads){
+		_decodeFilename = _outputFilename + ".paon";
+	}
+	else{
+		_decodeFilename = _outputFilename + ".leon";
+	}
+
 	//cout << "debug initializeRangeDecoder : outputFilename : " << _outputFilename << endl;
 	//cout << "debug initializeRangeDecoder : filename : " << _decodeFilename << endl;
 	_descInputFile = new ifstream(_decodeFilename.c_str(), ios::in|ios::binary);
@@ -552,7 +558,7 @@ void Requests::fgetRequests(){
 	do{
 
 	cout << endl << endl <<
-		"############# debug #############" << endl << endl <<
+		"############# DEBUG - TESTS #############" << endl << endl <<
 		"t sig\t\t\tto print sinatures" << endl <<
 		"t col\t\t\tto print colors" << endl <<
 		"t seq\t\t\tto print sequences" << endl <<
@@ -563,13 +569,19 @@ void Requests::fgetRequests(){
 		"t anchors dict sd\tto print the dictionnary's sequence's anchors sorted" << endl  <<
 		"testall\t\t\tto print kmers, indexes in mphf, color and signature" << endl << endl <<
 
+		"~~~~~ LEON ~ MODE ~~~~~" << endl << endl <<
+
 		"t read canchors\t\tto print compressed reads' anchors in file order" << endl << 
 		"t read canchors pos\tto print compressed reads' anchors' positions in file order" << endl << 
 		"t read creads\t\tto print compressed reads in file order" << endl << 
 		"t read c-all\t\tto print all three above informations in file order" << endl << 
 		"t read cfile\t\tto print original compressed file" << endl <<  endl <<
 
-		"############ requests ############" << endl << endl <<
+		"~~~~~ PAON ~ MODE ~~~~~" << endl << endl <<
+
+		"t read pfile" << endl << endl <<
+
+		"############ REQUESTS ############" << endl << endl <<
 		
 		"nb ds \t\t\tto get the number of datasets in the file" << endl << endl <<
 		
@@ -672,6 +684,8 @@ void Requests::fgetRequests(){
 			this->printTestAll();
 		}
 
+		//leon mode
+
 		if (strcmp(request, "t read canchors")==0){
 			this->testPrintReadsFile(false, true, false);
 		}
@@ -690,6 +704,12 @@ void Requests::fgetRequests(){
 
 		if (strcmp(request, "t read cfile")==0){
 			this->testPrintAllHeadersReadsFile();
+		}
+
+		//paon mode
+
+		if (strcmp(request, "t read pfile")==0){
+			this->testPrintPFile();
 		}
 
 		//requests
@@ -1047,6 +1067,8 @@ void Requests::printIsKmerInSequenceAnchorDict(char* kmer_chars,
 	}
 }
 
+//leon mode
+
 void Requests::printSequenceAnchorsDict(char* sequence, 
 								Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers){
 
@@ -1102,10 +1124,14 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 
 	initializeDecoders();
 
+	cerr << "debug Requests::testPrintReadsFile - reading blocks : " << endl;
+	cerr << "debug Requests::testPrintReadsFile - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+
 	for (int blockIndice = 0; 
 		blockIndice < _dnaBlockSizes.size(); 
 		blockIndice += 2){
 			
+		cerr << "debug Requests::testPrintReadsFile - block nb : " << blockIndice << endl;
 
 		if(blockIndice >= _dnaBlockSizes.size()) break;
 			
@@ -1444,7 +1470,308 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 }
 
+//paon mode
 
+void Requests::testPrintPFile(){
+
+	initializeRangeDecoder();
+
+	//original decoding order :
+
+	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
+	//cout << endl << "\tinfoByte : " << bitset<8>(infoByte) << endl;
+
+	//the first bit holds the file format. 0: fastq, 1: fasta
+	bool isFasta = ((infoByte & 0x01) == 0x01);
+	
+	
+	
+	//Second bit : option no header
+	bool noHeader = ((infoByte & 0x02) == 0x02);
+	cerr << "testPrintReads - noHeader : " << noHeader << endl;
+
+	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	cout << "\tKmer size: " << _kmerSize << endl;
+
+	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+
+	cout << "\tversion_major: " << version_major << endl;
+	cout << "\tversion_minor: " << version_minor << endl;
+	cout << "\tversion_patch: " << version_patch << endl;
+
+
+	u_int64_t filePosHeader = 0;
+	u_int64_t filePosDna = 0;
+	string firstHeader;
+	
+	if(! noHeader)
+	{
+		
+	///////// header setup  /////////
+	//Decode the first header
+	cerr << "debug - testPrintReads - header setup" << endl;
+	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	for(int i=0; i<firstHeaderSize; i++){
+		firstHeader += _rangeDecoder.nextByte(_generalModel);
+		cerr << "debug - testPrintReads - first header : " << firstHeader << endl;
+	}
+	cerr << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+	setupNextComponent(_headerBlockSizes);
+	cerr << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+	
+	}
+	//MARQUEUR
+	
+	/////// dna setup ////////////
+	
+	//need to init _filePosDna here
+	cerr << "debug - testPrintReads - dna setup" << endl;
+	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
+	{
+		filePosDna += _headerBlockSizes[ii];
+		cerr << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
+	}
+	
+	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	setupNextComponent(_dnaBlockSizes);
+	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+
+	decodeBloom();
+	decodeAnchorDict();
+
+
+		/////////// qualities setup //////////
+	/*if(! isFasta)
+	{
+	_filePosQual =0;
+	
+	//read block sizes and _blockCount
+	_qualBlockSizes.clear();
+	_inputFileQual->seekg(- sizeof(u_int64_t),_inputFileQual->end);
+	
+	_inputFileQual->read((char *)&_blockCount,sizeof(u_int64_t));
+	//cout << "\tBlock count: " << _blockCount/2 << endl;
+	
+	_qualBlockSizes.resize(_blockCount,0);
+	char * databuff = (char * )& _qualBlockSizes[0];
+	
+	_inputFileQual->seekg(- (sizeof(u_int64_t)*(_blockCount+1)),_inputFileQual->end);
+	_inputFileQual->read( databuff ,sizeof(u_int64_t) *  _blockCount);
+	
+	}*/
+	
+	//QualDecoder* qdecoder;
+	HeaderDecoder* hdecoder;
+	DnaDecoder* ddecoder;
+
+	if(! isFasta)
+	{
+		cout << " - testPrintReads - temporarily not treating fastq" << endl;
+		//QualDecoder* qd = new QualDecoder(this, _FileQualname);
+		//qualdecoders.push_back(qd);
+	}
+		
+	//DnaDecoder* dd = new DnaDecoder(_leon, _outputFilename);
+	cerr << " debug - testPrintReads - decodeFileName : " << _decodeFilename << endl;
+	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
+	//dnadecoders.push_back(dd);
+		
+	if(! noHeader)
+	{
+	//HeaderDecoder* hd = new HeaderDecoder(_leon, _outputFilename);
+	hdecoder = new HeaderDecoder(_leon, this, _decodeFilename);
+	//headerdecoders.push_back(hd);
+	}
+
+
+	int i=0;
+	cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
+	while(i < _dnaBlockSizes.size()){
+		
+		cerr << "debug - testPrintReads - block nb : " << i << endl;
+		//for(int j=0; j<_nb_cores; j++){
+			
+
+			//if(i >= _dnaBlockSizes.size()) break;
+			
+			
+			u_int64_t blockSize;
+			int sequenceCount;
+			
+			//livingThreadCount = j+1;
+			
+			//QualDecoder* qdecoder;
+			//HeaderDecoder* hdecoder;
+			//DnaDecoder* ddecoder;
+			
+			//header decoder
+			if(! noHeader)
+			{
+				blockSize = _headerBlockSizes[i];
+				cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+				sequenceCount = _headerBlockSizes[i+1];
+				//hdecoder = headerdecoders[j];
+				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
+				filePosHeader += blockSize;
+				
+				//hdecoder->execute();
+			}
+			else
+			{
+				hdecoder= NULL;
+			}
+			
+			//dna decoder
+			blockSize = _dnaBlockSizes[i];
+			cerr << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
+			sequenceCount = _dnaBlockSizes[i+1];
+			//ddecoder = dnadecoders[j];
+			ddecoder->setup(filePosDna, blockSize, sequenceCount);
+			filePosDna += blockSize;
+			//ddecoder->execute();
+
+			//qual decoder setup
+			//here test if in fastq mode, put null pointer otherwise
+			if(! isFasta)
+			{
+				cout << "testPrintReads - fastq not treated temporarily" << endl;
+				//blockSize = _qualBlockSizes[i];
+				//sequenceCount = _qualBlockSizes[i+1];
+				//qdecoder = qualdecoders[j];
+				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
+				//_filePosQual += blockSize;
+			}
+			else
+			{
+				//qdecoder= NULL;
+			}
+
+			if(hdecoder!=NULL){
+				cerr << "debug - testPrintReads - before hdecoder execute" << endl;
+				hdecoder->execute();
+				cerr << "debug - testPrintReads - after hdecoder execute" << endl;
+			}
+			cerr << "debug - testPrintReads - before dnacoder execute" << endl;
+			ddecoder->execute();
+			cerr << "debug - testPrintReads - before dnacoder execute" << endl;
+			i += 2;
+
+		}	
+	
+
+	std::istringstream  * stream_qual = NULL;
+	std::istringstream  * stream_header = NULL;
+
+	if(! isFasta)
+		{
+		cout << " - testPrintReads - fastq not treated temporarily" << endl;
+		//qdecoder = qualdecoders[j];
+		//stream_qual = new std::istringstream (qdecoder->_buffer);
+		//qdecoder->_buffer.clear();
+
+		}
+			
+	if(! noHeader)
+		{
+		//hdecoder = headerdecoders[j];
+		stream_header = new std::istringstream (hdecoder->_buffer);
+		hdecoder->_buffer.clear();
+
+		}
+
+	std::istringstream stream_dna (ddecoder->_buffer);
+			
+	ddecoder->_buffer.clear();
+
+	std::string line;
+	std::string output_buff;
+
+			
+			
+	output_buff.reserve(READ_PER_BLOCK * 500);
+			
+	bool reading = true;
+			
+			
+	u_int64_t readid=0;
+	while(reading){
+				
+		stringstream sint;
+		sint << readid;
+				
+		if( ! noHeader)
+		{
+			if(getline(*stream_header, line)){
+	//			cout << "debug - testPrintReads - getline" << endl;
+				if(isFasta)
+					output_buff += ">";
+				else
+					output_buff += "@";
+					
+				output_buff +=  line + '\n';
+			}
+			else{
+	//			cout << "debug - testPrintReads - getline header false" << endl;
+				reading = false;
+			}
+		}
+		else
+		{
+			if(isFasta)
+				output_buff += "> " + sint.str() + '\n';
+			else
+				output_buff += "@ " + sint.str() + '\n';
+					
+			readid++;
+		}
+				 
+				
+				
+		if(getline(stream_dna, line)){
+	//		cout << "debug - testPrintReads - getline" << endl;
+			output_buff +=  line + '\n';
+		}
+		else{
+	//			cout << "debug - testPrintReads - getline dna false" << endl;
+				reading = false;
+			}
+				
+				
+		if( ! isFasta)
+		{
+			cout << " - testPrintReads - fastq not treated temporarily" << endl;
+			//if(getline(*stream_qual, line)){
+			//	output_buff += "+\n";
+			//	output_buff +=  line + '\n';
+			//}
+			//else
+			//	reading = false;
+		}
+				 
+	}
+			
+			 
+	//_outputFile->fwrite(output_buff.c_str(), output_buff.size(), 1);
+	cout << " - testPrintReads - buff : \n" << output_buff.c_str() << endl;
+
+	if(stream_qual!= NULL) delete  stream_qual;
+	if(stream_header!= NULL) delete  stream_header;
+			
+			
+		
+		
+	//livingThreadCount = 0;
+
+	//cout << "debug testPrintReads : before clearRangeDecoder()" << endl; 
+	clearRangeDecoder();
+	delete hdecoder;
+	delete ddecoder;
+	//std::cout << "debug testPrintReads : after clearRangeDecoder()" << endl; 
+	//cout << "debug testPrintReads END" << endl; 
+
+}
 
 /*****requests*****/
 

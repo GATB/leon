@@ -1081,7 +1081,7 @@ void Leon::executeCompression(){
 	
 	_kmerModel = new KmerModel(_kmerSize);
 
-	/** We look for the beginnin of the suffix. */
+	/** We look for the begining of the suffix. */
 	int lastindex = _inputFilename.find_last_of (".");
 	
 	/** We build the result. */
@@ -1090,7 +1090,7 @@ void Leon::executeCompression(){
 	_noHeader =false;
 
 
-	if(getParser()->saw (Leon::STR_NOHEADER))
+	if(getParser()->saw (Leon::STR_NOHEADER) || _orderReads)
 	{
 		_noHeader = true;
 		infoByte |= 0x02; //no header
@@ -1235,17 +1235,23 @@ void Leon::executeCompression(){
 		//_baseOutputname = _inputFilename;
 		_baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
 	}
-	_outputFilename = _baseOutputname + ".leon";
 
 	if (_orderReads){
-		_outputFileRequestsName = _baseOutputname + ".paon";
+		_outputFilename = _baseOutputname + ".paon";
 	}
+	else{
+		_outputFilename = _baseOutputname + ".leon";
+	}
+
+	/*if (_orderReads){
+		_outputFileRequestsName = _baseOutputname + ".paon";
+	}*/
 
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 	
-	if (_orderReads){
+	/*if (_orderReads){
 		_outputFileRequests = System::file().newFile(_outputFileRequestsName, "wb");
-	}
+	}*/
 
 	if(! _isFasta)
 	{
@@ -1285,7 +1291,8 @@ void Leon::executeCompression(){
 
 
     //Compression
-	if(! _noHeader)
+	//temporarily disable header compression for paon
+	if(! _noHeader && ! _orderReads)
 	{
 		startHeaderCompression();
 	}
@@ -1302,6 +1309,7 @@ void Leon::executeCompression(){
 	
 	
 	endCompression();
+
 
 	//TMP REQUEST EMPLACEMENT CODE TEST
 
@@ -1529,7 +1537,8 @@ void Leon::endCompression(){
 	cout << "\t\tTotal Size: " << outputFileSize <<  "  (" <<  outputFileSize/1024LL/1024LL  << " MB)"<< endl;
 	std::cout.precision(4);
 	cout << "\tOverall Compression rate: " << (float)((double)outputFileSize / (double)inputFileSize) << " (" << (float)((double)inputFileSize / (double)outputFileSize ) << ")"<< endl;
-	if(! _noHeader)
+	
+	if(! _noHeader && ! _orderReads)
 	{
 		cout << "\t\tHeader: " << (float)_headerCompRate << " (" << (float) (1/_headerCompRate) << ")" << endl;
 	}
@@ -1562,11 +1571,7 @@ void Leon::endCompression(){
 	//printf("\tTime: %.2fs\n", (double)(clock() - _time)/CLOCKS_PER_SEC);
 	//printf("\tSpeed: %.2f mo/s\n", (System::file().getSize(_inputFilename)/1000000.0) / ((double)(clock() - _time)/CLOCKS_PER_SEC));
 }
-		
-		
-
-
-
+				
 
 void Leon::startHeaderCompression(){
     Iterator<Sequence>* itSeq = createIterator<Sequence> (
@@ -1733,7 +1738,7 @@ void Leon::startDnaCompression(){
   		unsortedReads.open (unsortedReadsFilePath);
   		//unsortedReads << "test" << endl;
 	}
-
+	
 	u_int64_t nbcreated ;
 	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated ); //creator with nb entries given
 	
@@ -1743,7 +1748,8 @@ void Leon::startDnaCompression(){
                                                           "Compressing dna"
                                                           );
     LOCAL(itSeq);
-    
+    	
+
 	//create a temporary output file to store the anchors dict
 	//_dictAnchorFile = System::file().newFile(_outputFilename + ".adtemp", "wb"); 
 	_dictAnchorFile = new ofstream((_outputFilename + ".adtemp").c_str(), ios::out|ios::binary);
@@ -1758,7 +1764,6 @@ void Leon::startDnaCompression(){
     
 	//iterate on read sequences and compress headers
 	TIME_INFO (getTimeInfo(), "DNA compression");
-
 	//int nb_threads_living = 0 ;
 	
 	#ifdef SERIAL
@@ -1766,10 +1771,15 @@ void Leon::startDnaCompression(){
 	#else
 		setDispatcher (  new Dispatcher (_nb_cores) );
 	#endif
-
+	
 	//getDispatcher()->iterate (itSeq,  HeaderEncoder(this, &nb_threads_living), 10000);
+	
+
+	//encode dna if leon mode
+	//launch dna sorting if paon mode
 	getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
 	
+
 	if (_orderReads){
 
 		//Do and wait for the map reduce sort here
@@ -1777,7 +1787,7 @@ void Leon::startDnaCompression(){
 		DnaEncoder* de = new DnaEncoder(this);
 
 
-		//After map reduce sort
+		//AFTER MAP REDUCE SORT
 
 		
 
@@ -1926,7 +1936,7 @@ void Leon::startDnaCompression(){
 					}
 					*/
 
-					de->encodeSortedFileRead(readType, readSize, anchorPos, anchorAddress, Npos,
+					de->encodeSortedFileRead(anchor, readType, readSize, anchorPos, anchorAddress, Npos,
 											leftErrorPos, bifurcations, binaryBifurcations, bifurcationTypes);
 
 				}
@@ -1943,7 +1953,7 @@ void Leon::startDnaCompression(){
 			}
 		}
 		
-
+		de->encodeSortedFileWriteBlock();
 		delete de;
 	}
 

@@ -165,12 +165,17 @@ class Requests
 		void printKmers();
 		void printSequences();
 		void printMPHFIndexes();
+
+		//leon
 		void printSequenceAnchors(char* sequence);
 		void printIsKmerInSequenceAnchorDict(char* kmer_chars, Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers);
 		void printSequenceAnchorsDict(char* sequence, Hash16<kmer_type, list<u_int32_t>* >* sequenceAnchorKmers);
 		void printTestAll();
 		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
+
+		//paon
+		void testPrintPFile();
 
 		/*****requests*****/
 
