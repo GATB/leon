@@ -31,6 +31,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	_anchorKmers = anchorKmers;
 	_anchorKmersSorted = anchorKmersSorted;
 	_anchorAdress = 0;
+	_orderReads = _leon->_orderReads;
 
 	_outputFilename = outputFilename; 
 	_solidFileSize = solidCollection.getNbItems();
@@ -347,7 +348,7 @@ bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
 void Requests::initializeRangeDecoder(){
 
 	if (_leon->_orderReads){
-		_decodeFilename = _outputFilename + ".paon";
+		_decodeFilename = _outputFilename + ".peacock";
 	}
 	else{
 		_decodeFilename = _outputFilename + ".leon";
@@ -577,7 +578,7 @@ void Requests::fgetRequests(){
 		"t read c-all\t\tto print all three above informations in file order" << endl << 
 		"t read cfile\t\tto print original compressed file" << endl <<  endl <<
 
-		"~~~~~ PAON ~ MODE ~~~~~" << endl << endl <<
+		"~~~~~ PEACOCK ~ MODE ~~~~~" << endl << endl <<
 
 		"t read pfile" << endl << endl <<
 
@@ -687,29 +688,59 @@ void Requests::fgetRequests(){
 		//leon mode
 
 		if (strcmp(request, "t read canchors")==0){
-			this->testPrintReadsFile(false, true, false);
+			if (! _orderReads){
+				this->testPrintReadsFile(false, true, false);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
 		}
 
 		if (strcmp(request, "t read canchors pos")==0){
-			this->testPrintReadsFile(false, false, true);
+			if (! _orderReads){
+				this->testPrintReadsFile(false, false, true);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
 		}
 
 		if (strcmp(request, "t read creads")==0){
-			this->testPrintReadsFile(true, false, false);
+			if (! _orderReads){
+				this->testPrintReadsFile(true, false, false);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
 		}
 
 		if (strcmp(request, "t read c-all")==0){
-			this->testPrintReadsFile(true, true, true);
+			if (! _orderReads){
+				this->testPrintReadsFile(true, true, true);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
 		}
 
 		if (strcmp(request, "t read cfile")==0){
-			this->testPrintAllHeadersReadsFile();
+			if (! _orderReads){
+				this->testPrintAllHeadersReadsFile();
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
 		}
 
-		//paon mode
+		//peacock mode
 
 		if (strcmp(request, "t read pfile")==0){
-			this->testPrintPFile();
+			if (_orderReads){
+				this->testPrintPFile();
+			}
+			else{
+				cout << "available only in peacock mode" << endl;
+			}
 		}
 
 		//requests
@@ -1470,7 +1501,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 }
 
-//paon mode
+//peacock mode
 
 void Requests::testPrintPFile(){
 
@@ -1488,7 +1519,7 @@ void Requests::testPrintPFile(){
 	
 	//Second bit : option no header
 	bool noHeader = ((infoByte & 0x02) == 0x02);
-	cerr << "testPrintReads - noHeader : " << noHeader << endl;
+	cerr << "testPrintPFile - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -1511,15 +1542,15 @@ void Requests::testPrintPFile(){
 		
 	///////// header setup  /////////
 	//Decode the first header
-	cerr << "debug - testPrintReads - header setup" << endl;
+	cerr << "debug - testPrintPFile - header setup" << endl;
 	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	for(int i=0; i<firstHeaderSize; i++){
 		firstHeader += _rangeDecoder.nextByte(_generalModel);
-		cerr << "debug - testPrintReads - first header : " << firstHeader << endl;
+		cerr << "debug - testPrintPFile - first header : " << firstHeader << endl;
 	}
-	cerr << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+	cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 	setupNextComponent(_headerBlockSizes);
-	cerr << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+	cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1527,16 +1558,16 @@ void Requests::testPrintPFile(){
 	/////// dna setup ////////////
 	
 	//need to init _filePosDna here
-	cerr << "debug - testPrintReads - dna setup" << endl;
+	cerr << "debug - testPrintPFile - dna setup" << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		filePosDna += _headerBlockSizes[ii];
-		cerr << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
+		cerr << "debug - testPrintPFile - file pos dna : " << filePosDna << endl;
 	}
 	
-	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	cerr << "debug - testPrintPFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	setupNextComponent(_dnaBlockSizes);
-	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	cerr << "debug - testPrintPFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
 
 	decodeBloom();
 	decodeAnchorDict();
@@ -1568,13 +1599,13 @@ void Requests::testPrintPFile(){
 
 	if(! isFasta)
 	{
-		cout << " - testPrintReads - temporarily not treating fastq" << endl;
+		cout << " - testPrintPFile - temporarily not treating fastq" << endl;
 		//QualDecoder* qd = new QualDecoder(this, _FileQualname);
 		//qualdecoders.push_back(qd);
 	}
 		
 	//DnaDecoder* dd = new DnaDecoder(_leon, _outputFilename);
-	cerr << " debug - testPrintReads - decodeFileName : " << _decodeFilename << endl;
+	cerr << " debug - testPrintPFile - decodeFileName : " << _decodeFilename << endl;
 	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
 	//dnadecoders.push_back(dd);
 		
@@ -1587,10 +1618,10 @@ void Requests::testPrintPFile(){
 
 
 	int i=0;
-	cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
+	cerr << "debug - testPrintPFile - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-		cerr << "debug - testPrintReads - block nb : " << i << endl;
+		cerr << "debug - testPrintPFile - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -1610,7 +1641,7 @@ void Requests::testPrintPFile(){
 			if(! noHeader)
 			{
 				blockSize = _headerBlockSizes[i];
-				cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+				cerr << "debug - testPrintPFile - header BlockSize : " << blockSize << endl;
 				sequenceCount = _headerBlockSizes[i+1];
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
@@ -1625,7 +1656,7 @@ void Requests::testPrintPFile(){
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-			cerr << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
+			cerr << "debug - testPrintPFile - dna BlockSize : " << blockSize << endl;
 			sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(filePosDna, blockSize, sequenceCount);
@@ -1636,7 +1667,7 @@ void Requests::testPrintPFile(){
 			//here test if in fastq mode, put null pointer otherwise
 			if(! isFasta)
 			{
-				cout << "testPrintReads - fastq not treated temporarily" << endl;
+				cout << "testPrintPFile - fastq not treated temporarily" << endl;
 				//blockSize = _qualBlockSizes[i];
 				//sequenceCount = _qualBlockSizes[i+1];
 				//qdecoder = qualdecoders[j];
@@ -1649,13 +1680,13 @@ void Requests::testPrintPFile(){
 			}
 
 			if(hdecoder!=NULL){
-				cerr << "debug - testPrintReads - before hdecoder execute" << endl;
+				cerr << "debug - testPrintPFile - before hdecoder execute" << endl;
 				hdecoder->execute();
-				cerr << "debug - testPrintReads - after hdecoder execute" << endl;
+				cerr << "debug - testPrintPFile - after hdecoder execute" << endl;
 			}
-			cerr << "debug - testPrintReads - before dnacoder execute" << endl;
+			cerr << "debug - testPrintPFile - before dnadecoder execute" << endl;
 			ddecoder->execute();
-			cerr << "debug - testPrintReads - before dnacoder execute" << endl;
+			cerr << "debug - testPrintPFile - after dnadecoder execute" << endl;
 			i += 2;
 
 		}	
@@ -1666,7 +1697,7 @@ void Requests::testPrintPFile(){
 
 	if(! isFasta)
 		{
-		cout << " - testPrintReads - fastq not treated temporarily" << endl;
+		cout << " - testPrintPFile - fastq not treated temporarily" << endl;
 		//qdecoder = qualdecoders[j];
 		//stream_qual = new std::istringstream (qdecoder->_buffer);
 		//qdecoder->_buffer.clear();
@@ -1701,6 +1732,8 @@ void Requests::testPrintPFile(){
 		stringstream sint;
 		sint << readid;
 				
+		
+
 		if( ! noHeader)
 		{
 			if(getline(*stream_header, line)){
@@ -1726,7 +1759,7 @@ void Requests::testPrintPFile(){
 					
 			readid++;
 		}
-				 
+			 
 				
 				
 		if(getline(stream_dna, line)){
@@ -1741,7 +1774,7 @@ void Requests::testPrintPFile(){
 				
 		if( ! isFasta)
 		{
-			cout << " - testPrintReads - fastq not treated temporarily" << endl;
+			cout << " - testPrintPFile - fastq not treated temporarily" << endl;
 			//if(getline(*stream_qual, line)){
 			//	output_buff += "+\n";
 			//	output_buff +=  line + '\n';
@@ -1754,7 +1787,10 @@ void Requests::testPrintPFile(){
 			
 			 
 	//_outputFile->fwrite(output_buff.c_str(), output_buff.size(), 1);
-	cout << " - testPrintReads - buff : \n" << output_buff.c_str() << endl;
+	cout << " - testPrintPFile - buff : \n" << output_buff.c_str() << endl;
+	//cout << " - testPrintPFile - buff max size : \n" << output_buff.max_size() << endl;
+	//cout << " - testPrintPFile - buff actual size : \n" << output_buff.length() << endl;
+
 
 	if(stream_qual!= NULL) delete  stream_qual;
 	if(stream_header!= NULL) delete  stream_header;

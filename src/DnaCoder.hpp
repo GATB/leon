@@ -155,8 +155,10 @@ class DnaEncoder : AbstractDnaCoder
 
 		void operator()(Sequence& sequence);
 
+
+		void reset();
 		void encodeSortedFileAnchor(kmer_type anchor);
-		void encodeSortedFileRead(kmer_type anchor, int readType, int readSize, int anchorPos, int anchorAddress, vector<int> Npos,
+		void encodeSortedFileRead(kmer_type anchor, int isRevComp, int readSize, int anchorPos, /*int anchorAddress,*/ vector<int> Npos,
 									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
 									vector<u_int8_t> binaryBifurcations, vector<u_int8_t> bifurcationTypes);
 		void encodeSortedFileWriteBlock();
@@ -296,7 +298,11 @@ class DnaDecoder : AbstractDnaCoder
 		string _currentSeq;
 		ifstream* _anchorDictFile;
 		
+		//sortedFile
+		kmer_type _anchor;
 		void decodeAnchorRead();
+		void decodeSortedAnchorRead();
+
 		kmer_type extendAnchor(kmer_type kmer, int pos, bool rightExtend);
 		
 		void decodeNoAnchorRead();

@@ -1237,14 +1237,14 @@ void Leon::executeCompression(){
 	}
 
 	if (_orderReads){
-		_outputFilename = _baseOutputname + ".paon";
+		_outputFilename = _baseOutputname + ".peacock";
 	}
 	else{
 		_outputFilename = _baseOutputname + ".leon";
 	}
 
 	/*if (_orderReads){
-		_outputFileRequestsName = _baseOutputname + ".paon";
+		_outputFileRequestsName = _baseOutputname + ".peacock";
 	}*/
 
 	_outputFile = System::file().newFile(_outputFilename, "wb");
@@ -1291,7 +1291,7 @@ void Leon::executeCompression(){
 
 
     //Compression
-	//temporarily disable header compression for paon
+	//temporarily disable header compression for peacock
 	if(! _noHeader && ! _orderReads)
 	{
 		startHeaderCompression();
@@ -1776,16 +1776,21 @@ void Leon::startDnaCompression(){
 	
 
 	//encode dna if leon mode
-	//launch dna sorting if paon mode
+	//launch dna sorting if peacock mode
+
+		
 	getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
 	
 
 	if (_orderReads){
 
+		int nbReadsEncodedTest = 0;
 		//Do and wait for the map reduce sort here
 
 		DnaEncoder* de = new DnaEncoder(this);
-
+		//TODO
+		//not normal having to reset _processedSquenceCount... why isn't it 0 already at construction ??
+		de->reset();
 
 		//AFTER MAP REDUCE SORT
 
@@ -1837,7 +1842,7 @@ void Leon::startDnaCompression(){
 					pch = strtok (str,":");
 
 
-					int readType = atoi(pch);
+					int isRevComp = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - readType : " << readType << endl;
 					pch = strtok (NULL, ":");
 					int readSize = atoi(pch);
@@ -1845,8 +1850,10 @@ void Leon::startDnaCompression(){
 					pch = strtok (NULL, ":");
 					int anchorPos = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - anchorPos : " << anchorPos << endl;
-					pch = strtok (NULL, ":");
-					int anchorAddress = atoi(pch);
+					
+					//pch = strtok (NULL, ":");
+					//int anchorAddress = atoi(pch);
+					
 					//cerr << "debug Leon::startDnaCompression - anchorAddress : " << anchorAddress << endl;
 					pch = strtok (NULL, ":");
 					int Npos_size = atoi(pch);
@@ -1906,6 +1913,7 @@ void Leon::startDnaCompression(){
 
 	       			pch = strtok (NULL, ":");
         			int nbBifurcations = strlen(pch);
+        			cerr << "debug Leon::startDnaCompression - nb bif : " << nbBifurcations << endl;
 
           			for (int i=0; i<nbBifurcations; ++i){
 	          				
@@ -1924,21 +1932,24 @@ void Leon::startDnaCompression(){
           			//cerr << "debug Leon::startDnaCompression - strlen(pch) : " << strlen(pch) << endl;
 
           			//debug
-          			/*
+          			
 					for (int i = 0; i<bifurcationTypes.size(); ++i){
 						cerr << "debug Leon::startDnaCompression - bifurcationTypes[i] : " << (int) bifurcationTypes[i] << endl;
 					}
+					cerr << "debug Leon::startDnaCompression - nb normal bif : " << bifurcations.size() << endl;
 					for (int i = 0; i<bifurcations.size(); ++i){
 						cerr << "debug Leon::startDnaCompression - bifurcations[i] : " << (int) bifurcations[i] << endl;
 					}
+					cerr << "debug Leon::startDnaCompression - nb binary bif : " << binaryBifurcations.size() << endl;
 					for (int i = 0; i<binaryBifurcations.size(); ++i){
 						cerr << "debug Leon::startDnaCompression - binaryBifurcations[i] : " << (int) binaryBifurcations[i] << endl;
 					}
-					*/
+					
 
-					de->encodeSortedFileRead(anchor, readType, readSize, anchorPos, anchorAddress, Npos,
+					de->encodeSortedFileRead(anchor, isRevComp, readSize, anchorPos, Npos,
 											leftErrorPos, bifurcations, binaryBifurcations, bifurcationTypes);
-
+					nbReadsEncodedTest++;
+					cerr << "debug Leon::startDnaCompression - nbReadsEncodedTest : " << (int) nbReadsEncodedTest << endl;
 				}
 				// at the end of the list of actual anchor's read
 				// we save the anchor and its nb of reads in a dictionnary

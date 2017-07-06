@@ -174,7 +174,7 @@ class Requests
 		void testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintAllHeadersReadsFile();
 
-		//paon
+		//peacock
 		void testPrintPFile();
 
 		/*****requests*****/
@@ -210,6 +210,7 @@ class Requests
 		void getSequenceFileMatchesInData(char* sequence);
 
 		//request global variables
+		bool _orderReads;
 		char request[1024];
 		int req_buffer_size;
 		bool end_requests;
