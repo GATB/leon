@@ -2189,7 +2189,7 @@ void DnaDecoder::execute(){
 			cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
 			cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
 			cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
-			cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
+			//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
 		}
 	}
 	else{

@@ -1183,7 +1183,7 @@ void Leon::executeCompression(){
 
 	//TODO test modif abundance default value : 4
        // _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
-	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s",_kmerSize, _h5OutputFilename.c_str());
+	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out kcount -out %s",_kmerSize, _h5OutputFilename.c_str());
 //	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s", _kmerSize, _h5OutputFilename.c_str());
 	
 
