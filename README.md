@@ -18,9 +18,9 @@ G. Benoit, C. Lemaitre, D. Lavenier, E. Drezen, T. Dayris, R. Uricaru, G. Rizk. 
 
 ## Requirements
 
-CMake 2.6+; see http://www.cmake.org/cmake/resources/software.html
+CMake 3.1+; see http://www.cmake.org/cmake/resources/software.html
 
-c++ compiler; compilation was tested with gcc and g++ version>=4.5 (Linux) and clang version>=4.1 (Mac OSX).
+c++/11 compiler; compilation was tested with gcc and g++ version>=4.8 (Linux) and clang version>=3.6 (Mac OSX).
 
 ## Instructions
 
