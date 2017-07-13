@@ -1,8 +1,8 @@
 # Leon 
 
-| **Linux** | **Mac OSX** |
-|-----------|-------------|
-[![Build Status](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-debian7-64bits-gcc-4.7/badge/icon)](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-debian7-64bits-gcc-4.7/) | [![Build Status](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-macos-10.9.5-gcc-4.2.1/badge/icon)](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-macos-10.9.5-gcc-4.2.1/)
+| **Linux** | **Mac OSX** | **Functional tests** |
+|-----------|-------------|----------------------|
+[![Build Status](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-debian7-64bits-gcc-4.7/badge/icon)](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-debian7-64bits-gcc-4.7/) | [![Build Status](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-macos-10.9.5-gcc-4.2.1/badge/icon)](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-build-macos-10.9.5-gcc-4.2.1/) | [![Build Status](https://ci.inria.fr/gatb-core/view/Leon/job/tool-leon-functional-tests/badge/icon)](https://github.com/GATB/gatb-core/tree/master/gatb-core/test/jenkins/leon) |
 
 [![License](http://img.shields.io/:license-affero-blue.svg)](http://www.gnu.org/licenses/agpl-3.0.en.html)
 
