@@ -6,9 +6,11 @@
 
 [![License](http://img.shields.io/:license-affero-blue.svg)](http://www.gnu.org/licenses/agpl-3.0.en.html)
 
-#What is Leon?
-Leon is a software to compress Next Generation Sequencing data. It can compress Fasta or Fastq format.
-The method does not require any reference genome, instead a reference is built de novo from the set of reads as a probabilist de Bruijn Graph. It uses the disk streaming k-mer counting algorithm contained in the GATB library, and inserts solid k-mers in a bloom-filter. Each read is then encoded as a path in this graph, storing only an anchoring kmer and a list of bifurcations indicating which path to follow in the graph if several are possible.
+# What is Leon?
+
+Leon is a software to compress Next Generation Sequencing data. It can compress Fasta or Fastq format; plain text and gzipped files are supported.
+
+The method does not require any reference genome, instead a reference is built de novo from the set of reads as a probabilist de Bruijn Graph. It uses the disk streaming k-mer counting algorithm contained in the [GATB-Core library](https://github.com/GATB/gatb-core), and inserts solid k-mers in a bloom-filter. Each read is then encoded as a path in this graph, storing only an anchoring kmer and a list of bifurcations indicating which path to follow in the graph if several are possible.
 
 G. Benoit, C. Lemaitre, D. Lavenier, E. Drezen, T. Dayris, R. Uricaru, G. Rizk. (2015) [Reference-free compression of high throughput sequencing data with a probabilistic de Bruijn graph](http://www.biomedcentral.com/1471-2105/16/288). BMC Bioinformatics, 2015, 16:288.
 								
@@ -29,7 +31,7 @@ c++ compiler; compilation was tested with gcc and g++ version>=4.5 (Linux) and c
     cd leon
     sh INSTALL
 
-#MANUAL	 
+# MANUAL	 
 								
 ## Usage
 
@@ -64,8 +66,6 @@ Examples :
     leon -file toy.leon  -d 
        -> "restores" the file toy.fasta
 
- 
-
 Note:
  
 In order to use k values larger than 31, recompilation is necessary.
@@ -78,10 +78,17 @@ by
 
     cmake -Dk1=64 -Dk2=96 -Dk3=128 -Dk4=162 ..
 
-this will allow to use k<63. For larger k, change the values such that they are multiple of 32 and k1<k2<k3<k4
+this will allow to use k<63. For larger k, change the values such that they are multiple of 32 and k1&lt;k2&lt;k3&lt;k4.
 
-#CHANGELOG
+# CHANGELOG
 
+* version 1.1.0: July 13, 2017:
+ + Leon compressor integrated into GATB-Core 1.4.0
+ + Leon compressed data is now stored into a single HDF5 binary file: '.leon'
+ + bug fixes on compression/decompression on small reads
+ + Extensive test suite added; [read more](https://github.com/GATB/gatb-core/tree/master/gatb-core/test/jenkins/leon)
+ + Leon now successfully works on data sets reported in [Y. Zhang et al, 2017](https://github.com/GATB/gatb-core/tree/master/gatb-core/test/jenkins/leon) as breaking Leon
+ 
 * version 1.0.0: April 16, 2015:
  bug fixes
 
@@ -97,6 +104,6 @@ this will allow to use k<63. For larger k, change the values such that they are 
 * version 0.1.2  Aug 10, 2014:
  initial public release
 
-#Contact
+# Contact
 
 To contact a developer, request help, etc: https://gatb.inria.fr/contact/

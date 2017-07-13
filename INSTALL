@@ -10,9 +10,9 @@ mkdir  build
 # Go in the 'build' directory
 cd build
 # Prepare the makefile
-cmake -DMAJOR=1 -DMINOR=0 -DPATCH=0 ..
+cmake ..
 # Run the newly created makefile:
-make -j 4
+make -j
 # Copy the created binaries in directory:
 cp ./bin/leon ../
 # Go back at the installation root directory
@@ -20,6 +20,6 @@ cd ..
 #toy example
 ./leon -file data/toy.fasta -c
 #decompress and check file, option -test-file to check decompressed file against original
-./leon -file data/toy.fasta.leon -d -test-file
+./leon -file data/toy.fasta.leon -d 
 
  

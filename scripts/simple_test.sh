@@ -33,10 +33,6 @@ else
   fi
 fi
 
-echo
-echo ">>> Gunzip data sample..."
-gunzip SRR387476.fastq.gz
-
 ################################################################################
 # we launch leon
 ################################################################################
@@ -52,16 +48,17 @@ else
 fi
 
 echo ">>> step 1/3: running compressing process..."
-${LEON_CMD} -c -lossless -file SRR387476.fastq
+${LEON_CMD} -c -lossless -file SRR387476.fastq.gz 
 echo
 echo ">>> step 2/3: running uncompressing process..."
-${LEON_CMD} -d -file SRR387476.fastq.leon
-
+${LEON_CMD} -d -file SRR387476.fastq.leon 
 ################################################################################
 # we check the result
 ################################################################################
 
 echo ">>> step 3/3: comparing original file and leon processed one..."
+echo "    gunzip original data sample..."
+gunzip SRR387476.fastq.gz
 diff ./SRR387476.fastq ./SRR387476.fastq.d
 if [ $? -eq 0 ]; then
    echo "*** test OK ***  "

@@ -1,13 +1,13 @@
 project(leon)
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.1.0)
 
 ################################################################################
 # The version number.
 ################################################################################
 # The default version number is the latest official build
 SET (gatb-tool_VERSION_MAJOR 1)
-SET (gatb-tool_VERSION_MINOR 0)
+SET (gatb-tool_VERSION_MINOR 1)
 SET (gatb-tool_VERSION_PATCH 0)
 
 # But, it is possible to define another release number during a local build
@@ -108,7 +108,7 @@ SET (CPACK_SOURCE_IGNORE_FILES
 # We copy some files to the binary archive
 INSTALL (TARGETS ${PROJECT_NAME} DESTINATION bin)
 INSTALL (DIRECTORY "${PROJECT_SOURCE_DIR}/data/" DESTINATION "data")
-INSTALL (FILES LICENSE README scripts/simple_test.sh DESTINATION bin/..)
+INSTALL (FILES LICENSE README.md scripts/simple_test.sh DESTINATION bin/..)
 
 # We include the "bin" tag into binary archive file name
 set (CPACK_PACKAGE_FILE_NAME  ${PROJECT_NAME}-${CPACK_PACKAGE_VERSION}-bin-${CMAKE_SYSTEM_NAME})
