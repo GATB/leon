@@ -84,11 +84,11 @@ this will allow to use k<63. For larger k, change the values such that they are 
 
 * version 1.1.0: July 13, 2017:
 
-    + Leon compressor integrated into GATB-Core 1.4.0
+    + Leon compressor integrated into GATB-Core 1.4.0, main source code is now included in GATB-Core source code
     + Leon compressed data is now stored into a single HDF5 binary file: '.leon'
-    + bug fixes on compression/decompression on small reads
+    + bug fixes on compression/decompression of very small reads
     + Extensive test suite added; [read more](https://github.com/GATB/gatb-core/tree/master/gatb-core/test/jenkins/leon)
-    + Leon now successfully works on data sets reported in [Y. Zhang et al, 2017](https://github.com/GATB/gatb-core/tree/master/gatb-core/test/jenkins/leon) as breaking Leon
+    + Leon now successfully works on the data sets reported as breaking Leon in [Y. Zhang et al, 2017](https://github.com/GATB/gatb-core/tree/master/gatb-core/test/jenkins/leon)
  
 * version 1.0.0: April 16, 2015:
  bug fixes
