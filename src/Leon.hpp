@@ -115,8 +115,8 @@ class Leon : public misc::impl::Tool
 	
 		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 
-		//Paon file Compression (for requests)
-		//void writePaonBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
+		//Peacock file Compression (for requests)
+		//void writePeacockBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 
 		//Header compression
 		string _firstHeader;
@@ -217,6 +217,8 @@ class Leon : public misc::impl::Tool
 		}
 		
 	
+	void decodeSortedAnchorDict();
+
 	private:
 
 		unsigned char  * _signature_array;
@@ -256,6 +258,7 @@ class Leon : public misc::impl::Tool
 
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
+		vector<Order0Model> _nbReadsPerAnchorModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
 	
@@ -272,7 +275,7 @@ class Leon : public misc::impl::Tool
 		void executeDecompression();
 		void executeRequest();
 		void endCompression();
-		//void endPaonCompression();
+		//void endPeacockCompression();
 		void endQualCompression();
 	
 		//Global decompression
@@ -309,15 +312,21 @@ class Leon : public misc::impl::Tool
 		void endDnaCompression();
 		void writeBloom();
 		void writeAnchorDict();
+		void writeSortedAnchorDict();
 		void encodeInsertedAnchor(const kmer_type& kmer);
+		void encodeInsertedSortedAnchor(const kmer_type& anchor, u_int32_t nbReads);
 			
 		RangeEncoder _anchorRangeEncoder;
+		//RangeEncoder _sortedAnchorRangeEncoder;
 		Order0Model _anchorDictModel;
 		
 		//map<kmer_type, u_int32_t> _anchorKmers; //uses 46 B per elem inserted
 		//OAHash<kmer_type> _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
 		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
+
+		//tmp test decompression
+		Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
 
 		//Header decompression
 	
@@ -336,6 +345,7 @@ class Leon : public misc::impl::Tool
 		string _dnaOutputFilename;
 		ofstream* _dnaOutputFile;
 		RangeDecoder _anchorRangeDecoder;
+		RangeDecoder _sortedAnchorRangeDecoder;
 		vector<kmer_type> _vecAnchorKmers;
 		
 		//Global decompression

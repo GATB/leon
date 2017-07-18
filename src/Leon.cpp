@@ -124,7 +124,7 @@ const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 Leon::Leon () :
 Tool("leon"),
 _generalModel(256),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
-_anchorDictModel(5),_nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
+_anchorDictModel(5), _nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
 _readCount (0), _totalDnaSize(0), _compressedSize(0),_MCtotal(0),_MCnoAternative(0),
 _MCuniqSolid(0),_MCuniqNoSolid(0),_MCmultipleSolid(0),_readWithoutAnchorCount(0),
 _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _otherSize(0), _readSizeSize(0), _bifurcationSize(0), _noAnchorSize(0),
@@ -219,7 +219,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = true;
+	_orderReads = false;
 	//_readSortedFileTest = true;
 
     _compress = false;
@@ -243,6 +243,7 @@ void Leon::execute()
 	//setup global
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
+		_nbReadsPerAnchorModel.push_back(Order0Model(256));
 	}
 	
 	if(_compress){
@@ -1753,6 +1754,7 @@ void Leon::startDnaCompression(){
 	//create a temporary output file to store the anchors dict
 	//_dictAnchorFile = System::file().newFile(_outputFilename + ".adtemp", "wb"); 
 	_dictAnchorFile = new ofstream((_outputFilename + ".adtemp").c_str(), ios::out|ios::binary);
+	cerr << "Leon::startDnaCompression - _dictAnchorFile : " << _outputFilename + ".adtemp" << endl;
 	
 	_lastAnchorValue = 0;
 	_anchorAdress = 0;
@@ -1956,6 +1958,7 @@ void Leon::startDnaCompression(){
 				else{
 					//cerr << "\tdebug Leon::startDnaCompression - anchors has : " << nbReads << " reads" << endl;
 						
+					encodeInsertedSortedAnchor(anchor, nbReads);	
 					_anchorKmersSorted->insert(anchor, nbReads);
 
 					readingNewAnchor = true;
@@ -1981,7 +1984,7 @@ void Leon::endDnaCompression(){
 	
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
 	for(int i=0; i<_blockSizes.size(); i++){
-		//cout << "block size: " << _blockSizes[i] << endl;
+		cout << "Leon::endDnaCompression() - block size: " << _blockSizes[i] << endl;
 		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
 	}
 	_blockSizes.clear();
@@ -1992,6 +1995,8 @@ void Leon::endDnaCompression(){
 		unsortedReads.close();
 		//TODO 
 		//write sortedAnchorDict
+		writeSortedAnchorDict();
+		//writeAnchorDict();
 	}
 
 	else{
@@ -2122,10 +2127,10 @@ void Leon::writeAnchorDict(){
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
 	_compressedSize += size;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
-	
+	cerr << "Leon::writeAnchorDict - encode dict size : " << size << endl;
 	//Encode anchors count
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
-	
+	cerr << "Leon::writeAnchorDict - encode anc count : " << _anchorAdress << endl;
 	//printf("should encode %u anchors \n",_anchorAdress);
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
 	//cout << "\t pos: " << _outputFile->tell() << endl;
@@ -2133,6 +2138,44 @@ void Leon::writeAnchorDict(){
 	
 	//_dictAnchorFile->seeko(0, SEEK_SET);
 	//_outputFile->fwrite(_dictAnchorFile, size, 1);
+	ifstream tempFile((_outputFilename + ".adtemp").c_str(), ios::in|ios::binary);
+	
+	
+	int bufsize = 4096*8;
+	char * buffer = new char [bufsize];
+
+    while (tempFile.good()) {
+    	cerr << "Leon::writeAnchorDict - tempFile.good()" << endl;
+		tempFile.read(buffer, bufsize);
+        _outputFile->fwrite(buffer, tempFile.gcount(), 1);
+    }
+    
+	tempFile.close();
+	remove((_outputFilename + ".adtemp").c_str());
+	delete [] buffer;
+
+}
+
+void Leon::writeSortedAnchorDict(){
+
+	_anchorRangeEncoder.flush();
+	
+	_dictAnchorFile->write( (const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
+	_dictAnchorFile->flush();
+	_dictAnchorFile->close();
+	_anchorRangeEncoder.clear();
+	
+	
+	u_int64_t size = System::file().getSize(_outputFilename + ".adtemp");
+	_anchorDictSize = size;
+
+	_compressedSize += size;
+	cerr << "Leon::writeSortedAnchorDict - encode dict size : " << size << endl;
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
+	
+	//Encode anchors count
+	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	cerr << "Leon::writeSortedAnchorDict - encode anc count : " << _anchorAdress << endl;
 	ifstream tempFile((_outputFilename + ".adtemp").c_str(), ios::in|ios::binary);
 	
 	
@@ -2148,7 +2191,6 @@ void Leon::writeAnchorDict(){
 	tempFile.close();
 	remove((_outputFilename + ".adtemp").c_str());
 	delete [] buffer;
-
 }
 
 bool Leon::anchorExist(const kmer_type& kmer, u_int32_t* anchorAdress){
@@ -2315,7 +2357,8 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 }
 
 void Leon::encodeInsertedAnchor(const kmer_type& kmer){
-
+	cerr << "Leon::encodeInsertedSortedAnchor - begin" << endl;
+	//encode anchor
 	/*
 	u_int64_t kmerValue = kmer.getVal();
 	u_int64_t deltaValue = 0;
@@ -2331,16 +2374,59 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 	//static int i = 0;
 	
 	string kmerStr = kmer.toString(_kmerSize);
-
+	cerr << "Leon::encodeInsertedSortedAnchor - encoding anchor : " << kmerStr << endl;
 	for(int i=0; i<kmerStr.size(); i++){
 		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		//cerr << "Leon::encodeInsertedSortedAnchor - encode : " << kmerStr[i] << endl;
+		//cerr << "Leon::encodeInsertedSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
 	}
 	//i+= 1;
 	//cout << i << endl;
+	
+	if(_anchorRangeEncoder.getBufferSize() >= 4096){
+		cerr << "Leon::encodeInsertedSortedAnchor - write : " << _anchorRangeEncoder.getBuffer() << endl;
+		_dictAnchorFile->write((const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
+		_anchorRangeEncoder.clearBuffer();
+	}
+	cerr << "Leon::encodeInsertedSortedAnchor - end" << endl;
+}
+
+void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads){
+	
+
+	cerr << "Leon::encodeInsertedSortedAnchor - begin" << endl;
+	//encode anchor
+	string kmerStr = kmer.toString(_kmerSize);
+	cerr << "Leon::encodeInsertedSortedAnchor - encoding anchor : " << kmerStr << endl;
+	for(int i=0; i<kmerStr.size(); i++){
+		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		cerr << "Leon::encodeInsertedSortedAnchor - encode : " << kmerStr[i] << endl;
+		cerr << "Leon::encodeInsertedSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
+	}
+	
+	u_int64_t nbReads = (uint32_t) u_nbReads;
+	//ICIIIII
+	cerr << "Leon::encodeInsertedSortedAnchor - encoding nb reads : " << nbReads << endl;
+	//CompressionUtils::encodeNumeric(_anchorRangeEncoder, _nbReadsPerAnchorModel, nbReads);
+	
+
+	/*char int8;
+	cerr << "Leon::encodeInsertedSortedAnchor - encoding nb reads : " << nbReads << endl;
+	for(int i=0; i<4; ++i){
+
+		int8 =  nbReads >> 8*(3-i);
+		//cerr << "Leon::encodeInsertedSortedAnchor - encode nb reads int8 : " <<  int8 << endl;
+		_anchorRangeEncoder.encode(_nbReadsModel, int8);
+		cerr << "Leon::encodeInsertedSortedAnchor - encode nb reads int8 : " << int8 << endl;
+	}*/
 	if(_anchorRangeEncoder.getBufferSize() >= 4096){
 		_dictAnchorFile->write((const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
 		_anchorRangeEncoder.clearBuffer();
 	}
+
+	cerr << "Leon::encodeInsertedSortedAnchor - end" << endl;
+
+
 }
 
 
@@ -3008,6 +3094,55 @@ void Leon::decodeAnchorDict(){
 	
 	//anchorDictFile.flush();
 	//anchorDictFile.close();
+}
+
+void Leon::decodeSortedAnchorDict(){
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\tDecode anchor dict" << endl;
+	#endif
+	cerr << "\tLeon::decodeSortedAnchorDict() - begin" << endl;
+	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	cerr << "\tLeon::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
+	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	cerr << "\tLeon::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
+	_sortedAnchorRangeDecoder.setInputFile(_inputFile);
+	string anchorKmer = "";
+
+	u_int64_t dictPos = _inputFile->tellg();
+	
+	u_int64_t currentAnchorCount = 0;
+
+	kmer_type anchor;
+	u_int32_t nbReads = 0;
+	u_int64_t nbcreated ;
+	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	cerr << "\tLeon::decodeSortedAnchorDict() - after initialisation" << endl;
+	while(currentAnchorCount < anchorCount){
+
+
+		u_int8_t c = _sortedAnchorRangeDecoder.nextByte(_anchorDictModel);
+		anchorKmer += Leon::bin2nt(c); //convert to char
+
+		if(anchorKmer.size() == _kmerSize){
+			
+			anchor = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ; //then convert to bin
+
+			//u_int32_t nbReads = 0;
+			u_int64_t nbReads = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+			cerr << "\tLeon::decodeSortedAnchorDict() - nbReads" << nbReads << endl;
+
+			//_vecAnchorKmers.push_back(kmer);
+			_anchorKmersSortedD->insert(anchor, nbReads);
+
+			anchorKmer.clear();
+
+			currentAnchorCount += 1;
+		}
+	}
+	
+	#ifdef PRINT_DEBUG_DECODER
+		cout << "\t\tAnchor count: " << _vecAnchorKmers.size() << endl;
+	#endif
 }
 
 

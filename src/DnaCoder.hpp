@@ -105,6 +105,7 @@ class AbstractDnaCoder
 		vector<Order0Model> _rightErrorPosModel;
 		
 		vector<Order0Model> _readSizeValueModel;
+		vector<Order0Model> _nbReadsPerAnchorModel;
 		Order0Model _readAnchorRevcompModel;
 		Order0Model _bifurcationModel;
 		Order0Model _bifurcationBinaryModel;

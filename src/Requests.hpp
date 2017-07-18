@@ -137,6 +137,7 @@ class Requests
 		void setupNextComponent(vector<u_int64_t> & blockSizes);
 		void decodeBloom();
 		void decodeAnchorDict();
+		void decodeSortedAnchorDict();
 		void decodeInfos();
 		void headerSetUp();
 		void dnaSetUp();
@@ -245,6 +246,7 @@ class Requests
 		KmerModel* _kmerModel;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
+		Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
 		u_int32_t _anchorAdress;
 		ifstream* _anchorDictFile;
 
@@ -253,6 +255,7 @@ class Requests
 		string _decodeFilename;
 		RangeDecoder _rangeDecoder;
 		RangeDecoder _anchorRangeDecoder;
+		//RangeDecoder _sortedAnchorRangeDecoder;
 		ifstream* _descInputFile;
 		ifstream* _inputFile;
 		DnaDecoder* _dnadec;
@@ -273,7 +276,9 @@ class Requests
 		// models :
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
+		vector<Order0Model> _nbReadsPerAnchorModel;
 		Order0Model _anchorDictModel;
+		vector<Order0Model> _nbReadsModel;
 
 
 		/*Iterator<kmer_count>* _itKmersAll;
