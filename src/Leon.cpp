@@ -243,7 +243,7 @@ void Leon::execute()
 	//setup global
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
-		_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		//_nbReadsPerAnchorModel.push_back(Order0Model(256));
 	}
 	
 	if(_compress){

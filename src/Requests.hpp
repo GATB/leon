@@ -246,7 +246,7 @@ class Requests
 		KmerModel* _kmerModel;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
-		Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
+		//Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
 		u_int32_t _anchorAdress;
 		ifstream* _anchorDictFile;
 
@@ -276,7 +276,7 @@ class Requests
 		// models :
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
-		vector<Order0Model> _nbReadsPerAnchorModel;
+		//vector<Order0Model> _nbReadsPerAnchorModel;
 		Order0Model _anchorDictModel;
 		vector<Order0Model> _nbReadsModel;
 

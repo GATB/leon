@@ -7,7 +7,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	Hash16<kmer_type, u_int32_t >  * anchorKmers,
 	Hash16<kmer_type, u_int32_t >  * anchorKmersSorted,
 	Leon* leon,
-	DnaDecoder* dnadec): _generalModel(256), _anchorDictModel(5)/*, _nbReadsModel(32)*/{
+	DnaDecoder* dnadec): _generalModel(256), _anchorDictModel(5){
 	
 	cout << "entering requests creator" << endl;
 
@@ -41,7 +41,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	_dnadec = dnadec;
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
-		_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		//_nbReadsPerAnchorModel.push_back(Order0Model(256));
 	}
 
 	cout << "nb kmers : " << _nb_kmers_infile << endl;
@@ -575,7 +575,7 @@ void Requests::decodeSortedAnchorDict(){
 
 	kmer_type anchor;
 	u_int64_t nbcreated ;
-	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	//_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
 	cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
 	
 	while(currentAnchorCount < anchorCount){

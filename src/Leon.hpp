@@ -258,7 +258,7 @@ class Leon : public misc::impl::Tool
 
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
-		vector<Order0Model> _nbReadsPerAnchorModel;
+		//vector<Order0Model> _nbReadsPerAnchorModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
 	
