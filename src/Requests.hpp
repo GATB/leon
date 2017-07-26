@@ -246,7 +246,7 @@ class Requests
 		KmerModel* _kmerModel;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
-		//Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
+		Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD; //get at decompression
 		u_int32_t _anchorAdress;
 		ifstream* _anchorDictFile;
 
@@ -276,12 +276,20 @@ class Requests
 		// models :
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
-		//vector<Order0Model> _nbReadsPerAnchorModel;
 		Order0Model _anchorDictModel;
-		vector<Order0Model> _nbReadsModel;
+		vector<Order0Model> _nbReadsPerAnchorModel;
+		//uint64_t blablalol;
+		
+		//int a1;
+		//int a2;
+		//int tab[5];
+		//int16_t b;
+		//int a3;
+		/*int a4;
+		int a5;
+		int a6;
 
-
-		/*Iterator<kmer_count>* _itKmersAll;
+*/		/*Iterator<kmer_count>* _itKmersAll;
 		Kmer<>::ModelCanonical::Iterator _itKmersSubBank;*/
 		Iterator<kmer_count>* _itKmers;
 
@@ -291,8 +299,8 @@ class Requests
 		unsigned char* _signature_array;
 		unsigned char* _color_array;
 		
-	protected:
 
+	protected:
 };
 
 #endif __REQUESTS__HPP__ 

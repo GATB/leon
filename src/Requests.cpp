@@ -41,7 +41,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	_dnadec = dnadec;
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
-		//_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		_nbReadsPerAnchorModel.push_back(Order0Model(256));
 	}
 
 	cout << "nb kmers : " << _nb_kmers_infile << endl;
@@ -380,8 +380,10 @@ void Requests::clearRangeDecoder(){
 	//test
 	_generalModel.clear();
 	_numericModel.clear();
+	_nbReadsPerAnchorModel.clear();
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
+		_nbReadsPerAnchorModel.push_back(Order0Model(256));
 	}
 	//test
 	delete _descInputFile;
@@ -494,10 +496,16 @@ void Requests::qualDecoderSetup(int blockIndice){
 
 //~~copy of Leon private method...
 void Requests::setupNextComponent(vector<u_int64_t> & blockSizes){
-
+			cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
+	cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
+	cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
 	//Go to the data block position (position 0 for headers, position |headers data| for reads)
 	_inputFile->seekg(_filePos, _inputFile->beg);
-	
+	cerr << "filepos : " << _filePos << endl;
+			cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
+	cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
+	cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
+
 	blockSizes.clear();
 	
 	_blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
@@ -539,12 +547,12 @@ void Requests::decodeAnchorDict(){
 	u_int64_t dictPos = _inputFile->tellg();
 	cerr << "Requests::decodeAnchorDict - dictPos : " << dictPos << endl;
 	u_int64_t currentAnchorCount = 0;
-	
+	//return;
 	while(currentAnchorCount < anchorCount){
 
 		u_int8_t c = _anchorRangeDecoder.nextByte(_anchorDictModel);
-		cerr << "Leon::decodeAnchorDict - decode : " << c << endl;
-		cerr << "Leon::decodeAnchorDict - decode Leon::bin2nt(c) : " << Leon::bin2nt(c) << endl;
+		//cerr << "Leon::decodeAnchorDict - decode : " << (uint32_t) c << endl;
+		//cerr << "Leon::decodeAnchorDict - decode Leon::bin2nt(c) : " << (char) Leon::bin2nt(c) << endl;
 		anchorKmer += Leon::bin2nt(c); //convert to char
 		if(anchorKmer.size() == _kmerSize){
 
@@ -552,6 +560,7 @@ void Requests::decodeAnchorDict(){
 			_vecAnchorKmers.push_back(kmer);
 			anchorKmer.clear();
 			currentAnchorCount += 1;
+			cerr << "\tRequests::decodeAnchorDict() - anchor : " << kmer.toString(_kmerSize) << endl;
 
 		}
 	}
@@ -566,37 +575,45 @@ void Requests::decodeSortedAnchorDict(){
 	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
+	
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile bad : " << _inputFile->bad() << endl;
+	/*cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile fail : " << _inputFile->fail() << endl;
+	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile is_open : " << _inputFile->is_open() << endl;
+*/
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";
-
+	//return;
 	u_int64_t dictPos = _inputFile->tellg();
-	
+	// cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile eof : " << _inputFile->eof() << endl;
+	// cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile bad : " << _inputFile->bad() << endl;
+	// cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile fail : " << _inputFile->fail() << endl;
+	cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
 	u_int64_t currentAnchorCount = 0;
 
 	kmer_type anchor;
 	u_int64_t nbcreated ;
-	//_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
 	cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
 	
 	while(currentAnchorCount < anchorCount){
 
 
 		u_int8_t c = _anchorRangeDecoder.nextByte(_anchorDictModel);
-		cerr << "Leon::decodeSortedAnchorDict - decode : " << c << endl;
-		cerr << "Leon::decodeSortedAnchorDict - decode Leon::bin2nt(c) : " << Leon::bin2nt(c) << endl;
+//		cerr << "Requests::decodeSortedAnchorDict - decode : " << (uint32_t) c << endl;
+//		cerr << "Requests::decodeSortedAnchorDict - decode Leon::bin2nt(c) : " << (char) Leon::bin2nt(c) << endl;
 		anchorKmer += Leon::bin2nt(c); //convert to char
 
 		if(anchorKmer.size() == _kmerSize){
 			
 			anchor = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ; //then convert to bin
 			cerr << "\tRequests::decodeSortedAnchorDict() - anchor : " << anchor.toString(_kmerSize) << endl;
-			//u_int32_t nbReads = 0;
 
-			//u_int64_t nbReads = CompressionUtils::decodeNumeric(_sortedAnchorRangeDecoder, _nbReadsPerAnchorModel);
-			//cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
+			u_int64_t nbReads = CompressionUtils::decodeNumeric(_anchorRangeDecoder, _nbReadsPerAnchorModel);
+			cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
 
 			//_vecAnchorKmers.push_back(kmer);
-			//_anchorKmersSortedD->insert(anchor, nbReads);
+			_anchorKmersSortedD->insert(anchor, nbReads);
 
 			anchorKmer.clear();
 
@@ -1564,6 +1581,8 @@ void Requests::testPrintAllHeadersReadsFile(){
 //peacock mode
 
 void Requests::testPrintPFile(){
+	
+	_filePos = 0;
 
 	initializeRangeDecoder();
 
@@ -1600,17 +1619,18 @@ void Requests::testPrintPFile(){
 	if(! noHeader)
 	{
 		
-	///////// header setup  /////////
-	//Decode the first header
-	cerr << "debug - testPrintPFile - header setup" << endl;
-	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	for(int i=0; i<firstHeaderSize; i++){
-		firstHeader += _rangeDecoder.nextByte(_generalModel);
-		cerr << "debug - testPrintPFile - first header : " << firstHeader << endl;
-	}
-	cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
-	setupNextComponent(_headerBlockSizes);
-	cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+		///////// header setup  /////////
+		//Decode the first header
+		cerr << "debug - testPrintPFile - header setup" << endl;
+		u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+		for(int i=0; i<firstHeaderSize; i++){
+			firstHeader += _rangeDecoder.nextByte(_generalModel);
+			cerr << "debug - testPrintPFile - first header : " << firstHeader << endl;
+		}
+		cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+		_filePos = filePosHeader;
+		setupNextComponent(_headerBlockSizes);
+		cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1626,6 +1646,7 @@ void Requests::testPrintPFile(){
 	}
 	
 	cerr << "debug - testPrintPFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	_filePos = filePosDna;
 	setupNextComponent(_dnaBlockSizes);
 	cerr << "debug - testPrintPFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
 

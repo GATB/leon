@@ -219,7 +219,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = false;
+	_orderReads = true;
 	//_readSortedFileTest = true;
 
     _compress = false;
@@ -243,7 +243,7 @@ void Leon::execute()
 	//setup global
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
-		//_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		_nbReadsPerAnchorModel.push_back(Order0Model(256));
 	}
 	
 	if(_compress){
@@ -1335,6 +1335,13 @@ void Leon::executeCompression(){
 		
 		DnaDecoder* dd = new DnaDecoder(this, _outputFilename);
 
+		//TEST LOAD GRAPH ...
+		// string _h5OutputFilename = System::file().getBaseName(_outputFilename);
+		// _h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
+		// cerr << "_h5OutputFilename : " << _h5OutputFilename.c_str() << endl;
+		// _graph =  Graph::load(_h5OutputFilename.c_str() );
+		//END TEST LOAD GRAPH...
+
 		Requests requests = Requests(_inputBank, _baseOutputname, _graph, 
 			model, solidCollection, _kmerSize, _anchorKmers,  _anchorKmersSorted, this, dd/*, 
 			_generalModel, _numericModel, _anchorDictModel*/);
@@ -1825,6 +1832,7 @@ void Leon::startDnaCompression(){
 				//cerr << "\tdebug Leon::startDnaCompression - kmer_type anchor : " << anchor.toString(_kmerSize) << endl;
 				
 				de->encodeSortedFileAnchor(anchor);
+				cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - ANCHOR : " << anchor.toString(_kmerSize) << endl << endl;
 				readingNewAnchor = false;
 			}
 
@@ -1936,15 +1944,15 @@ void Leon::startDnaCompression(){
           			//debug
           			
 					for (int i = 0; i<bifurcationTypes.size(); ++i){
-						cerr << "debug Leon::startDnaCompression - bifurcationTypes[i] : " << (int) bifurcationTypes[i] << endl;
+						//cerr << "debug Leon::startDnaCompression - bifurcationTypes[i] : " << (int) bifurcationTypes[i] << endl;
 					}
 					cerr << "debug Leon::startDnaCompression - nb normal bif : " << bifurcations.size() << endl;
 					for (int i = 0; i<bifurcations.size(); ++i){
-						cerr << "debug Leon::startDnaCompression - bifurcations[i] : " << (int) bifurcations[i] << endl;
+						//cerr << "debug Leon::startDnaCompression - bifurcations[i] : " << (int) bifurcations[i] << endl;
 					}
 					cerr << "debug Leon::startDnaCompression - nb binary bif : " << binaryBifurcations.size() << endl;
 					for (int i = 0; i<binaryBifurcations.size(); ++i){
-						cerr << "debug Leon::startDnaCompression - binaryBifurcations[i] : " << (int) binaryBifurcations[i] << endl;
+						//cerr << "debug Leon::startDnaCompression - binaryBifurcations[i] : " << (int) binaryBifurcations[i] << endl;
 					}
 					
 
@@ -2332,8 +2340,10 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 		return -1;
 	}
 
-	encodeInsertedAnchor(bestKmer);
-	
+	if (! _orderReads){
+		encodeInsertedAnchor(bestKmer);
+	}
+
 	_anchorKmers->insert(bestKmer,_anchorAdress); //with Hash16
 	//_anchorKmers[bestKmer] = _anchorAdress;
 	//_anchorKmers.insert(bestKmer, _anchorAdress);
@@ -2357,7 +2367,7 @@ int Leon::findAndInsertAnchor(const vector<kmer_type>& kmers, u_int32_t* anchorA
 }
 
 void Leon::encodeInsertedAnchor(const kmer_type& kmer){
-	cerr << "Leon::encodeInsertedSortedAnchor - begin" << endl;
+	cerr << "Leon::encodeInsertedAnchor - begin" << endl;
 	//encode anchor
 	/*
 	u_int64_t kmerValue = kmer.getVal();
@@ -2374,21 +2384,21 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 	//static int i = 0;
 	
 	string kmerStr = kmer.toString(_kmerSize);
-	cerr << "Leon::encodeInsertedSortedAnchor - encoding anchor : " << kmerStr << endl;
+	cerr << "Leon::encodeInsertedAnchor - encoding anchor : " << kmerStr << endl;
 	for(int i=0; i<kmerStr.size(); i++){
 		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
-		//cerr << "Leon::encodeInsertedSortedAnchor - encode : " << kmerStr[i] << endl;
-		//cerr << "Leon::encodeInsertedSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
+		//cerr << "Leon::encodeSortedAnchor - encode : " << kmerStr[i] << endl;
+		//cerr << "Leon::encodeSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
 	}
 	//i+= 1;
 	//cout << i << endl;
 	
 	if(_anchorRangeEncoder.getBufferSize() >= 4096){
-		cerr << "Leon::encodeInsertedSortedAnchor - write : " << _anchorRangeEncoder.getBuffer() << endl;
+		cerr << "Leon::encodeInsertedAnchor - write : " << _anchorRangeEncoder.getBuffer() << endl;
 		_dictAnchorFile->write((const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
 		_anchorRangeEncoder.clearBuffer();
 	}
-	cerr << "Leon::encodeInsertedSortedAnchor - end" << endl;
+	cerr << "Leon::encodeInsertedAnchor - end" << endl;
 }
 
 void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads){
@@ -2400,25 +2410,16 @@ void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads
 	cerr << "Leon::encodeInsertedSortedAnchor - encoding anchor : " << kmerStr << endl;
 	for(int i=0; i<kmerStr.size(); i++){
 		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
-		cerr << "Leon::encodeInsertedSortedAnchor - encode : " << kmerStr[i] << endl;
-		cerr << "Leon::encodeInsertedSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
+		// cerr << "Leon::encodeInsertedSortedAnchor - encode : " << kmerStr[i] << endl;
+		// cerr << "Leon::encodeInsertedSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
 	}
 	
-	u_int64_t nbReads = (uint32_t) u_nbReads;
-	//ICIIIII
+	u_int64_t nbReads = /*(u_int64_t)*/ u_nbReads;
+
 	cerr << "Leon::encodeInsertedSortedAnchor - encoding nb reads : " << nbReads << endl;
-	//CompressionUtils::encodeNumeric(_anchorRangeEncoder, _nbReadsPerAnchorModel, nbReads);
+	CompressionUtils::encodeNumeric(_anchorRangeEncoder, _nbReadsPerAnchorModel, nbReads);
 	
 
-	/*char int8;
-	cerr << "Leon::encodeInsertedSortedAnchor - encoding nb reads : " << nbReads << endl;
-	for(int i=0; i<4; ++i){
-
-		int8 =  nbReads >> 8*(3-i);
-		//cerr << "Leon::encodeInsertedSortedAnchor - encode nb reads int8 : " <<  int8 << endl;
-		_anchorRangeEncoder.encode(_nbReadsModel, int8);
-		cerr << "Leon::encodeInsertedSortedAnchor - encode nb reads int8 : " << int8 << endl;
-	}*/
 	if(_anchorRangeEncoder.getBufferSize() >= 4096){
 		_dictAnchorFile->write((const char*) _anchorRangeEncoder.getBuffer(), _anchorRangeEncoder.getBufferSize());
 		_anchorRangeEncoder.clearBuffer();
