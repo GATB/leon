@@ -284,7 +284,7 @@ class DnaDecoder : AbstractDnaCoder
 		Requests* _requests;
 		bool _decodeReq = false;
 
-		
+	
 	private:
 	
 

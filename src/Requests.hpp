@@ -208,7 +208,7 @@ class Requests
 		bool isSequenceInData(char* sequence);
 		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence);
 		int getSequenceNbColorsInData(char* sequence);
-		void getSequenceFileMatchesInData(char* sequence);
+		void getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX_COLORS>>* sequenceMatches);
 
 		//request global variables
 		bool _orderReads;

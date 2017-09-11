@@ -2027,11 +2027,15 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 	//cerr << "\tdebug DnaDecoder::getNextReadInfos - BEGIN " << endl;
 	if (_processedSequenceCount < _sequenceCount){
 		ri->readType = _rangeDecoder.nextByte(_readTypeModel);
-
+		//cerr << "\tdebug DnaDecoder::getNextReadInfos - ri->readType :  " << (int) ri->readType << endl;
 		if(ri->readType == 0){
+			/*
 			ri->readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeValueModel);
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - ri->readSize :  " << (int) ri->readSize << endl;
 			ri->anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosModel);
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - ri->anchorPos :  " << (int) ri->anchorPos << endl;
 			ri->anchorAddress = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressModel);
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - ri->anchorAddress :  " << (int) ri->anchorAddress << endl;
 			//TODO
 			//suppress the requests method "getAnchor"...
 			kmer_type anchor;
@@ -2062,14 +2066,14 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 			//cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count before :  " << ri->NposCount << endl;
 
 			ri->NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-//cerr << "\tdebug DnaDecoder::getNextReadInfos - GOOD " << endl;
+
 //cerr << "\tdebug DnaDecoder::getNextReadInfos - npos count :  " << ri->NposCount << endl;
 			for(int i=0; i<ri->NposCount; i++){
 				u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
 				ri->Npos.push_back(nPos);
 				_prevNpos = nPos;
 			}
-			//cerr << "\tdebug DnaDecoder::getNextReadInfos - CRASH " << endl;
+			
 			//Decode error pos
 			ri->nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
 
@@ -2092,11 +2096,132 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 				kmer = extendAnchor(kmer, i, true);
 
 			}
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - GOOD " << endl;
 			
 			//Inject N in the decoded read sequence
-			for(int i=0; i<ri->Npos.size(); i++){
+			for(int i=0; i<ri->NposCount; i++){
+				cerr << "\tri->NposCount : " << ri->NposCount << endl;
+				cerr << "\t_currentSeq.size() : " << _currentSeq.size() << endl;
+				cerr << "\ti : " << i << endl;
+				cerr << "\tri->Npos[i] : " << ri->Npos[i] << endl;
+				_currentSeq[ri->Npos[i]] = 'N';
+				cerr << "\tdebug DnaDecoder::getNextReadInfos - CRASH " << endl;
+			}
+			cerr << "\tdebug DnaDecoder::getNextReadInfos - CRASH " << endl;
+
+			*/
+
+			u_int8_t deltaType;
+			u_int64_t deltaValue;
+			
+			//printf("Decode anchor read \n");
+
+			//Decode read size
+			//cerr << "DnaDecoder::decodeAnchorRead() - readSize before" << endl;
+			_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeValueModel);
+			ri->readSize = _readSize;
+			// cerr << "DnaDecoder::decodeAnchorRead() - readSize after" << endl;
+			//cerr << "DnaDecoder::decodeAnchorRead() - readSize : " << _readSize << endl;
+			
+			//Decode anchor pos
+			//cerr << "DnaDecoder::decodeAnchorRead() - anchorPos before" << endl;
+			int anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosModel);
+			ri->anchorPos = anchorPos;
+			// cerr << "DnaDecoder::decodeAnchorRead() - anchorPos after" << endl;
+			//cerr << "DnaDecoder::decodeAnchorRead() - anchorPos : " << anchorPos << endl;
+			
+			//Decode anchor address
+			//cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress before" << endl;
+			u_int64_t anchorAddress = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressModel);
+			ri->anchorAddress = anchorAddress;
+			//cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress after" << endl;
+			//cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress : " << anchorAddress << endl;
+
+			
+			//TODO
+			//suppress the requests method "getAnchor"...
+			kmer_type anchor;
+			if (_decodeReq){
+			//	cerr << "debug dnadecoder - getAnchor (requests) before" << endl;
+				anchor = _requests->getAnchor(_anchorDictFile, anchorAddress); //laa
+			}
+			else{
+			//	cerr << "debug dnadecoder - getAnchor (leon) before" << endl;
+				anchor = _leon->getAnchor(_anchorDictFile, anchorAddress); //laa
+			}
+			//cerr << "DnaDecoder::decodeAnchorRead() - getAnchor after" << endl;
+			//cerr << "DnaDecoder::decodeAnchorRead() - anchor : " << anchor.toString(_kmerSize) << endl;
+			
+			//Decode the bit that says if the anchor is revcomp or not
+			if((ri->revcomp = _rangeDecoder.nextByte(_readAnchorRevcompModel)) == 1){
+				anchor = revcomp(anchor, _kmerSize);
+			}
+
+			ri->anchor = anchor;
+			ri->revAnchor = revcomp(anchor, _kmerSize);
+			
+			_currentSeq = anchor.toString(_kmerSize);	
+			_leftErrorPos.clear();
+			_Npos.clear();
+			
+			//cout << _readSize << " " << anchorPos << " " << anchorAddress << endl;
+			
+			//Decode N pos
+			_prevNpos = 0;
+			//cerr << "DnaDecoder::decodeAnchorRead() - NposCount before" << endl;
+			u_int64_t NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+			ri->NposCount = NposCount;
+			//cerr << "DnaDecoder::decodeAnchorRead() - NposCount after" << endl;
+			//cerr << "DnaDecoder::decodeAnchorRead() - NposCount : " << (int) NposCount << endl;
+			for(int i=0; i<NposCount; i++){
+				//cerr << "DnaDecoder::decodeAnchorRead() - nPos before" << endl;
+				u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
+				//cerr << "DnaDecoder::decodeAnchorRead() - nPos after" << endl;
+				//cerr << "DnaDecoder::decodeAnchorRead() - nPos : " << (int) nPos << endl;
+				_Npos.push_back(nPos);
+				ri->Npos.push_back(nPos);
+				//cerr << nPos << endl;
+				_prevNpos = nPos;
+				//_Npos.push_back(CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosSizeModel, _anchorPosModel));
+			}
+			
+			//Decode error pos
+			//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError before" << endl;
+			u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
+			ri->nbLeftError = nbLeftError;
+			//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError after" << endl;
+			//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError : " << (int) nbLeftError << endl;
+			_prevErrorPos = 0;
+			for(int i=0; i<nbLeftError; i++){
+				u_int64_t errorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorPosModel) + _prevErrorPos;
+				addErrorPos(errorPos, true);
+				ri->leftErrorPos.push_back(errorPos);
+				_prevErrorPos = errorPos;
+			}
+		
+			//Extend anchor to the left
+			//cerr << "DnaDecoder::decodeAnchorRead() - Extend anchor to the left start" << endl;
+			kmer_type kmer = ri->anchor;
+			for(int i=anchorPos-1; i>=0; i--){
+				kmer = extendAnchor(kmer, i, false);
+			}
+			//cerr << "DnaDecoder::decodeAnchorRead() - Extend anchor to the left end" << endl;
+			//Extend anchor to the right
+			kmer = anchor;
+			for(int i=anchorPos+_kmerSize; i<_readSize; i++){
+				kmer = extendAnchor(kmer, i, true);
+				//cerr << "\t" << kmer.toString(_kmerSize) << endl;
+			}
+
+			
+			//Inject N in the decoded read sequence
+			//printf("npos s %i currseq %s \n",_Npos.size(),_currentSeq.c_str());
+			for(int i=0; i<_Npos.size(); i++){
 				_currentSeq[_Npos[i]] = 'N';
 			}
+
+			//cerr << "DnaDecoder::decodeAnchorRead() - dnadecoder END" << endl;
+
 		}
 		//if not anchored read
 		else if(ri->readType == 1){
@@ -2206,6 +2331,7 @@ void DnaDecoder::execute(){
 			//if(_leon->_readCount > 1) return;
 
 
+
 			cerr << "\tDnaDecoder::execute() - reading unsorted file" << endl;
 			cerr << "\tDnaDecoder::execute() - readType before" << endl;
 			u_int8_t readType = _rangeDecoder.nextByte(_readTypeModel);
@@ -2281,10 +2407,10 @@ void DnaDecoder::decodeAnchorRead(){
 //	printf("read deltaValue %llu \n",deltaValue);
 	//_readSize = CompressionUtils::getValueFromDelta(deltaType, _prevReadSize, deltaValue);
 	//_prevReadSize = _readSize;
-	cerr << "DnaDecoder::decodeAnchorRead() - readSize before" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - readSize before" << endl;
 	_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeValueModel);
-	cerr << "DnaDecoder::decodeAnchorRead() - readSize after" << endl;
-	cerr << "DnaDecoder::decodeAnchorRead() - readSize : " << _readSize << endl;
+	// cerr << "DnaDecoder::decodeAnchorRead() - readSize after" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - readSize : " << _readSize << endl;
 //	printf("read size %i \n",_readSize);
 	
 	//Decode anchor pos
@@ -2293,20 +2419,20 @@ void DnaDecoder::decodeAnchorRead(){
 	//int anchorPos = CompressionUtils::getValueFromDelta(deltaType, _prevAnchorPos, deltaValue);
 	//_prevAnchorPos = anchorPos;
 //	printf("anchor pos %i \n",anchorPos);
-	cerr << "DnaDecoder::decodeAnchorRead() - anchorPos before" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - anchorPos before" << endl;
 	int anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosModel);
-	cerr << "DnaDecoder::decodeAnchorRead() - anchorPos after" << endl;
-	cerr << "DnaDecoder::decodeAnchorRead() - anchorPos : " << anchorPos << endl;
+	// cerr << "DnaDecoder::decodeAnchorRead() - anchorPos after" << endl;
+	// cerr << "DnaDecoder::decodeAnchorRead() - anchorPos : " << anchorPos << endl;
 	
 	//Decode anchor address
 	//deltaType = _rangeDecoder.nextByte(_anchorAddressDeltaTypeModel);
 	//deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressModel);
 	//u_int64_t anchorAddress = CompressionUtils::getValueFromDelta(deltaType, _prevAnchorAddress, deltaValue);
 	//_prevAnchorAddress = anchorAddress;
-	cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress before" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress before" << endl;
 	u_int64_t anchorAddress = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorAddressModel);
-	cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress after" << endl;
-	cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress : " << anchorAddress << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress after" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - anchorAddress : " << anchorAddress << endl;
 
 	
 	//TODO
@@ -2320,8 +2446,8 @@ void DnaDecoder::decodeAnchorRead(){
 	//	cout << "debug dnadecoder - getAnchor (leon) before" << endl;
 		anchor = _leon->getAnchor(_anchorDictFile, anchorAddress); //laa
 	}
-	cerr << "DnaDecoder::decodeAnchorRead() - getAnchor after" << endl;
-	cerr << "DnaDecoder::decodeAnchorRead() - anchor : " << anchor.toString(_kmerSize) << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - getAnchor after" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - anchor : " << anchor.toString(_kmerSize) << endl;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tRead size: " << _readSize << endl;
 		cout << "\t\t\tAnchor pos: " << anchorPos << endl;
@@ -2342,18 +2468,18 @@ void DnaDecoder::decodeAnchorRead(){
 	cout << _readSize << " " << anchorPos << " " << anchorAddress << endl;
 	//Decode N pos
 	_prevNpos = 0;
-	cout << "DnaDecoder::decodeAnchorRead() - NposCount before" << endl;
+	//cout << "DnaDecoder::decodeAnchorRead() - NposCount before" << endl;
 	u_int64_t NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "DnaDecoder::decodeAnchorRead() - NposCount after" << endl;
-	cerr << "DnaDecoder::decodeAnchorRead() - NposCount : " << (int) NposCount << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - NposCount after" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - NposCount : " << (int) NposCount << endl;
 	for(int i=0; i<NposCount; i++){
 		//deltaType = _rangeDecoder.nextByte(_NposDeltaTypeModel);
 		//deltaValue = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel);
 		//u_int64_t nPos = CompressionUtils::getValueFromDelta(deltaType, _prevNpos, deltaValue);
-		cerr << "DnaDecoder::decodeAnchorRead() - nPos before" << endl;
+		//cerr << "DnaDecoder::decodeAnchorRead() - nPos before" << endl;
 		u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
-		cerr << "DnaDecoder::decodeAnchorRead() - nPos after" << endl;
-		cerr << "DnaDecoder::decodeAnchorRead() - nPos : " << (int) nPos << endl;
+		//cerr << "DnaDecoder::decodeAnchorRead() - nPos after" << endl;
+		//cerr << "DnaDecoder::decodeAnchorRead() - nPos : " << (int) nPos << endl;
 		_Npos.push_back(nPos);
 		//cout << nPos << endl;
 		_prevNpos = nPos;
@@ -2361,10 +2487,10 @@ void DnaDecoder::decodeAnchorRead(){
 	}
 	
 	//Decode error pos
-	cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError before" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError before" << endl;
 	u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
-	cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError after" << endl;
-	cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError : " << (int) nbLeftError << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError after" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError : " << (int) nbLeftError << endl;
 	_prevErrorPos = 0;
 	for(int i=0; i<nbLeftError; i++){
 		u_int64_t errorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorPosModel) + _prevErrorPos;
@@ -2401,7 +2527,7 @@ void DnaDecoder::decodeAnchorRead(){
 
 	
 	//Extend anchor to the left
-	//cout << "DnaDecoder::decodeAnchorRead() - Extend anchor to the left start" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - Extend anchor to the left start" << endl;
 	kmer_type kmer = anchor;
 	for(int i=anchorPos-1; i>=0; i--){
 		kmer = extendAnchor(kmer, i, false);
@@ -2420,7 +2546,7 @@ void DnaDecoder::decodeAnchorRead(){
 		_currentSeq[_Npos[i]] = 'N';
 	}
 
-	cout << "DnaDecoder::decodeAnchorRead() - dnadecoder END" << endl;
+	//cerr << "DnaDecoder::decodeAnchorRead() - dnadecoder END" << endl;
 }
 
 void DnaDecoder::decodeSortedAnchorRead(){
@@ -2695,6 +2821,7 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		//cerr << "\tDnaDecoder::extendAnchor - next nt is unique : " << nextNt << endl;
 		//cout << "case 1         " << nextNt << endl;
 		resultKmer = uniqKmer;
+		//cerr << "\tDnaDecoder::extendAnchor - next1 nt is : " << nextNt << endl;
 	}
 	else if(indexedKmerCount == 2){
 
@@ -2722,6 +2849,7 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		//cout << nextNt << endl;
 		resultKmer = kmer;
 		codeSeedNT(&_kmerModel, &resultKmer, nextNt, rightExtend);
+		//cerr << "\tDnaDecoder::extendAnchor - next2 nt is : " << nextNt << endl;
 
 
 	}
@@ -2731,6 +2859,7 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		//cerr << "\tDnaDecoder::extendAnchor - next nt is normal bif : " << nextNt << endl;
 		resultKmer = kmer;
 		codeSeedNT(&_kmerModel, &resultKmer, nextNt, rightExtend);
+		//cerr << "\tDnaDecoder::extendAnchor - nextn nt is : " << nextNt << endl;
 	}
 	
 	//cout << nextNt << endl;

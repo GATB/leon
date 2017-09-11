@@ -464,6 +464,15 @@ void Requests::clearDecoders(){
 }
 
 void Requests::headerDecoderSetup(int blockIndice){
+
+	u_int64_t blockSize;
+	int sequenceCount;
+	blockSize = _headerBlockSizes[blockIndice];
+	cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+	sequenceCount = _headerBlockSizes[blockIndice+1];
+	//hdecoder = headerdecoders[j];
+	_hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
+	_filePosHeader += blockSize;
 }
 
 void Requests::dnaDecoderSetup(int blockIndice){
@@ -636,7 +645,7 @@ void Requests::fgetRequests(){
 	do{
 
 	cout << endl << endl <<
-		"############# DEBUG - TESTS #############" << endl << endl <<
+		"############## DEBUG - TESTS #############" << endl << endl <<
 		"t sig\t\t\tto print sinatures" << endl <<
 		"t col\t\t\tto print colors" << endl <<
 		"t seq\t\t\tto print sequences" << endl <<
@@ -647,7 +656,7 @@ void Requests::fgetRequests(){
 		"t anchors dict sd\tto print the dictionnary's sequence's anchors sorted" << endl  <<
 		"testall\t\t\tto print kmers, indexes in mphf, color and signature" << endl << endl <<
 
-		"~~~~~ LEON ~ MODE ~~~~~" << endl << endl <<
+		"~~~~~~~ LEON ~ MODE ~~~~~~" << endl << endl <<
 
 		"t read canchors\t\tto print compressed reads' anchors in file order" << endl << 
 		"t read canchors pos\tto print compressed reads' anchors' positions in file order" << endl << 
@@ -655,11 +664,17 @@ void Requests::fgetRequests(){
 		"t read c-all\t\tto print all three above informations in file order" << endl << 
 		"t read cfile\t\tto print original compressed file" << endl <<  endl <<
 
+		"~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl <<
+
 		"~~~~~ PEACOCK ~ MODE ~~~~~" << endl << endl <<
 
 		"t read pfile" << endl << endl <<
 
-		"############ REQUESTS ############" << endl << endl <<
+		"~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl <<
+
+		"##########################################" << endl << endl <<
+
+		"################ REQUESTS ################" << endl << endl <<
 		
 		"nb ds \t\t\tto get the number of datasets in the file" << endl << endl <<
 		
@@ -672,12 +687,22 @@ void Requests::fgetRequests(){
 		"seq hg\t\t\tto know in the sequence's colors' number in the graph" << endl <<
 		"seq dg\t\t\tto know in which datasets the sequence is present in the graph" << endl << endl <<
 
+		//"~~~~~~~ LEON ~ MODE ~~~~~~" << endl << endl <<
+
 		"seq p\t\t\tto know if the sequence is present in the data" << endl <<
 		"seq h\t\t\tto know in the sequence's colors' number in the data" << endl <<
 		"seq d\t\t\tto know in which datasets the sequence is present in the data" << endl <<
 		"seq m\t\t\tto get the sequence's matches with data" << endl << endl << 
 
-		"q \t\tto quit" << endl << endl;
+		//"~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl <<
+
+		//"~~~~~ PEACOCK ~ MODE ~~~~~" << endl << endl <<
+
+		//"~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl <<
+
+		"q \t\tto quit" << endl << endl <<
+
+		"##########################################" << endl << endl;
 
 		fgets(request, req_buffer_size, stdin);
 		request[strlen(request)-1]='\0';
@@ -1014,7 +1039,7 @@ void Requests::fgetRequests(){
 				int sequenceSize = strlen(sequence_req);
 				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
 
-				getSequenceFileMatchesInData(sequence_req);	
+				getSequenceFileMatchesInData(sequence_req, _sequenceMatches);	
 
 				//tmp print
 				for (int i = 0; i < sequenceSize; ++i)
@@ -1221,6 +1246,9 @@ void Requests::printTestAll(){
 
 void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos){
 
+	_filePos = 0;
+	u_int64_t filePosHeader = 0;
+	u_int64_t filePosDna = 0;
 	initializeRangeDecoder();
 
 	decodeInfos();
@@ -1241,8 +1269,12 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 			
 		cerr << "debug Requests::testPrintReadsFile - block nb : " << blockIndice << endl;
 
-		if(blockIndice >= _dnaBlockSizes.size()) break;
+		//if(blockIndice >= _dnaBlockSizes.size()) break;
 			
+		if(! _noHeader)
+		{
+			headerDecoderSetup(blockIndice);
+		}	
 		dnaDecoderSetup(blockIndice);
 		qualDecoderSetup(blockIndice);
 
@@ -1272,12 +1304,16 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 		}
 	}	
 
+
 	clearRangeDecoder();
 	clearDecoders();
+
 
 }
 
 void Requests::testPrintAllHeadersReadsFile(){
+
+	_filePos = 0;
 
 	initializeRangeDecoder();
 
@@ -2005,7 +2041,7 @@ bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){
 
 	int sequenceSize = strlen(sequence);
 	//bitset<NB_MAX_COLORS> sequenceMatches[sequenceSize];
-	getSequenceFileMatchesInData(sequence);
+	getSequenceFileMatchesInData(sequence, _sequenceMatches);
 
 	//tmp debug
 	//cerr << "debug Requests::isSequenceInData" << endl;
@@ -2039,7 +2075,7 @@ int  Requests::getSequenceNbColorsInData(char* sequence){
 	return getSequenceColorsInData(sequence).count();
 }
 
-void Requests::getSequenceFileMatchesInData(char* sequence){
+void Requests::getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX_COLORS>>* sequenceMatches){
 
 	//the array with colors of each sequence's part of read
  	int sequenceSize = strlen(sequence);
@@ -2054,6 +2090,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence){
 	fillSequenceAnchorsDict(_sequenceAnchorKmers, sequence);
 
 	//decode commpressed file, to find matching anchors
+	_filePos = 0;
 	initializeRangeDecoder();
 
 	decodeInfos();
@@ -2160,7 +2197,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence){
 							
 							if (seqPos != mismatches[nbMismatchIndex])
 							{
-								(*_sequenceMatches)[seqPos] |= readColor;
+								(*sequenceMatches)[seqPos] |= readColor;
 								cerr << "read color test : " << readColor << endl;
 								cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
 							}
@@ -2184,7 +2221,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence){
 	cerr << "debug Requests::getSequenceFileMatchesInData" << endl;
 	for (int i = 0; i < sequenceSize; ++i)
 	{
-		cout << (*_sequenceMatches)[i] << " : " << bitset<NB_MAX_COLORS>((*_sequenceMatches)[i]) << endl;
+		cout << (*sequenceMatches)[i] << " : " << bitset<NB_MAX_COLORS>((*sequenceMatches)[i]) << endl;
 	}
 
 	//cleaning decoders objects
