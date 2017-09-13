@@ -65,6 +65,31 @@ struct ReadInfos{
 
 };
 
+
+struct OrderedReadsInfosBlock{
+
+	kmer_type anchor;
+	u_int32_t nbReads;
+};
+
+struct OrderedReadInfos{
+	
+	u_int8_t readType; //comp
+	int readSize; //comp
+	int anchorPos; //comp
+	u_int64_t anchorAddress; //comp
+	kmer_type anchor; //comp
+	int revcomp; //comp
+	vector<u_int8_t> bifurcations; //comp
+	vector<u_int8_t> binaryBifurcations; //comp
+	vector<u_int8_t> bifurcationTypes; //comp
+	vector<int> Npos; //comp
+	vector<int> leftErrorPos; //comp
+	kmer_type revAnchor;
+	string sread;
+};
+
+
 //====================================================================================
 // ** AbstractDnaCoder
 //====================================================================================
@@ -276,6 +301,9 @@ class DnaDecoder : AbstractDnaCoder
 		//return false if end of file
 		//bool getNextAnchor(string* anchor);
 		bool getNextReadInfos(struct ReadInfos* ri);
+		bool getNextOrderedReadsInfosBLock(struct OrderedReadsInfosBlock* orib);
+		bool getNextOrderedReadInfos(struct OrderedReadInfos* ori);
+		
 		void execute();
 	
 		string _buffer;

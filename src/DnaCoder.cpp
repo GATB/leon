@@ -2262,6 +2262,140 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 	}
 }
 
+bool DnaDecoder::getNextOrderedReadsInfosBLock(struct OrderedReadsInfosBlock* orib){
+	
+	if (_processedSequenceCount < _sequenceCount){
+	
+		Hash16<kmer_type, u_int32_t >  * anchorKmersSorted = _requests->_anchorKmersSortedD;
+
+		//cerr << "\tDnaDecoder::execute() - before decoding anchor" << endl;
+		u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - anchor_uint64t : " << anchor_uint64t << endl;
+
+		_anchor.setVal(anchor_uint64t);
+		orib->anchor.setVal(anchor_uint64t);
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - anchor : " << _anchor.toString(_kmerSize) << endl;
+
+		//get the number of reads encoded with actual anchor
+		//and verify if anchor is revcomp
+
+		u_int32_t nbReads;
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - anchorKmersSorted->contains(_anchor) : " << 	anchorKmersSorted->contains(_anchor) << endl; 
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - before getting nbReads" << endl; 
+		anchorKmersSorted->get(_anchor, &nbReads);
+		orib->nbReads = nbReads;
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - nbReads : " << orib->nbReads << endl;
+		return true;
+
+	}
+	else{
+
+		_finished = true;
+
+		return false;
+	}
+}
+
+bool DnaDecoder::getNextOrderedReadInfos(struct OrderedReadInfos* ori){
+	
+	if (_processedSequenceCount < _sequenceCount){
+
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
+
+		_readSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readSizeValueModel);
+		ori->readSize = _readSize;
+		//cerr << "\tDnaEncoder::getNextOrderedReadInfos - readSize : " << ori->readSize << endl;
+		
+		int anchorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorPosModel);
+		ori->anchorPos = anchorPos;
+		//cerr << "\tDnaEncoder::getNextOrderedReadInfos - anchorPos : " << ori->anchorPos << endl;
+
+		int isRevComp = _rangeDecoder.nextByte(_readAnchorRevcompModel);
+		ori->revcomp = isRevComp;
+		//cerr << "\tDnaEncoder::getNextOrderedReadInfos - revcomp : " << ori->revcomp << endl;
+
+		if(ori->revcomp){
+			ori->anchor = revcomp(_anchor, _kmerSize);
+			ori->revAnchor = _anchor;
+		}
+		else{
+			ori->anchor = _anchor;
+			ori->revAnchor = revcomp(_anchor, _kmerSize);
+		}
+		
+		_currentSeq = ori->anchor.toString(_kmerSize);
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq = current anchor" << endl;
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
+		_leftErrorPos.clear();
+		_Npos.clear();	
+
+		_prevNpos = 0;
+		u_int64_t NposCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - NposCount : " << (int) NposCount << endl;
+		for(int i=0; i<NposCount; i++){
+
+			u_int64_t nPos = CompressionUtils::decodeNumeric(_rangeDecoder, _NposModel) + _prevNpos;
+			//cerr << "DnaDecoder::getNextOrderedReadInfos() - nPos : " << (int) nPos << endl;
+			_Npos.push_back(nPos);
+			ori->Npos.push_back(nPos);
+			_prevNpos = nPos;
+		}
+
+		u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
+		//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError after" << endl;
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - nbLeftError : " << (int) nbLeftError << endl;
+		_prevErrorPos = 0;
+		for(int i=0; i<nbLeftError; i++){
+			u_int64_t errorPos = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorPosModel) + _prevErrorPos;
+			addErrorPos(errorPos, true);
+			ori->leftErrorPos.push_back(errorPos);
+			_prevErrorPos = errorPos;
+		}
+
+		//Extend anchor to the left
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - Extend anchor to the left" << endl;
+		kmer_type kmer = ori->anchor;
+		for(int i=anchorPos-1; i>=0; i--){
+			kmer = extendAnchor(kmer, i, false);
+		}
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - Extend anchor to the right" << endl;
+		//Extend anchor to the right
+		kmer = ori->anchor;
+		for(int i=anchorPos+_kmerSize; i<_readSize; i++){
+			kmer = extendAnchor(kmer, i, true);
+			//cerr << "\t" << kmer.toString(_kmerSize) << endl;
+		}
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
+
+			
+		//Inject N in the decoded read sequence
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - Inject Ns" << endl;
+		//printf("npos s %i currseq %s \n",_Npos.size(),_currentSeq.c_str());
+		for(int i=0; i<_Npos.size(); i++){
+			_currentSeq[_Npos[i]] = 'N';
+		}
+
+		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
+
+		endRead();
+
+		ori->sread = _buffer;
+
+		_buffer.clear();
+		//cerr << "\tDnaEncoder::encodeSortedFileRead - _processedSequenceCount : " << _processedSequenceCount << endl;
+
+		return true;
+
+	}
+	else{
+
+		_finished = true;
+
+		return false;
+	}
+}
+
 int _nbTests;
 
 void DnaDecoder::execute(){

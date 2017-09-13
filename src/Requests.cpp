@@ -505,24 +505,24 @@ void Requests::qualDecoderSetup(int blockIndice){
 
 //~~copy of Leon private method...
 void Requests::setupNextComponent(vector<u_int64_t> & blockSizes){
-			cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
+			//cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
 	//Go to the data block position (position 0 for headers, position |headers data| for reads)
 	_inputFile->seekg(_filePos, _inputFile->beg);
-	cerr << "filepos : " << _filePos << endl;
-			cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
+	//cerr << "filepos : " << _filePos << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
 
 	blockSizes.clear();
 	
 	_blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "Requests::setupNextComponent - _blockCount : " << _blockCount << endl;
+	//cerr << "Requests::setupNextComponent - _blockCount : " << _blockCount << endl;
 	for(int i=0; i<_blockCount; i++){
 		u_int64_t blockSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 		blockSizes.push_back(blockSize);
-		cerr << "Requests::setupNextComponent - blockSize : " << blockSize << endl;
+		//cerr << "Requests::setupNextComponent - blockSize : " << blockSize << endl;
 	}
 }
 void Requests::decodeBloom(){
@@ -579,11 +579,11 @@ void Requests::decodeSortedAnchorDict(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\tDecode anchor dict" << endl;
 	#endif
-	cerr << "\tRequests::decodeSortedAnchorDict() - begin" << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - begin" << endl;
 	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
 	
 	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile eof : " << _inputFile->eof() << endl;
 	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile bad : " << _inputFile->bad() << endl;
@@ -597,13 +597,13 @@ void Requests::decodeSortedAnchorDict(){
 	// cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile eof : " << _inputFile->eof() << endl;
 	// cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile bad : " << _inputFile->bad() << endl;
 	// cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile fail : " << _inputFile->fail() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
 	u_int64_t currentAnchorCount = 0;
 
 	kmer_type anchor;
 	u_int64_t nbcreated ;
 	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
-	cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
 	
 	while(currentAnchorCount < anchorCount){
 
@@ -616,10 +616,10 @@ void Requests::decodeSortedAnchorDict(){
 		if(anchorKmer.size() == _kmerSize){
 			
 			anchor = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ; //then convert to bin
-			cerr << "\tRequests::decodeSortedAnchorDict() - anchor : " << anchor.toString(_kmerSize) << endl;
+			//cerr << "\tRequests::decodeSortedAnchorDict() - anchor : " << anchor.toString(_kmerSize) << endl;
 
 			u_int64_t nbReads = CompressionUtils::decodeNumeric(_anchorRangeDecoder, _nbReadsPerAnchorModel);
-			cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
+			//cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
 
 			//_vecAnchorKmers.push_back(kmer);
 			_anchorKmersSortedD->insert(anchor, nbReads);
@@ -668,7 +668,11 @@ void Requests::fgetRequests(){
 
 		"~~~~~ PEACOCK ~ MODE ~~~~~" << endl << endl <<
 
-		"t read pfile" << endl << endl <<
+		"t read panchors\t\tto print peacock reads' anchors in file order" << endl << 
+		"t read panchors pos\tto print peacock reads' anchors' positions in file order" << endl << 
+		"t read preads\t\tto print peacock reads in file order" << endl << 
+		"t read p-all\t\tto print all three above informations in file order" << endl << 
+		"t read pfile\t\tto print original peacock file" << endl << endl <<
 
 		"~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl <<
 
@@ -836,6 +840,42 @@ void Requests::fgetRequests(){
 
 		//peacock mode
 
+		if (strcmp(request, "t read panchors")==0){
+			if (_orderReads){
+				this->testPrintReadsPFile(false, true, false);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
+		}
+
+		if (strcmp(request, "t read panchors pos")==0){
+			if (_orderReads){
+				this->testPrintReadsPFile(false, false, true);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
+		}
+
+		if (strcmp(request, "t read preads")==0){
+			if (_orderReads){
+				this->testPrintReadsPFile(true, false, false);
+			}
+			else{
+				cout << "available only in leon mode" << endl;
+			}
+		}
+
+		if (strcmp(request, "t read p-all")==0){
+			if (_orderReads){
+				this->testPrintReadsPFile(true, true, true);
+			}
+			else{
+				cout << "available only in peacock mode" << endl;
+			}
+		}
+
 		if (strcmp(request, "t read pfile")==0){
 			if (_orderReads){
 				this->testPrintPFile();
@@ -959,20 +999,26 @@ void Requests::fgetRequests(){
 				int sequenceSize = strlen(sequence_req);
 				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
 
-				if (this->isSequenceInData(sequence_req))
-				{
-					std::cout << sequence_req << endl << 
-					" is present in data" << std::endl;
+				if (!_orderReads){
 
-					if (_sequenceAmbiguousMatches.any()){
-					cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-					endl << _sequenceAmbiguousMatches << endl << endl;
+					if (this->isSequenceInData(sequence_req))
+					{
+						std::cout << sequence_req << endl << 
+						" is present in data" << std::endl;
+
+						if (_sequenceAmbiguousMatches.any()){
+						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
+						endl << _sequenceAmbiguousMatches << endl << endl;
+					}
+					}
+					else
+					{
+						std::cout << sequence_req << endl <<
+						 " is not present in data" << std::endl;
+					}
 				}
-				}
-				else
-				{
-					std::cout << sequence_req << endl <<
-					 " is not present in data" << std::endl;
+				else{
+					cout << endl << "not yet available on peacock mode" << endl;
 				}
 				delete _sequenceMatches;
 			}
@@ -984,13 +1030,21 @@ void Requests::fgetRequests(){
 			{
 				int sequenceSize = strlen(sequence_req);
 				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				int nbData = this->getSequenceNbColorsInData(sequence_req);
-				cout << nbData << endl;
+				
+				if (!_orderReads){
 
-				if (_sequenceAmbiguousMatches.any()){
-					cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-					endl << _sequenceAmbiguousMatches << endl << endl;
+					int nbData = this->getSequenceNbColorsInData(sequence_req);
+					cout << nbData << endl;
+
+					if (_sequenceAmbiguousMatches.any()){
+						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
+						endl << _sequenceAmbiguousMatches << endl << endl;
+					}
 				}
+				else{
+					cout << endl << "not yet available on peacock mode" << endl;
+				}
+
 				delete _sequenceMatches;
 			}
 		}
@@ -1001,33 +1055,41 @@ void Requests::fgetRequests(){
 			{
 				int sequenceSize = strlen(sequence_req);
 				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInData(sequence_req);
+				
+				if (!_orderReads){
 
-				if (sequence_colors.none())
-				{
-					cout <<  sequence_req << endl <<
-					" is not present in any dataset" << endl;
-				}
+					bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInData(sequence_req);
 
-				else
-				{
-					//TODO get nb data sets to minimize the loop on NB_MAX COLORS
-
-					cout <<  sequence_req << endl <<
-					 " is present in the following dataset : " << endl;
-					for (int i=0; i<NB_MAX_COLORS; ++i)
+					if (sequence_colors.none())
 					{
-						if (sequence_colors.test(i))
-						{
-							cout << i << endl;
-						}
+						cout <<  sequence_req << endl <<
+						" is not present in any dataset" << endl;
+					}
 
-						if (_sequenceAmbiguousMatches.any()){
-							cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-							endl << _sequenceAmbiguousMatches << endl << endl;
+					else
+					{
+						//TODO get nb data sets to minimize the loop on NB_MAX COLORS
+
+						cout <<  sequence_req << endl <<
+						 " is present in the following dataset : " << endl;
+						for (int i=0; i<NB_MAX_COLORS; ++i)
+						{
+							if (sequence_colors.test(i))
+							{
+								cout << i << endl;
+							}
+
+							if (_sequenceAmbiguousMatches.any()){
+								cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
+								endl << _sequenceAmbiguousMatches << endl << endl;
+							}
 						}
 					}
 				}
+				else{
+					cout << endl << "not yet available on peacock mode" << endl;
+				}
+
 				delete _sequenceMatches;
 			}
 			
@@ -1039,17 +1101,23 @@ void Requests::fgetRequests(){
 				int sequenceSize = strlen(sequence_req);
 				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
 
-				getSequenceFileMatchesInData(sequence_req, _sequenceMatches);	
+				if (!_orderReads){
 
-				//tmp print
-				for (int i = 0; i < sequenceSize; ++i)
-				{
-					cout << sequence_req[i] << " : " << bitset<NB_MAX_COLORS>((*_sequenceMatches)[i]) << endl;
+					getSequenceFileMatchesInData(sequence_req, _sequenceMatches);	
+
+					//tmp print
+					for (int i = 0; i < sequenceSize; ++i)
+					{
+						cout << sequence_req[i] << " : " << bitset<NB_MAX_COLORS>((*_sequenceMatches)[i]) << endl;
+					}
+
+					if (_sequenceAmbiguousMatches.any()){
+						cout << endl << "warning, some colors may have been filled using the same read at least twice : " <<
+						endl << _sequenceAmbiguousMatches << endl << endl;
+					}
 				}
-
-				if (_sequenceAmbiguousMatches.any()){
-					cout << endl << "warning, some colors may have been filled using the same read at least twice : " <<
-					endl << _sequenceAmbiguousMatches << endl << endl;
+				else {
+					cout << endl << "not yet available on peacock mode" << endl;
 				}
 
 				delete _sequenceMatches;
@@ -1616,6 +1684,83 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 //peacock mode
 
+void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAnchorPos){
+	
+	_filePos = 0;
+	u_int64_t filePosHeader = 0;
+	u_int64_t filePosDna = 0;
+	initializeRangeDecoder();
+
+	decodeInfos();
+	headerSetUp();
+	dnaSetUp();
+	
+	decodeBloom();
+	//decodeAnchorDict();
+	decodeSortedAnchorDict();
+
+	initializeDecoders();
+
+	//cerr << "debug Requests::testPrintReadsPFile - reading blocks : " << endl;
+	//cerr << "debug Requests::testPrintReadsPFile - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+
+	for (int blockIndice = 0; 
+		blockIndice < _dnaBlockSizes.size(); 
+		blockIndice += 2){
+			
+		//cerr << "debug Requests::testPrintReadsPFile - block nb : " << blockIndice << endl;
+
+		//if(blockIndice >= _dnaBlockSizes.size()) break;
+			
+		if(! _noHeader)
+		{
+			headerDecoderSetup(blockIndice);
+		}	
+		dnaDecoderSetup(blockIndice);
+		qualDecoderSetup(blockIndice);
+
+		//struct ReadInfos* ri = (struct ReadInfos*)malloc(sizeof(struct ReadInfos));
+		struct OrderedReadsInfosBlock* orib = new OrderedReadsInfosBlock{};
+		int nbRead = 0;
+		//cerr << "debug Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orib)" << endl;
+
+		while(_ddecoder->getNextOrderedReadsInfosBLock(orib)){
+
+			for (int i=0; i < orib->nbReads; ++i){
+			
+				cout << "element " << nbRead << endl;
+				struct OrderedReadInfos* ori = new OrderedReadInfos{};
+				if (_ddecoder->getNextOrderedReadInfos(ori)){
+				
+					if (getReads){
+						cout << "read type : " << (int) ori->readType << endl;
+						cout << "read  : " << ori->sread;
+					}
+					if (getAnchors){
+						cout << "anchor : " << getKmerString(ori->anchor) << endl;
+						cout << "reversed : " << ori->revcomp << endl;
+						if (ori->revcomp){
+							cout << "reversed anchor : " << getKmerString(ori->revAnchor) << endl;
+						}
+					}
+					if (getAnchorPos){
+						cout << "anchorPos : " << ori->anchorPos << endl;
+					}
+					cout << endl;
+					++nbRead;
+				}
+				/*else{
+					cerr << "debug Requests::testPrintReadsPFile - ERROR" << endl;
+				}*/
+			}
+		}
+	}	
+
+
+	clearRangeDecoder();
+	clearDecoders();	
+}
+
 void Requests::testPrintPFile(){
 	
 	_filePos = 0;
@@ -1722,7 +1867,7 @@ void Requests::testPrintPFile(){
 	}
 		
 	//DnaDecoder* dd = new DnaDecoder(_leon, _outputFilename);
-	cerr << " debug - testPrintPFile - decodeFileName : " << _decodeFilename << endl;
+	//cerr << " debug - testPrintPFile - decodeFileName : " << _decodeFilename << endl;
 	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
 	//dnadecoders.push_back(dd);
 		
@@ -1735,10 +1880,10 @@ void Requests::testPrintPFile(){
 
 
 	int i=0;
-	cerr << "debug - testPrintPFile - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintPFile - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-		cerr << "debug - testPrintPFile - block nb : " << i << endl;
+		//cerr << "debug - testPrintPFile - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -1758,7 +1903,7 @@ void Requests::testPrintPFile(){
 			if(! noHeader)
 			{
 				blockSize = _headerBlockSizes[i];
-				cerr << "debug - testPrintPFile - header BlockSize : " << blockSize << endl;
+				//cerr << "debug - testPrintPFile - header BlockSize : " << blockSize << endl;
 				sequenceCount = _headerBlockSizes[i+1];
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
@@ -1773,7 +1918,7 @@ void Requests::testPrintPFile(){
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-			cerr << "debug - testPrintPFile - dna BlockSize : " << blockSize << endl;
+			//cerr << "debug - testPrintPFile - dna BlockSize : " << blockSize << endl;
 			sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(filePosDna, blockSize, sequenceCount);
@@ -1797,13 +1942,13 @@ void Requests::testPrintPFile(){
 			}
 
 			if(hdecoder!=NULL){
-				cerr << "debug - testPrintPFile - before hdecoder execute" << endl;
+				//cerr << "debug - testPrintPFile - before hdecoder execute" << endl;
 				hdecoder->execute();
-				cerr << "debug - testPrintPFile - after hdecoder execute" << endl;
+				//cerr << "debug - testPrintPFile - after hdecoder execute" << endl;
 			}
-			cerr << "debug - testPrintPFile - before dnadecoder execute" << endl;
+			//cerr << "debug - testPrintPFile - before dnadecoder execute" << endl;
 			ddecoder->execute();
-			cerr << "debug - testPrintPFile - after dnadecoder execute" << endl;
+			//cerr << "debug - testPrintPFile - after dnadecoder execute" << endl;
 			i += 2;
 
 		}	

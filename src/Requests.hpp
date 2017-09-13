@@ -176,6 +176,7 @@ class Requests
 		void testPrintAllHeadersReadsFile();
 
 		//peacock
+		void testPrintReadsPFile(bool getReads, bool getAnchors, bool getAnchorPos);
 		void testPrintPFile();
 
 		/*****requests*****/
