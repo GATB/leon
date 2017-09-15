@@ -196,20 +196,67 @@ class Requests
 		bitset<NB_MAX_COLORS> getKmerColors(kmer_type kmer);
 		int getKmerNbColors(char* kmer);
 
-		// First step for sequences requests (or rapid search)
-		// request the graph, if not in the graph, no reason to search in data
-		
+		/* 
+		** First step for sequences requests (or rapid search)
+		** request the graph, if not in the graph, no reason to search in data
+		*/
 		bool isSequenceInGraph(char* sequence);
 		bitset<NB_MAX_COLORS> getSequenceColorsInGraph(char* sequence);
 		int getSequenceNbColorsInGraph(char* sequence);
 
-		// Second step for sequences requests
-		// search in the data, extending anchor kmers
+		/* 
+		** Second step for sequences requests
+		** search in the data, extending anchor kmers
+		**
+		** - infos on the needed variables - 
+		**
+		** Hash16<kmer_type, list<u_int32_t>*>* _sequenceAnchorKmers :
+		** is a dictionnary of all the anchor kmers that are both in the given sequence
+		** and the anchor dictionnary of the total data
+		**
+		** bitset<NB_MAX_COLORS> _sequenceColors :
+		** is a bitset representing the colors of the given sequence.
+		** the sequence has a certain color if reads of this color can completely
+		** cover the sequence
+		** 1 if the sequence is of the nth color, 0 else
+		**
+		** bitset<NB_MAX_COLORS> _sequenceAmbiguousColors :
+		** is a bitset representing the ambiguous colors of the given sequence.
+		** a color is ambiguous if the same read MAY have been used at least twice
+		** to fullfill the color
+		** 1 if a color is ambiguous, 0 else
 
-		bool isSequenceInData(char* sequence);
-		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence);
-		int getSequenceNbColorsInData(char* sequence);
-		void getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX_COLORS>>* sequenceMatches);
+		** vector<bitset<NB_MAX_COLORS>>* _sequenceMatches :
+		** is a vector representing the matches between the given sequence
+		** and the dataset
+		** nth column represents the nth data set color
+		** nth row represents the nth letter of the sequence
+		** 1 if we find a match between the sequence and the data
+		** (minimum length of match is kmer's size)
+		** 0 else
+		*/
+		bool isSequenceInData(char* sequence, 
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
+							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence, 
+													vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
+													bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+		int getSequenceNbColorsInData(char* sequence, 
+									vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
+									bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+		void getSequenceFileMatchesInData(char* sequence, 
+										vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
+										bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+		
+		//returns the matches in sequenceMatches
+		//ri : needs the infos of the read to align
+		//listPos : the list of the positions of the read's anchor on the sequence
+		void searchAlignements(char* sequence,
+								ReadInfos* ri,
+								list<u_int32_t>* listPos,
+								Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
+								vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
 
 		//request global variables
 		bool _orderReads;

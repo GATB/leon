@@ -264,8 +264,8 @@ bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
 
 	char read_chars[ri->sread.size()+1];
 	getSequenceChars(read_chars, ri->sread);
-	//cout << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
-	//cout << "debug Requests::getReadColor - csread : " << read_chars << endl;
+	cerr << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
+	cerr << "debug Requests::getReadColor - csread : " << read_chars << endl;
 
 	bitset<NB_MAX_COLORS> readColor = getKmerColors(anchor);
 	uint pos = anchorPos;
@@ -748,10 +748,10 @@ void Requests::fgetRequests(){
 
 				u_int64_t dictSize = strlen(sequence_req);
 				u_int64_t nbcreated;
-				_sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
-				fillSequenceAnchorsDict(_sequenceAnchorKmers, sequence_req);
+				Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
+				fillSequenceAnchorsDict(sequenceAnchorKmers, sequence_req);
 
-				this->printSequenceAnchorsDict(sequence_req, _sequenceAnchorKmers);	
+				this->printSequenceAnchorsDict(sequence_req, sequenceAnchorKmers);	
 			
 				cout << "enter any kmer to test if in dictionnary" << endl;
 				cout << "enter q to quit" << endl;
@@ -759,10 +759,10 @@ void Requests::fgetRequests(){
 				char kmer_chars[1024];
 				while(strcmp(kmer_chars, "q")!=0){
 					if(this->fgetKmer(kmer_chars)){
-						printIsKmerInSequenceAnchorDict(kmer_chars, _sequenceAnchorKmers);
+						printIsKmerInSequenceAnchorDict(kmer_chars, sequenceAnchorKmers);
 					}
 				}
-				emptySequenceAnchorDict(_sequenceAnchorKmers, sequence_req);
+				emptySequenceAnchorDict(sequenceAnchorKmers, sequence_req);
 			}
 
 		}
@@ -999,18 +999,19 @@ void Requests::fgetRequests(){
 			if (this->fgetSequence(sequence_req))
 			{
 				int sequenceSize = strlen(sequence_req);
-				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
+				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
+				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
 
 				if (!_orderReads){
 
-					if (this->isSequenceInData(sequence_req))
+					if (this->isSequenceInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches))
 					{
 						std::cout << sequence_req << endl << 
 						" is present in data" << std::endl;
 
-						if (_sequenceAmbiguousMatches.any()){
+						if (sequenceAmbiguousMatches.any()){
 						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-						endl << _sequenceAmbiguousMatches << endl << endl;
+						endl << sequenceAmbiguousMatches << endl << endl;
 					}
 					}
 					else
@@ -1022,7 +1023,7 @@ void Requests::fgetRequests(){
 				else{
 					cout << endl << "not yet available on peacock mode" << endl;
 				}
-				delete _sequenceMatches;
+				delete sequenceMatches;
 			}
 		}
 
@@ -1031,23 +1032,24 @@ void Requests::fgetRequests(){
 			if (this->fgetSequence(sequence_req))
 			{
 				int sequenceSize = strlen(sequence_req);
-				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				
+				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
+				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
+
 				if (!_orderReads){
 
-					int nbData = this->getSequenceNbColorsInData(sequence_req);
+					int nbData = this->getSequenceNbColorsInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches);
 					cout << nbData << endl;
 
-					if (_sequenceAmbiguousMatches.any()){
+					if (sequenceAmbiguousMatches.any()){
 						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-						endl << _sequenceAmbiguousMatches << endl << endl;
+						endl << sequenceAmbiguousMatches << endl << endl;
 					}
 				}
 				else{
 					cout << endl << "not yet available on peacock mode" << endl;
 				}
 
-				delete _sequenceMatches;
+				delete sequenceMatches;
 			}
 		}
 
@@ -1056,11 +1058,12 @@ void Requests::fgetRequests(){
 			if (this->fgetSequence(sequence_req))
 			{
 				int sequenceSize = strlen(sequence_req);
-				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				
+				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
+				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
+
 				if (!_orderReads){
 
-					bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInData(sequence_req);
+					bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches);
 
 					if (sequence_colors.none())
 					{
@@ -1081,9 +1084,9 @@ void Requests::fgetRequests(){
 								cout << i << endl;
 							}
 
-							if (_sequenceAmbiguousMatches.any()){
+							if (sequenceAmbiguousMatches.any()){
 								cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-								endl << _sequenceAmbiguousMatches << endl << endl;
+								endl << sequenceAmbiguousMatches << endl << endl;
 							}
 						}
 					}
@@ -1092,7 +1095,7 @@ void Requests::fgetRequests(){
 					cout << endl << "not yet available on peacock mode" << endl;
 				}
 
-				delete _sequenceMatches;
+				delete sequenceMatches;
 			}
 			
 		}
@@ -1101,28 +1104,29 @@ void Requests::fgetRequests(){
 			if (this->fgetSequence(sequence_req)){
 
 				int sequenceSize = strlen(sequence_req);
-				_sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
+				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
+				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
 
-				if (!_orderReads){
+				//if (!_orderReads){
 
-					getSequenceFileMatchesInData(sequence_req, _sequenceMatches);	
+					getSequenceFileMatchesInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches);	
 
 					//tmp print
 					for (int i = 0; i < sequenceSize; ++i)
 					{
-						cout << sequence_req[i] << " : " << bitset<NB_MAX_COLORS>((*_sequenceMatches)[i]) << endl;
+						cout << sequence_req[i] << " : " << bitset<NB_MAX_COLORS>((*sequenceMatches)[i]) << endl;
 					}
 
-					if (_sequenceAmbiguousMatches.any()){
+					if (sequenceAmbiguousMatches.any()){
 						cout << endl << "warning, some colors may have been filled using the same read at least twice : " <<
-						endl << _sequenceAmbiguousMatches << endl << endl;
+						endl << sequenceAmbiguousMatches << endl << endl;
 					}
-				}
-				else {
-					cout << endl << "not yet available on peacock mode" << endl;
-				}
+				//}
+				//else {
+				//	cout << endl << "not yet available on peacock mode" << endl;
+				//}
 
-				delete _sequenceMatches;
+				delete sequenceMatches;
 			}
 		}
 
@@ -1731,22 +1735,22 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 			for (int i=0; i < orib->nbReads; ++i){
 			
 				cout << "element " << nbRead << endl;
-				struct OrderedReadInfos* ori = new OrderedReadInfos{};
-				if (_ddecoder->getNextOrderedReadInfos(ori)){
+				struct ReadInfos* ri = new ReadInfos{};
+				if (_ddecoder->getNextOrderedReadInfos(ri)){
 				
 					if (getReads){
-						cout << "read type : " << (int) ori->readType << endl;
-						cout << "read  : " << ori->sread;
+						cout << "read type : " << (int) ri->readType << endl;
+						cout << "read  : " << ri->sread;
 					}
 					if (getAnchors){
-						cout << "anchor : " << getKmerString(ori->anchor) << endl;
-						cout << "reversed : " << ori->revcomp << endl;
-						if (ori->revcomp){
-							cout << "reversed anchor : " << getKmerString(ori->revAnchor) << endl;
+						cout << "anchor : " << getKmerString(ri->anchor) << endl;
+						cout << "reversed : " << ri->revcomp << endl;
+						if (ri->revcomp){
+							cout << "reversed anchor : " << getKmerString(ri->revAnchor) << endl;
 						}
 					}
 					if (getAnchorPos){
-						cout << "anchorPos : " << ori->anchorPos << endl;
+						cout << "anchorPos : " << ri->anchorPos << endl;
 					}
 					cout << endl;
 					++nbRead;
@@ -2180,22 +2184,26 @@ int Requests::getSequenceNbColorsInGraph(char* sequence){
 
 //TODO stop the algo when constructing the bitset array in getSequenceFileMatchesInData
 // if not present to limit timeloop
-bool  Requests::isSequenceInData(char* sequence)
+bool  Requests::isSequenceInData(char* sequence, 
+								vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches)
 {
-	return !getSequenceColorsInData(sequence).none();
+	return !getSequenceColorsInData(sequence, sequenceMatches, sequenceAmbiguousMatches).none();
 }
 
-bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){
+bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence, 
+														vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+														bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
 
 	int sequenceSize = strlen(sequence);
 	//bitset<NB_MAX_COLORS> sequenceMatches[sequenceSize];
-	getSequenceFileMatchesInData(sequence, _sequenceMatches);
+	getSequenceFileMatchesInData(sequence, sequenceMatches, sequenceAmbiguousMatches);
 
 	//tmp debug
 	//cerr << "debug Requests::isSequenceInData" << endl;
 	//for (int i = 0; i < sequenceSize; ++i)
 	//{
-	//	cout << (_sequenceMatches[i] << " : " << bitset<NB_MAX_COLORS>(sequenceMatches[i]) << endl;
+	//	cout << (sequenceMatches[i] << " : " << bitset<NB_MAX_COLORS>(sequenceMatches[i]) << endl;
 	//}
 
 	int sequencePos = 0;
@@ -2203,7 +2211,7 @@ bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){
 	_sequenceColors.set();
 	while (!_sequenceColors.none() && (sequencePos < sequenceSize)){
 
-		_sequenceColors &= (*_sequenceMatches)[sequencePos];
+		_sequenceColors &= (*sequenceMatches)[sequencePos];
 		++sequencePos;
 	}
 
@@ -2211,19 +2219,26 @@ bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence){
 	// we keep the 1 values of the bitset _sequenceAmbiguousColors only if
 	// the color is fullfilled
 
-	_sequenceAmbiguousColors = _sequenceAmbiguousMatches & _sequenceColors;
+	_sequenceAmbiguousColors = sequenceAmbiguousMatches & _sequenceColors;
 
 	return _sequenceColors;
 }
 
 //TODO : count nb colors during construction of bitset sequenceColors
 // tolimit time loop
-int  Requests::getSequenceNbColorsInData(char* sequence){
+int  Requests::getSequenceNbColorsInData(char* sequence, 
+										vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+										bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
 
-	return getSequenceColorsInData(sequence).count();
+	return getSequenceColorsInData(sequence, sequenceMatches, sequenceAmbiguousMatches).count();
 }
 
-void Requests::getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX_COLORS>>* sequenceMatches){
+void Requests::getSequenceFileMatchesInData(char* sequence, 
+											vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+											bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
+
+
+	cerr << "debug Requests::getSequenceFileMatchesInData - BEGIN" << endl;
 
 	//the array with colors of each sequence's part of read
  	int sequenceSize = strlen(sequence);
@@ -2233,10 +2248,11 @@ void Requests::getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX
 	//get existing anchors in the sequence and create a dictionnary of <anchor, pos> 
 	u_int64_t dictSize = strlen(sequence);
 	u_int64_t nbcreated;
-	_sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
-	_sequenceAmbiguousMatches.reset();
-	fillSequenceAnchorsDict(_sequenceAnchorKmers, sequence);
-
+	Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
+	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
+	
+	sequenceAmbiguousMatches.reset();
+	
 	//decode commpressed file, to find matching anchors
 	_filePos = 0;
 	initializeRangeDecoder();
@@ -2246,8 +2262,12 @@ void Requests::getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX
 	dnaSetUp();
 	
 	decodeBloom();
-	decodeAnchorDict();
-
+	if (! _orderReads){
+		decodeAnchorDict();
+	}
+	else{
+		decodeSortedAnchorDict();
+	}
 	initializeDecoders();
 
 	for (int blockIndice = 0; 
@@ -2260,113 +2280,58 @@ void Requests::getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX
 		dnaDecoderSetup(blockIndice);
 		qualDecoderSetup(blockIndice);
 
+		list<u_int32_t>* listPos;		
 		struct ReadInfos* ri = new ReadInfos{};
-		u_int32_t anchorSequencePos;
-		list<u_int32_t>* listPos;
-		//cerr << "Requests::getSequenceFileMatchesInData - getNextReadInfos before" << endl;
-		while(_ddecoder->getNextReadInfos(ri)){
 
-			//cerr << "Requests::getSequenceFileMatchesInData - getNextReadInfos after" << endl;
-			char kmer_chars_test[_kmerSize+1];
-			getKmerChars(ri->anchor, kmer_chars_test);
-			/*cerr << "Requests::getSequenceFileMatchesInData - read anchor : " << 
-			 kmer_chars_test << " in table : " <<
-			 (_sequenceAnchorKmers->get(ri->anchor, &anchorSequencePos)) << endl <<
-			 "read : " << ri->sread << endl;*/
+		if (! _orderReads){
+			
+			//reading the compressed file read per read
+			while(_ddecoder->getNextReadInfos(ri)){
 
+				//if the read's anchor is in the sequence's list of anchors
+				//then we try to aline the read to the sequence
+				if(sequenceAnchorKmers->get(ri->anchor, &listPos)){
 
-
-			if(_sequenceAnchorKmers->get(ri->anchor, &listPos)){
-				
-
-
-				// iterate on the positions of the list
-				// we keep a boolean to know if the read has already been alined
-				bool readAlreadyAlined = false;
-				for (std::list<u_int32_t>::iterator it=listPos->begin(); it != listPos->end(); ++it){
-
-					anchorSequencePos = *it;
-					bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
-
-					char read_chars[ri->sread.size()+1];
-					getSequenceChars(read_chars, ri->sread);
-
-					int seqStartPos = max(((int)anchorSequencePos-ri->anchorPos),0);
-					int seqPos = seqStartPos;
-					int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
-					//memset(mismatches, -1, NB_MAX_SNPS+1);
-					for (int i=0; i<NB_MAX_SNPS+1; ++i){
-						mismatches[i] = -1;
-						cerr << " mismatches[i] : " << mismatches[i] << endl;
-					}
-					int nbMismatches = 0;
-					cerr << " mismatches[0] : " << mismatches[0] << endl;
-
-					//compare char per char, 
-					while ((seqPos<sequenceSize)&&(readPos<ri->readSize)){
-
-						if(sequence[seqPos] != read_chars[readPos]){
-							cerr << endl << "sequenceSize : " << sequenceSize << endl << "seqPos : " << seqPos << endl << endl;
-							cerr << "readSize : " << ri->readSize << endl << "readPos : " << readPos << endl << endl;
-							cerr << "mismatch at seqPos " << seqPos << ", readPos " << readPos << 
-							" : " << endl << 
-									 "sequence[seqPos] : " << sequence[seqPos] << endl <<
-									 "read_chars[readPos] : " << read_chars[readPos] << endl <<
-									 "read : " << ri->sread << endl;
-
-							++nbMismatches;
-							if(nbMismatches > NB_MAX_SNPS){
-								cerr << "nbMismatches > NB_MAX_SNPS" << endl <<endl;
-								break;
-							}
-							//we keep the mismatch position on the sequence
-							//for when we'll have to fill the array
-							mismatches[nbMismatches-1] = seqPos;
-						}
-
-						++seqPos;
-						++readPos;
-					}
-					if(nbMismatches <= NB_MAX_SNPS){
-						cerr << "nbMismatches <= NB_MAX_SNPS" << endl;
-						cerr << "read color : " << readColor << endl;
-
-						if (readAlreadyAlined){
-							_sequenceAmbiguousMatches |= readColor;
-						}
-
-						int nbMismatchIndex = 0;
-						int alignementEndPos = seqPos;
-						for (seqPos = seqStartPos; (seqPos < alignementEndPos); ++seqPos)
-						{
-							cerr << sequence[seqPos] << " - seqPos : " << seqPos << endl;
-							cerr << " mismatches[nbMismatchIndex] : " << mismatches[nbMismatchIndex] << endl;
-							//we verify that it isn't a mismatch position
-							
-							if (seqPos != mismatches[nbMismatchIndex])
-							{
-								(*sequenceMatches)[seqPos] |= readColor;
-								cerr << "read color test : " << readColor << endl;
-								cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
-							}
-							else{
-								//we verify that we don't exceed the nbMismatches before increment
-								//to avoid seg fault
-								if (nbMismatchIndex < nbMismatches-1){
-									++nbMismatchIndex;
-								}
-							}
-						}
-						readAlreadyAlined = true;
-					}
-				}				
+					searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
+									sequenceMatches, sequenceAmbiguousMatches);
+				}
 			}
-			//cerr << "Requests::getSequenceFileMatchesInData - getNextReadInfos before" << endl;
+		}
+
+		else{
+			
+			struct OrderedReadsInfosBlock* orib = new OrderedReadsInfosBlock{};
+			
+			//reading the compressed file read blocks per read blocks
+			//a block of read is a block of all the reads with same anchor
+			while(_ddecoder->getNextOrderedReadsInfosBLock(orib)){
+				
+				//if the block's anchor is in the sequence's list of anchors
+				//then we try to aline each read of the block to the sequence
+				//else, we just read reads and skip without aligning
+				if(sequenceAnchorKmers->get(orib->anchor, &listPos) ||
+					sequenceAnchorKmers->get(orib->revAnchor, &listPos)){
+
+					for (int i=0; i < orib->nbReads; ++i){
+						
+						//reading the compressed file block read per read
+						if (_ddecoder->getNextOrderedReadInfos(ri)){
+
+							searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
+								sequenceMatches, sequenceAmbiguousMatches);
+						}
+					}
+				}
+				else{
+
+					for (int i=0; i < orib->nbReads; ++i){
+						_ddecoder->getNextOrderedReadInfos(ri);
+					}
+				}
+			}
 		}		
 	}
 
-		//tmp debug
-	cerr << "debug Requests::getSequenceFileMatchesInData" << endl;
 	for (int i = 0; i < sequenceSize; ++i)
 	{
 		cout << (*sequenceMatches)[i] << " : " << bitset<NB_MAX_COLORS>((*sequenceMatches)[i]) << endl;
@@ -2376,7 +2341,109 @@ void Requests::getSequenceFileMatchesInData(char* sequence, vector<bitset<NB_MAX
 	clearRangeDecoder();
 	clearDecoders();
 
-	emptySequenceAnchorDict(_sequenceAnchorKmers, sequence);
+	emptySequenceAnchorDict(sequenceAnchorKmers, sequence);
+	
 }
 
+void Requests::searchAlignements(char* sequence, 
+								ReadInfos* ri,
+								list<u_int32_t>* listPos,
+								Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
+								vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
 
+	int sequenceSize = strlen(sequence);
+	int mismatches[NB_MAX_SNPS+1];
+	u_int32_t anchorSequencePos;
+
+	cerr << "debug Requests::searchAlignements - ri->anchor : " << ri->anchor << endl;
+
+	/*
+	//if the read's anchor is in the sequence's list of anchors
+	//then we try to aline the read to the sequence
+	if(sequenceAnchorKmers->get(ri->anchor, &listPos)){
+	*/				
+
+
+		// iterate on the positions of the list
+		// we keep a boolean to know if the read has already been alined
+		bool readAlreadyAlined = false;
+		for (std::list<u_int32_t>::iterator it=listPos->begin(); it != listPos->end(); ++it){
+
+			anchorSequencePos = *it;
+			bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
+
+			char read_chars[ri->sread.size()+1];
+			getSequenceChars(read_chars, ri->sread);
+
+			int seqStartPos = max(((int)anchorSequencePos-ri->anchorPos),0);
+			int seqPos = seqStartPos;
+			int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
+			//memset(mismatches, -1, NB_MAX_SNPS+1);
+			for (int i=0; i<NB_MAX_SNPS+1; ++i){
+				mismatches[i] = -1;
+				//cerr << " mismatches[i] : " << mismatches[i] << endl;
+			}
+			int nbMismatches = 0;
+			//cerr << " mismatches[0] : " << mismatches[0] << endl;
+
+			//compare char per char, 
+			while ((seqPos<sequenceSize)&&(readPos<ri->readSize)){
+
+				if(sequence[seqPos] != read_chars[readPos]){
+					//cerr << endl << "sequenceSize : " << sequenceSize << endl << "seqPos : " << seqPos << endl << endl;
+					//cerr << "readSize : " << ri->readSize << endl << "readPos : " << readPos << endl << endl;
+					//cerr << "mismatch at seqPos " << seqPos << ", readPos " << readPos << 
+					//" : " << endl << 
+					//		 "sequence[seqPos] : " << sequence[seqPos] << endl <<
+					//		 "read_chars[readPos] : " << read_chars[readPos] << endl <<
+					//		 "read : " << ri->sread << endl;
+
+					++nbMismatches;
+					if(nbMismatches > NB_MAX_SNPS){
+						//cerr << "nbMismatches > NB_MAX_SNPS" << endl <<endl;
+						break;
+					}
+					//we keep the mismatch position on the sequence
+					//for when we'll have to fill the array
+					mismatches[nbMismatches-1] = seqPos;
+				}
+
+				++seqPos;
+				++readPos;
+			}
+			if(nbMismatches <= NB_MAX_SNPS){
+				// cerr << "nbMismatches <= NB_MAX_SNPS" << endl;
+				// cerr << "read color : " << readColor << endl;
+
+				if (readAlreadyAlined){
+					sequenceAmbiguousMatches |= readColor;
+				}
+
+				int nbMismatchIndex = 0;
+				int alignementEndPos = seqPos;
+				for (seqPos = seqStartPos; (seqPos < alignementEndPos); ++seqPos)
+				{
+					// cerr << sequence[seqPos] << " - seqPos : " << seqPos << endl;
+					// cerr << " mismatches[nbMismatchIndex] : " << mismatches[nbMismatchIndex] << endl;
+					//we verify that it isn't a mismatch position
+									
+					if (seqPos != mismatches[nbMismatchIndex])
+					{
+						(*sequenceMatches)[seqPos] |= readColor;
+						// cerr << "read color test : " << readColor << endl;
+						// cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
+					}
+					else{
+						//we verify that we don't exceed the nbMismatches before increment
+						//to avoid seg fault
+						if (nbMismatchIndex < nbMismatches-1){
+							++nbMismatchIndex;
+						}
+					}
+				}
+				readAlreadyAlined = true;
+			}
+		}				
+	/*}*/
+}
