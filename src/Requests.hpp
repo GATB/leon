@@ -236,17 +236,17 @@ class Requests
 		** 0 else
 		*/
 		bool isSequenceInData(char* sequence, 
-							vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
-							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence, 
-													vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
-													bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+													vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+													bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		int getSequenceNbColorsInData(char* sequence, 
-									vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
-									bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+									vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+									bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		void getSequenceFileMatchesInData(char* sequence, 
-										vector<bitset<NB_MAX_COLORS>>* sequenceMatches, 
-										bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+										vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+										bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		
 		//returns the matches in sequenceMatches
 		//ri : needs the infos of the read to align
@@ -255,8 +255,8 @@ class Requests
 								ReadInfos* ri,
 								list<u_int32_t>* listPos,
 								Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
-								vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
-								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches);
+								vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 
 		//request global variables
 		bool _orderReads;

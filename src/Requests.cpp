@@ -1000,29 +1000,29 @@ void Requests::fgetRequests(){
 			{
 				int sequenceSize = strlen(sequence_req);
 				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
+				//bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches/*(std::string("11111110"))*/;
 
-				if (!_orderReads){
+				//if (!_orderReads){
 
-					if (this->isSequenceInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches))
-					{
-						std::cout << sequence_req << endl << 
-						" is present in data" << std::endl;
+				if (this->isSequenceInData(sequence_req, sequenceMatches/*, _sequenceAmbiguousMatches*/))
+				{
+					std::cout << sequence_req << endl << 
+					" is present in data" << std::endl;
 
-						if (sequenceAmbiguousMatches.any()){
+					if (_sequenceAmbiguousMatches.any()){
 						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-						endl << sequenceAmbiguousMatches << endl << endl;
-					}
-					}
-					else
-					{
-						std::cout << sequence_req << endl <<
-						 " is not present in data" << std::endl;
+						endl << _sequenceAmbiguousMatches << endl << endl;
 					}
 				}
-				else{
-					cout << endl << "not yet available on peacock mode" << endl;
+				else
+				{
+					std::cout << sequence_req << endl <<
+					 " is not present in data" << std::endl;
 				}
+				//}
+				//else{
+				//	cout << endl << "not yet available on peacock mode" << endl;
+				//}
 				delete sequenceMatches;
 			}
 		}
@@ -1033,21 +1033,22 @@ void Requests::fgetRequests(){
 			{
 				int sequenceSize = strlen(sequence_req);
 				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
+				//bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches;
 
-				if (!_orderReads){
+				//if (!_orderReads){
 
-					int nbData = this->getSequenceNbColorsInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches);
-					cout << nbData << endl;
+				int nbData = this->getSequenceNbColorsInData(sequence_req, sequenceMatches/*, _sequenceAmbiguousMatches*/);
+				cout << nbData << endl;
 
-					if (sequenceAmbiguousMatches.any()){
-						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-						endl << sequenceAmbiguousMatches << endl << endl;
-					}
+				if (_sequenceAmbiguousMatches.any()){
+					cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
+					endl << _sequenceAmbiguousMatches << endl << endl;
 				}
-				else{
-					cout << endl << "not yet available on peacock mode" << endl;
-				}
+				
+				//}
+				//else{
+				//	cout << endl << "not yet available on peacock mode" << endl;
+				//}
 
 				delete sequenceMatches;
 			}
@@ -1059,41 +1060,40 @@ void Requests::fgetRequests(){
 			{
 				int sequenceSize = strlen(sequence_req);
 				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
+				//bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches;
 
-				if (!_orderReads){
+				//if (!_orderReads){
 
-					bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches);
+				bitset<NB_MAX_COLORS> sequence_colors = this->getSequenceColorsInData(sequence_req, sequenceMatches/*, _sequenceAmbiguousMatches*/);
 
-					if (sequence_colors.none())
-					{
-						cout <<  sequence_req << endl <<
-						" is not present in any dataset" << endl;
-					}
+				if (sequence_colors.none())
+				{
+					cout <<  sequence_req << endl <<
+					" is not present in any dataset" << endl;
+				}
 
-					else
-					{
+				else
+				{
 						//TODO get nb data sets to minimize the loop on NB_MAX COLORS
 
-						cout <<  sequence_req << endl <<
-						 " is present in the following dataset : " << endl;
-						for (int i=0; i<NB_MAX_COLORS; ++i)
+					cout <<  sequence_req << endl <<
+					 " is present in the following dataset : " << endl;
+					for (int i=0; i<NB_MAX_COLORS; ++i)
+					{
+						if (sequence_colors.test(i))
 						{
-							if (sequence_colors.test(i))
-							{
-								cout << i << endl;
-							}
-
-							if (sequenceAmbiguousMatches.any()){
-								cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
-								endl << sequenceAmbiguousMatches << endl << endl;
-							}
+							cout << i << endl;
 						}
 					}
+					if (_sequenceAmbiguousMatches.any()){
+						cout << endl << "warning, some colors may have been fullfilled using the same read at least twice : " <<
+						endl << _sequenceAmbiguousMatches << endl << endl;
+					}
 				}
-				else{
-					cout << endl << "not yet available on peacock mode" << endl;
-				}
+				//}
+				//else{
+				//	cout << endl << "not yet available on peacock mode" << endl;
+				//}
 
 				delete sequenceMatches;
 			}
@@ -1105,11 +1105,11 @@ void Requests::fgetRequests(){
 
 				int sequenceSize = strlen(sequence_req);
 				vector<bitset<NB_MAX_COLORS>>* sequenceMatches = new vector<bitset<NB_MAX_COLORS>>(sequenceSize,bitset<NB_MAX_COLORS>()); 
-				bitset<NB_MAX_COLORS> sequenceAmbiguousMatches;
+				//bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches;
 
 				//if (!_orderReads){
 
-					getSequenceFileMatchesInData(sequence_req, sequenceMatches, sequenceAmbiguousMatches);	
+					getSequenceFileMatchesInData(sequence_req, sequenceMatches/*, _sequenceAmbiguousMatches*/);	
 
 					//tmp print
 					for (int i = 0; i < sequenceSize; ++i)
@@ -1117,9 +1117,9 @@ void Requests::fgetRequests(){
 						cout << sequence_req[i] << " : " << bitset<NB_MAX_COLORS>((*sequenceMatches)[i]) << endl;
 					}
 
-					if (sequenceAmbiguousMatches.any()){
+					if (_sequenceAmbiguousMatches.any()){
 						cout << endl << "warning, some colors may have been filled using the same read at least twice : " <<
-						endl << sequenceAmbiguousMatches << endl << endl;
+						endl << _sequenceAmbiguousMatches << endl << endl;
 					}
 				//}
 				//else {
@@ -2185,19 +2185,19 @@ int Requests::getSequenceNbColorsInGraph(char* sequence){
 //TODO stop the algo when constructing the bitset array in getSequenceFileMatchesInData
 // if not present to limit timeloop
 bool  Requests::isSequenceInData(char* sequence, 
-								vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
-								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches)
+								vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+								bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/)
 {
-	return !getSequenceColorsInData(sequence, sequenceMatches, sequenceAmbiguousMatches).none();
+	return !getSequenceColorsInData(sequence, sequenceMatches/*, _sequenceAmbiguousMatches*/).none();
 }
 
 bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence, 
-														vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
-														bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
+														vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+														bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/){
 
 	int sequenceSize = strlen(sequence);
 	//bitset<NB_MAX_COLORS> sequenceMatches[sequenceSize];
-	getSequenceFileMatchesInData(sequence, sequenceMatches, sequenceAmbiguousMatches);
+	getSequenceFileMatchesInData(sequence, sequenceMatches/*, _sequenceAmbiguousMatches*/);
 
 	//tmp debug
 	//cerr << "debug Requests::isSequenceInData" << endl;
@@ -2219,7 +2219,7 @@ bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence,
 	// we keep the 1 values of the bitset _sequenceAmbiguousColors only if
 	// the color is fullfilled
 
-	_sequenceAmbiguousColors = sequenceAmbiguousMatches & _sequenceColors;
+	_sequenceAmbiguousColors = _sequenceAmbiguousMatches & _sequenceColors;
 
 	return _sequenceColors;
 }
@@ -2227,15 +2227,15 @@ bitset<NB_MAX_COLORS>  Requests::getSequenceColorsInData(char* sequence,
 //TODO : count nb colors during construction of bitset sequenceColors
 // tolimit time loop
 int  Requests::getSequenceNbColorsInData(char* sequence, 
-										vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
-										bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
+										vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+										bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/){
 
-	return getSequenceColorsInData(sequence, sequenceMatches, sequenceAmbiguousMatches).count();
+	return getSequenceColorsInData(sequence, sequenceMatches/*, _sequenceAmbiguousMatches*/).count();
 }
 
 void Requests::getSequenceFileMatchesInData(char* sequence, 
-											vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
-											bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
+											vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+											bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/){
 
 
 	cerr << "debug Requests::getSequenceFileMatchesInData - BEGIN" << endl;
@@ -2251,7 +2251,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 	Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
 	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
 	
-	sequenceAmbiguousMatches.reset();
+	_sequenceAmbiguousMatches.reset();
 	
 	//decode commpressed file, to find matching anchors
 	_filePos = 0;
@@ -2293,7 +2293,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 				if(sequenceAnchorKmers->get(ri->anchor, &listPos)){
 
 					searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
-									sequenceMatches, sequenceAmbiguousMatches);
+									sequenceMatches/*, _sequenceAmbiguousMatches*/);
 				}
 			}
 		}
@@ -2318,7 +2318,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 						if (_ddecoder->getNextOrderedReadInfos(ri)){
 
 							searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
-								sequenceMatches, sequenceAmbiguousMatches);
+								sequenceMatches/*, _sequenceAmbiguousMatches*/);
 						}
 					}
 				}
@@ -2349,8 +2349,8 @@ void Requests::searchAlignements(char* sequence,
 								ReadInfos* ri,
 								list<u_int32_t>* listPos,
 								Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
-								vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
-								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches){
+								vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+								bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/){
 
 	int sequenceSize = strlen(sequence);
 	int mismatches[NB_MAX_SNPS+1];
@@ -2417,7 +2417,7 @@ void Requests::searchAlignements(char* sequence,
 				// cerr << "read color : " << readColor << endl;
 
 				if (readAlreadyAlined){
-					sequenceAmbiguousMatches |= readColor;
+					_sequenceAmbiguousMatches |= readColor;
 				}
 
 				int nbMismatchIndex = 0;

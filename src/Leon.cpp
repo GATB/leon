@@ -219,7 +219,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = true;
+	_orderReads = false;
 	//_readSortedFileTest = true;
 
     _compress = false;
