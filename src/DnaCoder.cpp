@@ -527,6 +527,7 @@ void DnaEncoder::execute(){
 			cerr << "DnaEncoder::execute() - current sequence : " << _readseq << endl;
 
 			ofstream& unsortedReads = _leon->unsortedReads;
+			++_leon->_nbLinesToSort;
 
 			/*
 			//old version

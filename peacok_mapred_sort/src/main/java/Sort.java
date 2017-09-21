@@ -45,6 +45,48 @@ import java.net.URI;
 }
 */
 
+class InfosReducers{
+	
+	int numActualReducerID;
+	//int nbReducersNeeded;
+	long nbTasksLeftForActualReducer;
+	
+	InfosReducers(int numActualReducerID, long nbTasksLeftForActualReducer){
+		
+		this.numActualReducerID = numActualReducerID;
+		this.nbTasksLeftForActualReducer = nbTasksLeftForActualReducer;
+	}
+	
+	public int getNumActualReducerID() {
+		return numActualReducerID;
+	}
+	
+	/*public int getNbReducersNeeded() {
+		return nbReducersNeeded;
+	}*/
+	
+	public long getNbTasksLeftForActualReducer() {
+		return nbTasksLeftForActualReducer;
+	}
+	
+	//give the id of next reducer
+	//actualize nb of tasks remaining to attribute to actual reducer
+	//if no place left, next tasks will be attributed to the followinf reducer
+	public int getNextReducerID(long limitReducerCapacity) {
+		
+		if (nbTasksLeftForActualReducer > 0) {
+			--nbTasksLeftForActualReducer;
+		}
+		else {
+			++numActualReducerID;
+			//--nbReducersNeeded;
+			nbTasksLeftForActualReducer = limitReducerCapacity;
+			
+		}
+		return numActualReducerID;
+	}
+}
+
 public class Sort {
 	
 	//static Map<String, MutableInt> histoKeys = new TreeMap<String, MutableInt>();
@@ -52,6 +94,7 @@ public class Sort {
 	static int numReducers = 0;
 	static Map<String, Long> histoTreeMap = new TreeMap<String, Long>();
 	static Map<String, Integer> reducerTreeMap = new TreeMap<String, Integer>();
+	static Map<String, InfosReducers> infosReducersTreeMap = new TreeMap<String, InfosReducers>();
 	
 	
 	public static class HistoMapper
@@ -147,8 +190,11 @@ public class Sort {
 	{
 		private Configuration configuration;
 		static Map<String, Integer> reducerTreeMap =  new TreeMap<String, Integer>();
-		boolean reducerTreeMapSet = false;
+		static Map<String, InfosReducers> infosReducersTreeMap = new TreeMap<String, InfosReducers>();
+		//boolean reducerTreeMapSet = false;
 		//Map<String, Integer> keyReducer = new TreeMap<String, Integer>();
+		int partitionVersion;
+		long limitReducerCapacity;
 		
 		/*public SortPartitioner()
 		{			
@@ -268,8 +314,14 @@ public class Sort {
 	            return 0;
 	         }
 	         
+	         if(partitionVersion < 4) {
+	        	 return reducerTreeMap.get(anchorString);
+	         }
+	         else {
+	        	 InfosReducers ir = infosReducersTreeMap.get(anchorString);
+	        	 return ir.getNextReducerID(limitReducerCapacity);
+	         }
 	         
-	         return reducerTreeMap.get(anchorString);
 	         //return 1;
 	      }
 		
@@ -278,13 +330,20 @@ public class Sort {
 	         this.configuration = configuration;
 	         
 	         String treeMapFilePath = configuration.get("treeMapFilePath");
+	         int partitionVersion = Integer.parseInt(configuration.get("partitionVersion"));
+	         long limitReducerCapacity = Long.parseLong(configuration.get("limitReducerCapacity"));
 				
-				try{
-			        Path pt=new Path(treeMapFilePath);
-			        FileSystem fs = FileSystem.get(configuration);
-			        BufferedReader br=new BufferedReader(new InputStreamReader(fs.open(pt)));
-			        String line;
-			        line=br.readLine();
+	         try{
+	        	 
+		         Path pt=new Path(treeMapFilePath);
+			     FileSystem fs = FileSystem.get(configuration);
+			     BufferedReader br=new BufferedReader(new InputStreamReader(fs.open(pt)));
+			     String line;
+			     line=br.readLine();
+		        
+		     	if (partitionVersion < 4) {
+	        	 
+				
 			        while (line != null){
 			                //System.out.println(line);
 			                
@@ -297,9 +356,28 @@ public class Sort {
 			                line=br.readLine();
 			                
 			        }
-				}catch(Exception e){
-					System.out.println("\t\tERROR WHILE READING");
 				}
+		     	else {
+
+		     		while (line != null){
+		     			//System.out.println(line);
+				                
+		     			String tokens[] = line.split(":");
+	        			 
+		     			String anchor = tokens[0];
+		     			int numFirstReducer = Integer.parseInt(tokens[1]);
+		     			long nbTasksLeftForActualReducer = Long.parseLong(tokens[2]);
+	        				
+		     			InfosReducers ir = new InfosReducers(numFirstReducer, nbTasksLeftForActualReducer);
+
+		     			infosReducersTreeMap.put(anchor, ir);
+		     			line=br.readLine();
+				                
+		     		}
+		     	}
+	         }catch(Exception e){
+        		 System.out.println("\t\tERROR WHILE READING"); 
+	         }
 	         
 	      }
 	 
@@ -334,12 +412,218 @@ public class Sort {
     }
   }
   
+  /*
+   *version 1 
+   *try to balance charge on remaining reducers
+   *(the first one will probably be the more charged reducer)
+   */
+  public static void fillReducerTreeMapV1(long totalNbElements, int numReduceTasks) {
+	  
+	  long boundPortion = totalNbElements/numReducers+1;
+	  long nbRemainingElements = totalNbElements;
+	  int nbRemainingReducers = numReducers;
+	  long limit = boundPortion;
+	  long distance = boundPortion;
+	  long newDistance = boundPortion;
+	  long currentCount = 0;
+	  int reducerID = 0;
+		
+	  for(Map.Entry<String,Long> entry : histoTreeMap.entrySet()) {
+		  String anchor = entry.getKey().toString();
+		  long occurence = entry.getValue();
+	  
+		  currentCount += occurence;
+    	
+		  reducerTreeMap.put(anchor, reducerID);
+				  
+		  if (currentCount > limit){
+
+			  ++reducerID;
+				
+			  nbRemainingElements -= currentCount;
+			  nbRemainingReducers -= 1;
+			  boundPortion = nbRemainingElements/nbRemainingReducers+1;
+			  currentCount = 0;
+			  limit = boundPortion;
+				
+		  }
+	  }
+  }
+  
+  /*
+   * version 2
+   * balance by portions :
+   * the first one will at least work on the first n ones
+   * the second from n to 2n... etc
+   * if one portion reaches the limit of the next reducer,
+   * then the next one won't work at all...
+   */
+  public static void fillReducerTreeMapV2(long totalNbElements, int numReduceTasks) {
+	  
+	  long boundPortion = totalNbElements/numReducers+1;
+	  long nbRemainingElements = totalNbElements;
+	  int nbRemainingReducers = numReducers;
+	  long limit = boundPortion;
+	  long distance = boundPortion;
+	  long newDistance = boundPortion;
+	  long currentCount = 0;
+	  int reducerID = 0;
+		
+	  for(Map.Entry<String,Long> entry : histoTreeMap.entrySet()) {
+		  
+		  String anchor = entry.getKey().toString();
+		  long occurence = entry.getValue();
+	  
+	      currentCount += occurence;	    	
+	      reducerTreeMap.put(anchor, reducerID);
+				
+	      if (currentCount > limit){
+	
+	    	  ++reducerID;
+	    	  limit += boundPortion;
+					
+	      }
+	  }
+  }
+  
+  /*
+   * version 3
+   * take the next set in the reducer if the distance to
+   * bound portion get smaller, and then reajust the perfect
+   * bound
+   * else stop
+   */
+  public static void fillReducerTreeMapV3(long totalNbElements, int numReduceTasks) {
+	  
+	  long boundPortion = totalNbElements/numReducers+1;
+	  long nbRemainingElements = totalNbElements;
+	  int nbRemainingReducers = numReducers;
+	  long limit = boundPortion;
+	  long distance = boundPortion;
+	  long newDistance = boundPortion;
+	  long currentCount = 0;
+	  int reducerID = 0;
+		
+	  for(Map.Entry<String,Long> entry : histoTreeMap.entrySet()) {
+		  
+		  String anchor = entry.getKey().toString();
+		  long occurence = entry.getValue();
+	  
+	      currentCount += occurence;
+	
+	      newDistance = Math.abs(boundPortion - currentCount);
+	
+				     
+	      if (newDistance <= distance)
+	      { 
+	    	  reducerTreeMap.put(anchor, reducerID);
+	    	  distance = newDistance;
+	      }
+	      else{
+	    	  if (reducerID < numReduceTasks-1){
+	    		  ++reducerID;
+	    	  }
+	    	  reducerTreeMap.put(anchor, reducerID);
+	    	  nbRemainingElements -= currentCount;
+	    	  nbRemainingReducers -= 1;
+	    	  if (nbRemainingReducers > 0){
+	    		  boundPortion = nbRemainingElements/nbRemainingReducers+1;
+	    		  System.out.println("test - new boundPortion : " + boundPortion);
+	    	  }
+						
+	    	  currentCount = 0;
+	    	  distance = boundPortion;
+	    	  newDistance = 0;
+	      }
+	  }
+  }
+  
+  //V4 :
+ // cut exactly charges between reducers
+  //several red may have the same key
+  //will have to remove first line of reducers resulting file, receiving
+  // the same key that the previous one
+public static void fillInfosReducersTreeMapV4(long totalNbElements, int numReduceTasks) {
+	  
+	  long boundPortion = totalNbElements/numReducers+1;
+	  long nbRemainingElements = totalNbElements;
+	  int nbRemainingReducers = numReducers;
+	  long limit = boundPortion;
+	  long distance = boundPortion;
+	  long newDistance = boundPortion;
+	  long currentCount = 0;
+	  int reducerID = 0;
+		
+	  for(Map.Entry<String,Long> entry : histoTreeMap.entrySet()) {
+		  String anchor = entry.getKey().toString();
+		  long occurence = entry.getValue();
+		  
+		  int numFirstReducer;
+		  long nbTasksLeftForActualReducer;
+			
+		  currentCount += occurence;
+		  
+		  numFirstReducer = reducerID;
+				  
+		  if (currentCount > limit){
+			  
+			 long remainingCount = currentCount - limit;
+			 //number of red needed are 1 + the number of red for the exceeded data (remainingCount/limit)
+			// int nbReducersNeeded = 1 + ((int) (remainingCount/limit));
+			 int nbReducersNeeded = 1 + (int) Math.ceil((double) remainingCount / limit);
+			 nbTasksLeftForActualReducer = occurence - remainingCount;
+				
+			 currentCount = remainingCount;
+			 
+			 
+			//we increment reducerID wirh the nb red needed minus 1
+			 //if the last one isn't full
+			 if ((remainingCount % limit) != 0)
+			 {
+				 reducerID += nbReducersNeeded -1;
+			 }
+			 else
+			 {
+				 reducerID += nbReducersNeeded;
+			 }
+			 
+			 
+			 //old version, adjusting limit. Not necessary anymore (normaly)
+			  //nbRemainingElements -= currentCount;
+			  //nbRemainingReducers -= 1;
+			  //boundPortion = nbRemainingElements/nbRemainingReducers+1;
+			  //currentCount = 0;
+			  //limit = boundPortion;
+				
+		  }
+		  
+		  if (currentCount == limit){
+			  
+			  //numFirstReducer = reducerID;
+			  nbTasksLeftForActualReducer = occurence;
+			  
+			  ++reducerID;
+			  currentCount = 0;
+		  }
+		  
+		  else {
+			  //numFirstReducer = reducerID;
+			  nbTasksLeftForActualReducer = occurence;
+		  }
+		  
+		  InfosReducers ir = new InfosReducers(numFirstReducer, nbTasksLeftForActualReducer);
+		  infosReducersTreeMap.put(anchor, ir);
+	  }
+  }
+  
   public static void main(String[] args) throws Exception {
 	  
 	if (args.length != 4){
 		System.out.println("cmd inputPath outputPath nbElements nbReducers");
 		System.exit(1);;
 	}
+	
+	int partitionVersion = 1;
 	  
 	long totalNbElements = Long.parseLong(args[2]);  
     Configuration conf = new Configuration();
@@ -454,6 +738,21 @@ public class Sort {
 	
 	//determine reducersIDs
 	
+	switch (partitionVersion) {
+	
+		case 1: fillReducerTreeMapV1(totalNbElements, numReduceTasks);
+		break;
+		case 2: fillReducerTreeMapV2(totalNbElements, numReduceTasks);
+		break;
+		case 3: fillReducerTreeMapV3(totalNbElements, numReduceTasks);
+		break;
+		case 4: fillInfosReducersTreeMapV4(totalNbElements, numReduceTasks);
+		break;
+	}
+	
+	//OLD VERSION ALL ALGOS
+	/*	
+	
 	long nbRemainingElements = totalNbElements;
 	int nbRemainingReducers = numReducers;
 	long limit = boundPortion;
@@ -470,38 +769,38 @@ public class Sort {
         currentCount += occurence;
         //System.out.println("test - occurence : " + occurence);
         //System.out.println("test - currentCount : " + currentCount);
-        newDistance = Math.abs(boundPortion - currentCount);
+        //newDistance = Math.abs(boundPortion - currentCount);
         
         //System.out.println("test - newDistance : " + newDistance);
 			  
 			// version 3    
-			/*    if (newDistance <= distance)
-			    {*/
+			//    if (newDistance <= distance)
+			//   {
 			// version 3 end  
 			    	
 				  reducerTreeMap.put(anchor, reducerID);
-				  distance = newDistance;
+				  //distance = newDistance;
 			  
 			//version 3
-			    /*}
-			    else{
-			    	if (reducerID < numReduceTasks-1){
-			    		++reducerID;
-			    	}
-			    	reducerTreeMap.put(anchor, reducerID);
+			    //}
+			    //else{
+			    //	if (reducerID < numReduceTasks-1){
+			    //		++reducerID;
+			    //	}
+			    //	reducerTreeMap.put(anchor, reducerID);
 			    	
-			    	nbRemainingElements -= currentCount;
-					nbRemainingReducers -= 1;
-					if (nbRemainingReducers > 0){
-						boundPortion = nbRemainingElements/nbRemainingReducers+1;
-						//distance = boundPortion;
-						System.out.println("test - new boundPortion : " + boundPortion);
-					}
+			    //	nbRemainingElements -= currentCount;
+				//	nbRemainingReducers -= 1;
+				//	if (nbRemainingReducers > 0){
+				//		boundPortion = nbRemainingElements/nbRemainingReducers+1;
+				//		//distance = boundPortion;
+				//		System.out.println("test - new boundPortion : " + boundPortion);
+				//	}
 					
-					currentCount = 0;
-					distance = boundPortion;
-					newDistance = 0;
-			    }*/
+				//	currentCount = 0;
+				//	distance = boundPortion;
+				//	newDistance = 0;
+			    //}
 			// version 3 end
 
 			//version 1,2	  
@@ -513,11 +812,11 @@ public class Sort {
 				
 				//readjust bound portion
 				
-				/*
-				 *version 1 
-				 *try to balance charge on remaining reducers
-				 *(the first one will probably be the more charged reducer)
-				*/
+				//
+				//version 1 
+				//try to balance charge on remaining reducers
+				//(the first one will probably be the more charged reducer)
+				
 				nbRemainingElements -= currentCount;
 				nbRemainingReducers -= 1;
 				boundPortion = nbRemainingElements/nbRemainingReducers+1;
@@ -525,25 +824,25 @@ public class Sort {
 				limit = boundPortion;
 				
 				
-				/*
-				 * version 2
-				 * balance by portions :
-				 * the first one will at least work on the first n ones
-				 * the second from n to 2n... etc
-				 * if one portion reaches the limit of the next reducer,
-				 * then the next one won't work at all...
-				 */
-				/*limit += boundPortion;
-				System.out.println("test - limit : " + limit);
-				*/
+				//
+				// version 2
+				// balance by portions :
+				// the first one will at least work on the first n ones
+				// the second from n to 2n... etc
+				// if one portion reaches the limit of the next reducer,
+				// then the next one won't work at all...
+				//
+				//limit += boundPortion;
+				//System.out.println("test - limit : " + limit);
+				//
 				
-				/*
-				 * version 3
-				 * take the next set in the reducer if the distance to
-				 * bound portion get smaller, and then reajust the perfect
-				 * bound
-				 * else stop
-				 */
+				//
+				// version 3
+				// take the next set in the reducer if the distance to
+				// bound portion get smaller, and then reajust the perfect
+				// bound
+				// else stop
+				//
 				
 			}
 			//version 1,2 end
@@ -555,27 +854,42 @@ public class Sort {
          //totalNbElements += val;
 	
          
- }
+ }*/
 	
 	//save the treeMap in a file
-	 String treeMapFilePath = inputPath +"treeMap.tmp";
-	 Path treeMapFile = new Path(treeMapFilePath);
-	 if ( hdfs.exists( treeMapFile )) { hdfs.delete( treeMapFile, true ); } 
-	 OutputStream os = hdfs.create( treeMapFile/*,
-	     new Progressable() {
-	         public void progress() {
-	             out.println("...bytes written: [ "+bytesWritten+" ]");
-	         } }*/);
-	 BufferedWriter bw = new BufferedWriter( new OutputStreamWriter( os, "UTF-8" ) );
+	String treeMapFilePath = inputPath +"treeMap.tmp";
+	Path treeMapFile = new Path(treeMapFilePath);
+	if ( hdfs.exists( treeMapFile )) { hdfs.delete( treeMapFile, true ); } 
+	OutputStream os = hdfs.create( treeMapFile/*,
+	    new Progressable() {
+	        public void progress() {
+	            out.println("...bytes written: [ "+bytesWritten+" ]");
+	        } }*/);
+	BufferedWriter bw = new BufferedWriter( new OutputStreamWriter( os, "UTF-8" ) );
 	 
-	 for(Map.Entry<String, Integer> entry : reducerTreeMap.entrySet()) {
+	if (partitionVersion < 4) {
 		 
+		 for(Map.Entry<String, Integer> entry : reducerTreeMap.entrySet()) {
+			 
+				String anchor = entry.getKey();
+				int ID = entry.getValue();
+	
+				bw.write(anchor + ":" + ID + "\n");
+			 }	
+	}
+	else {
+		 
+		for(Map.Entry<String, InfosReducers> entry : infosReducersTreeMap.entrySet()) {
+			 
 			String anchor = entry.getKey();
-			int ID = entry.getValue();
-
-			bw.write(anchor + ":" + ID + "\n");
+			InfosReducers ir = entry.getValue();
+			int numFirstReducer = ir.getNumActualReducerID();
+			long nbTasksLeftForActualReducer = ir.getNbTasksLeftForActualReducer();
+	
+			bw.write(anchor + ":" + numFirstReducer + ":" + nbTasksLeftForActualReducer +"\n");
 		 }
-	 
+	}
+	
 	 bw.close();
 	 
 	 /*String sreducerTreeMap = "";
@@ -591,6 +905,9 @@ public class Sort {
 	 System.out.println(sreducerTreeMap);*/
 	 
 	 conf.set("treeMapFilePath", treeMapFilePath);
+	 conf.set("partitionVersion", Integer.toString(partitionVersion));
+	 long limitReducerCapacity = totalNbElements/numReducers+1;
+	 conf.set("limitReducerCapacity", Long.toString(limitReducerCapacity));
 	
 	//delete temp files
 	command = "hdfs dfs -rm " + histoFilePath;

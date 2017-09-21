@@ -219,7 +219,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = false;
+	_orderReads = true;
 	//_readSortedFileTest = true;
 
     _compress = false;
@@ -1794,7 +1794,42 @@ void Leon::startDnaCompression(){
 	if (_orderReads){
 
 		int nbReadsEncodedTest = 0;
+
+		cerr << "Leon::startDnaCompression() - before mapred sort _nbLinesToSort : " << _nbLinesToSort << endl;
+		
+		std::string unsortedReadsFilePath = _baseOutputname + ".ars.tosort";
+		std::string sortedReadsFilePath = _baseOutputname + ".ars";
+		std::string launch_mapred_sort_script_path = binaryPath + "launch_mapred_sort.sh";
+
 		//Do and wait for the map reduce sort here
+		//CALL MAP REDUCE SORT HERE
+		//args :
+		// inputfile : unsortedReadsFilePath
+		// outputfile : sortedReadsFilePath
+		// number of line to sort : _nbLinesToSort
+		// default nb reducers (10 ?)
+	
+		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
+						unsortedReadsFilePath + " " + 
+						sortedReadsFilePath + " " + 
+						std::to_string(_nbLinesToSort) + " " + 
+						" " + std::to_string(nbReducers); 
+		cerr << "Leon::startDnaCompression() - test system call" << endl;
+		    int ret = std::system(commandLine.c_str());
+		    if (ret > 0){
+		    	cerr << "Leon::startDnaCompression() - FAILURE" << endl;
+		      	remove((_outputFilename + ".adtemp").c_str());
+		      	//remove((_baseOutputname + ".ars.tosort").c_str());
+		      	unsortedReads.close();
+		      	exit(0);
+			}
+		    else{
+		    	cerr << "Leon::startDnaCompression() - SUCCESS" << endl;
+		    	//remove((_baseOutputname + ".ars.tosort").c_str());
+		  	}
+		
+		std::ifstream sortedReads(sortedReadsFilePath);
+
 
 		DnaEncoder* de = new DnaEncoder(this);
 		//TODO
@@ -1806,9 +1841,6 @@ void Leon::startDnaCompression(){
 		
 
 		_anchorKmersSorted = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated );
-
-		std::string sortedReadsFilePath = _baseOutputname + ".ars";
-		std::ifstream sortedReads(sortedReadsFilePath);
 
 		//cerr << "Leon::startDnaCompression - sortedReadsFilePath: " << sortedReadsFilePath << endl;
 

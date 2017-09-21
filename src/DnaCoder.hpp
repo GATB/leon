@@ -102,6 +102,7 @@ class AbstractDnaCoder
 	protected:
 		Leon* _leon;
 		bool _orderReads;
+		unsigned long* _nbLinesToSort;
 		collections::impl::IBloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 
 		Order0Model _readSizeDeltaTypeModel;

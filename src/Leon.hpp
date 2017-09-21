@@ -57,6 +57,9 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 #include <sstream>
 #include <iostream>
 #include <list>
+#include <stdio.h>
+#include <sys/wait.h>
+#include <cstdlib>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
 #include "Requests.hpp"
@@ -73,7 +76,6 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 #include <pthread.h>
 
-
 class HeaderEncoder;
 class HeaderDecoder;
 class DnaEncoder;
@@ -81,6 +83,9 @@ class DnaEncoder;
 class Leon : public misc::impl::Tool
 {
 	public:
+
+		//Path to binay
+		std::string binaryPath = "/home/tbraquel/NGS/gatb-tool-leon/";
 		
 		//Leon( bool compress, bool decompress);
 		Leon();
@@ -146,7 +151,11 @@ class Leon : public misc::impl::Tool
 	
 		bool _isFasta;
 		bool _noHeader;
+
 		bool _orderReads;
+		unsigned long _nbLinesToSort = 0;
+		int nbReducers = 4; //default 4
+
 		//tmp tests bool
 		bool _readSortedFileTest;
 

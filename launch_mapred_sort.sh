@@ -1,7 +1,7 @@
 #! /bin/bash
 
 set -e 
-set -o pipefail
+#set -o pipefail
 
 if [ "$#" -ne 4 ]; then
  	echo "args are : \n- inputfile (to sort)\n- outputfile (sorted)\n- number of lines of the inputfile\n- number of reducers required"
