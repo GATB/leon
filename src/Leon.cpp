@@ -121,7 +121,7 @@ const char Leon::_bin2nt = {'A', 'C', 'T', 'G', 'N'};
 */
 
 //Leon::Leon ( bool compress, bool decompress) :
-Leon::Leon () :
+Leon::Leon (string binaryPath) :
 Tool("leon"),
 _generalModel(256),// _anchorKmers(ANCHOR_KMERS_HASH_SIZE),
 _anchorDictModel(5), _nb_thread_living(0), _blockwriter(0), //5value: A, C, G, T, N
@@ -131,6 +131,7 @@ _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _otherSize(0), _rea
 _progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0), _qualwriter(NULL)
 
 {
+_binaryPath = binaryPath;
 _isFasta = true;
 	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
 
@@ -1799,7 +1800,7 @@ void Leon::startDnaCompression(){
 		
 		std::string unsortedReadsFilePath = _baseOutputname + ".ars.tosort";
 		std::string sortedReadsFilePath = _baseOutputname + ".ars";
-		std::string launch_mapred_sort_script_path = binaryPath + "launch_mapred_sort.sh";
+		std::string launch_mapred_sort_script_path = _binaryPath + "launch_mapred_sort.sh";
 
 		//Do and wait for the map reduce sort here
 		//CALL MAP REDUCE SORT HERE
@@ -1809,6 +1810,8 @@ void Leon::startDnaCompression(){
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
 	
+		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
+
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
 						unsortedReadsFilePath + " " + 
 						sortedReadsFilePath + " " + 

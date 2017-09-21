@@ -84,11 +84,11 @@ class Leon : public misc::impl::Tool
 {
 	public:
 
-		//Path to binay
-		std::string binaryPath = "/home/tbraquel/NGS/gatb-tool-leon/";
+		//Path to binary
+		std::string _binaryPath;// = "/home/tbraquel/NGS/gatb-tool-leon/";
 		
 		//Leon( bool compress, bool decompress);
-		Leon();
+		Leon(string binaryPath);
 		~Leon();
 	
 		static const char* STR_COMPRESS;

@@ -49,7 +49,9 @@ int main (int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 	
-	
+	std::string binary = argv[0];
+	std::string _binaryPath = binary.substr(0, binary.size()-4);
+	cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
     // We dump some information about the gatb core library
    // std::cout << LibraryInfo::getInfo() << endl;
 
@@ -95,7 +97,7 @@ int main (int argc, char* argv[])
             if (strncmp("-d",argv[i],2)  == 0)  {  decompress = true;  }
 		}
         Leon (compress, decompress).run (argc, argv);*/
-    	Leon ().run (argc, argv);
+    	Leon (_binaryPath).run (argc, argv);
 
     }
     
