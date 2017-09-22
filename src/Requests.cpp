@@ -264,8 +264,8 @@ bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
 
 	char read_chars[ri->sread.size()+1];
 	getSequenceChars(read_chars, ri->sread);
-	cerr << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
-	cerr << "debug Requests::getReadColor - csread : " << read_chars << endl;
+	//cerr << "debug Requests::getReadColor - ri->read : " << ri->sread << endl;
+	//cerr << "debug Requests::getReadColor - csread : " << read_chars << endl;
 
 	bitset<NB_MAX_COLORS> readColor = getKmerColors(anchor);
 	uint pos = anchorPos;
@@ -469,7 +469,7 @@ void Requests::headerDecoderSetup(int blockIndice){
 	u_int64_t blockSize;
 	int sequenceCount;
 	blockSize = _headerBlockSizes[blockIndice];
-	cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+	//cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
 	sequenceCount = _headerBlockSizes[blockIndice+1];
 	//hdecoder = headerdecoders[j];
 	_hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
@@ -549,13 +549,13 @@ void Requests::decodeAnchorDict(){
 	#endif
 
 	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "Requests::decodeAnchorDict - decode dict size : " << anchorDictSize << endl;
+	//cerr << "Requests::decodeAnchorDict - decode dict size : " << anchorDictSize << endl;
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "Requests::decodeAnchorDict - decode anc count : " << anchorCount << endl;
+	//cerr << "Requests::decodeAnchorDict - decode anc count : " << anchorCount << endl;
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";
 	u_int64_t dictPos = _inputFile->tellg();
-	cerr << "Requests::decodeAnchorDict - dictPos : " << dictPos << endl;
+	//cerr << "Requests::decodeAnchorDict - dictPos : " << dictPos << endl;
 	u_int64_t currentAnchorCount = 0;
 	//return;
 	while(currentAnchorCount < anchorCount){
@@ -570,7 +570,7 @@ void Requests::decodeAnchorDict(){
 			_vecAnchorKmers.push_back(kmer);
 			anchorKmer.clear();
 			currentAnchorCount += 1;
-			cerr << "\tRequests::decodeAnchorDict() - anchor : " << kmer.toString(_kmerSize) << endl;
+			//cerr << "\tRequests::decodeAnchorDict() - anchor : " << kmer.toString(_kmerSize) << endl;
 
 		}
 	}
@@ -580,48 +580,48 @@ void Requests::decodeSortedAnchorDict(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\tDecode anchor dict" << endl;
 	#endif
-	cerr << "\tRequests::decodeSortedAnchorDict() - begin" << endl;
-	cerr << "\tRequests::decodeSortedAnchorDict() - _filePos : " << _filePos << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - begin" << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - _filePos : " << _filePos << endl;
 	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
 	
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile eof : " << _inputFile->eof() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile bad : " << _inputFile->bad() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile fail : " << _inputFile->fail() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile is_open : " << _inputFile->is_open() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile bad : " << _inputFile->bad() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile fail : " << _inputFile->fail() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile is_open : " << _inputFile->is_open() << endl;
 
 	_anchorRangeDecoder.setInputFile(_inputFile);
 	string anchorKmer = "";
 	//return;
 	u_int64_t dictPos = _inputFile->tellg();
-	 cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile eof : " << _inputFile->eof() << endl;
-	 cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile bad : " << _inputFile->bad() << endl;
-	 cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile fail : " << _inputFile->fail() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile eof : " << _inputFile->eof() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile bad : " << _inputFile->bad() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile fail : " << _inputFile->fail() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
 	u_int64_t currentAnchorCount = 0;
 
 	kmer_type anchor;
 	u_int64_t nbcreated ;
 	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
-	cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
 	
 	while(currentAnchorCount < anchorCount){
 
 
 		u_int8_t c = _anchorRangeDecoder.nextByte(_anchorDictModel);
-		cerr << "Requests::decodeSortedAnchorDict - decode : " << (uint32_t) c << endl;
-		cerr << "Requests::decodeSortedAnchorDict - decode Leon::bin2nt(c) : " << (char) Leon::bin2nt(c) << endl;
+		//cerr << "Requests::decodeSortedAnchorDict - decode : " << (uint32_t) c << endl;
+		//cerr << "Requests::decodeSortedAnchorDict - decode Leon::bin2nt(c) : " << (char) Leon::bin2nt(c) << endl;
 		anchorKmer += Leon::bin2nt(c); //convert to char
 
 		if(anchorKmer.size() == _kmerSize){
 			
 			anchor = _kmerModel->codeSeed(anchorKmer.c_str(), Data::ASCII).value() ; //then convert to bin
-			cerr << "\tRequests::decodeSortedAnchorDict() - anchor : " << anchor.toString(_kmerSize) << endl;
+			//cerr << "\tRequests::decodeSortedAnchorDict() - anchor : " << anchor.toString(_kmerSize) << endl;
 
 			u_int64_t nbReads = CompressionUtils::decodeNumeric(_anchorRangeDecoder, _nbReadsPerAnchorModel);
-			cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
+			//cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
 
 			//_vecAnchorKmers.push_back(kmer);
 			_anchorKmersSortedD->insert(anchor, nbReads);
@@ -1266,7 +1266,7 @@ void Requests::printIsKmerInSequenceAnchorDict(char* kmer_chars,
 		cout << "yes, at position(s) :" << endl;
 
 		for (std::list<u_int32_t>::iterator it=listPos->begin(); it != listPos->end(); ++it){
-			cerr << *it << endl;
+			cout << *it << endl;
 		}
 	}
 	else{
@@ -1285,7 +1285,7 @@ void Requests::printSequenceAnchorsDict(char* sequence,
 	uint nbKmer = 0;
 	char kmer[_kmerSize+1];
 	char anchor[_kmerSize+1];
-	cerr << "Requests::printSequenceAnchorsDict - test";
+	//cerr << "Requests::printSequenceAnchorsDict - test";
 	while(getSequenceKmer(sequence, nbKmer, kmer))
 	{	
 		if (getNextAnchor(sequence, &nbKmer, anchor, anchorAddress)){
@@ -1403,7 +1403,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	
 	//Second bit : option no header
 	bool noHeader = ((infoByte & 0x02) == 0x02);
-	cerr << "testPrintReads - noHeader : " << noHeader << endl;
+	//cerr << "testPrintReads - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -1426,15 +1426,15 @@ void Requests::testPrintAllHeadersReadsFile(){
 		
 	///////// header setup  /////////
 	//Decode the first header
-	cerr << "debug - testPrintReads - header setup" << endl;
+	//cerr << "debug - testPrintReads - header setup" << endl;
 	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	for(int i=0; i<firstHeaderSize; i++){
 		firstHeader += _rangeDecoder.nextByte(_generalModel);
-		cerr << "debug - testPrintReads - first header : " << firstHeader << endl;
+		//cerr << "debug - testPrintReads - first header : " << firstHeader << endl;
 	}
-	cerr << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+	//cerr << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 	setupNextComponent(_headerBlockSizes);
-	cerr << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+	//cerr << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1442,16 +1442,16 @@ void Requests::testPrintAllHeadersReadsFile(){
 	/////// dna setup ////////////
 	
 	//need to init _filePosDna here
-	cerr << "debug - testPrintReads - dna setup" << endl;
+	//cerr << "debug - testPrintReads - dna setup" << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		filePosDna += _headerBlockSizes[ii];
-		cerr << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
+		//cerr << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
 	}
 	
-	cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	setupNextComponent(_dnaBlockSizes);
-	cerr << "debug - testPrintReads - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintReads - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
 
 	decodeBloom();
 	decodeAnchorDict();
@@ -1489,7 +1489,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	}
 		
 	//DnaDecoder* dd = new DnaDecoder(_leon, _outputFilename);
-	cerr << " debug - testPrintReads - decodeFileName : " << _decodeFilename << endl;
+	//cerr << " debug - testPrintReads - decodeFileName : " << _decodeFilename << endl;
 	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
 	//dnadecoders.push_back(dd);
 		
@@ -1502,10 +1502,10 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 
 	int i=0;
-	cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-		cerr << "debug - testPrintReads - block nb : " << i << endl;
+		//cerr << "debug - testPrintReads - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -1525,7 +1525,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			if(! noHeader)
 			{
 				blockSize = _headerBlockSizes[i];
-				cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+				//cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
 				sequenceCount = _headerBlockSizes[i+1];
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
@@ -1540,7 +1540,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-			cerr << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
+			//cerr << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
 			sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(filePosDna, blockSize, sequenceCount);
@@ -1564,13 +1564,13 @@ void Requests::testPrintAllHeadersReadsFile(){
 			}
 
 			if(hdecoder!=NULL){
-				cerr << "debug - testPrintReads - before hdecoder execute" << endl;
+				//cerr << "debug - testPrintReads - before hdecoder execute" << endl;
 				hdecoder->execute();
-				cerr << "debug - testPrintReads - after hdecoder execute" << endl;
+				//cerr << "debug - testPrintReads - after hdecoder execute" << endl;
 			}
-			cerr << "debug - testPrintReads - before ddecoder execute" << endl;
+			//cerr << "debug - testPrintReads - before ddecoder execute" << endl;
 			ddecoder->execute();
-			cerr << "debug - testPrintReads - after ddecoder execute" << endl;
+			//cerr << "debug - testPrintReads - after ddecoder execute" << endl;
 			i += 2;
 
 		}	
@@ -1785,7 +1785,7 @@ void Requests::testPrintPFile(){
 	
 	//Second bit : option no header
 	bool noHeader = ((infoByte & 0x02) == 0x02);
-	cerr << "testPrintPFile - noHeader : " << noHeader << endl;
+	//cerr << "testPrintPFile - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -1808,16 +1808,16 @@ void Requests::testPrintPFile(){
 		
 		///////// header setup  /////////
 		//Decode the first header
-		cerr << "debug - testPrintPFile - header setup" << endl;
+		//cerr << "debug - testPrintPFile - header setup" << endl;
 		u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 		for(int i=0; i<firstHeaderSize; i++){
 			firstHeader += _rangeDecoder.nextByte(_generalModel);
-			cerr << "debug - testPrintPFile - first header : " << firstHeader << endl;
+			//cerr << "debug - testPrintPFile - first header : " << firstHeader << endl;
 		}
-		cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+		//cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 		//_filePos = filePosHeader;
 		setupNextComponent(_headerBlockSizes);
-		cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+		//cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1825,17 +1825,17 @@ void Requests::testPrintPFile(){
 	/////// dna setup ////////////
 	
 	//need to init _filePosDna here
-	cerr << "debug - testPrintPFile - dna setup" << endl;
+	//cerr << "debug - testPrintPFile - dna setup" << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		//filePosDna += _headerBlockSizes[ii];
-		cerr << "debug - testPrintPFile - file pos dna : " << filePosDna << endl;
+		//cerr << "debug - testPrintPFile - file pos dna : " << filePosDna << endl;
 	}
 	
-	cerr << "debug - testPrintPFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintPFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	_filePos = filePosDna;
 	setupNextComponent(_dnaBlockSizes);
-	cerr << "debug - testPrintPFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintPFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
 
 	decodeBloom();
 	//decodeAnchorDict();
@@ -2356,7 +2356,7 @@ void Requests::searchAlignements(char* sequence,
 	int mismatches[NB_MAX_SNPS+1];
 	u_int32_t anchorSequencePos;
 
-	cerr << "debug Requests::searchAlignements - ri->anchor : " << ri->anchor << endl;
+	//cerr << "debug Requests::searchAlignements - ri->anchor : " << ri->anchor << endl;
 
 	/*
 	//if the read's anchor is in the sequence's list of anchors
