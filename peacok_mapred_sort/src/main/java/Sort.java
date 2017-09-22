@@ -619,8 +619,14 @@ public static void fillInfosReducersTreeMapV4(long totalNbElements, int numReduc
   public static void main(String[] args) throws Exception {
 	  
 	if (args.length != 4){
-		System.out.println("cmd inputPath outputPath nbElements nbReducers");
-		System.exit(1);;
+		System.out.println("cmd inputPath outputPath nbElements nbReducers\n");
+		System.out.println("nb args : " + args.length + "\n");
+		
+		for (int i=0; i<args.length; ++i) {
+			System.out.println("arg " + i + " : " + args[i] + "\n");
+		}
+		
+		System.exit(1);
 	}
 	
 	int partitionVersion = 1;

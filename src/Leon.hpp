@@ -154,7 +154,7 @@ class Leon : public misc::impl::Tool
 
 		bool _orderReads;
 		unsigned long _nbLinesToSort = 0;
-		int nbReducers = 4; //default 4
+		int _nbReducers = 4; //default 4
 
 		//tmp tests bool
 		bool _readSortedFileTest;

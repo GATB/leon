@@ -1798,40 +1798,50 @@ void Leon::startDnaCompression(){
 
 		cerr << "Leon::startDnaCompression() - before mapred sort _nbLinesToSort : " << _nbLinesToSort << endl;
 		
-		std::string unsortedReadsFilePath = _baseOutputname + ".ars.tosort";
-		std::string sortedReadsFilePath = _baseOutputname + ".ars";
+		//getting name of file for hdfs
+		std::size_t filenameIndex = _baseOutputname.find_last_of("/\\");
+		std::string pathToFiles = _baseOutputname.substr(0,filenameIndex) + "/";
+		std::string fileName = _baseOutputname.substr(filenameIndex+1);
+		//cerr << "Leon::startDnaCompression() - file: " << fileName << '\n';
+
+		std::string unsortedReadsFileName = fileName + ".ars.tosort";
+		std::string sortedReadsFileName = fileName + ".ars";
 		std::string launch_mapred_sort_script_path = _binaryPath + "launch_mapred_sort.sh";
 
 		//Do and wait for the map reduce sort here
 		//CALL MAP REDUCE SORT HERE
 		//args :
-		// inputfile : unsortedReadsFilePath
-		// outputfile : sortedReadsFilePath
+		// path to input/output files : pathToFiles
+		// inputfile name : unsortedReadsFileName
+		// outputfile name : sortedReadsFileName
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
 	
 		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
-						unsortedReadsFilePath + " " + 
-						sortedReadsFilePath + " " + 
+						pathToFiles + " " +
+						unsortedReadsFileName + " " + 
+						sortedReadsFileName + " " + 
 						std::to_string(_nbLinesToSort) + " " + 
-						" " + std::to_string(nbReducers); 
+						" " + std::to_string(_nbReducers); 
 		cerr << "Leon::startDnaCompression() - test system call" << endl;
 		    int ret = std::system(commandLine.c_str());
 		    if (ret > 0){
-		    	cerr << "Leon::startDnaCompression() - FAILURE" << endl;
+		    	cerr << "Leon::startDnaCompression() - map red sort FAILURE" << endl;
 		      	remove((_outputFilename + ".adtemp").c_str());
 		      	//remove((_baseOutputname + ".ars.tosort").c_str());
 		      	unsortedReads.close();
 		      	exit(0);
 			}
 		    else{
-		    	cerr << "Leon::startDnaCompression() - SUCCESS" << endl;
+		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
 		  	}
+
+		//AFTER MAP REDUCE SORT
 		
-		std::ifstream sortedReads(sortedReadsFilePath);
+		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);
 
 
 		DnaEncoder* de = new DnaEncoder(this);
@@ -1839,7 +1849,7 @@ void Leon::startDnaCompression(){
 		//not normal having to reset _processedSquenceCount... why isn't it 0 already at construction ??
 		de->reset();
 
-		//AFTER MAP REDUCE SORT
+
 
 		
 
@@ -1853,9 +1863,10 @@ void Leon::startDnaCompression(){
 		u_int32_t nbReads = 0;
 
 		//we read all the file
+		cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading the file : " << sortedReadsFileName << endl;
 		while (std::getline(sortedReads, line))
 		{
-
+			cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading line : " << line << endl;
 			//if new anchor
 			//we encode the anchor and
 			//we save the anchor for the dictionnary
