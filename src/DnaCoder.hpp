@@ -102,7 +102,6 @@ class AbstractDnaCoder
 	protected:
 		Leon* _leon;
 		bool _orderReads;
-		unsigned long* _nbLinesToSort;
 		collections::impl::IBloom<kmer_type>* _bloom; // the bloom containing the solid kmers
 
 		Order0Model _readSizeDeltaTypeModel;
@@ -176,6 +175,10 @@ class DnaEncoder : AbstractDnaCoder
 {
 		
 	public:
+
+		//normally private
+		//TODO make it private again
+		u_int64_t _readWithoutAnchorCount;
 		
 		DnaEncoder(Leon* leon);
 		DnaEncoder(const DnaEncoder& copy);
@@ -185,6 +188,7 @@ class DnaEncoder : AbstractDnaCoder
 
 
 		void reset();
+		void encodeSortedFileNoAnchorRead(string read);
 		void encodeSortedFileAnchor(kmer_type anchor);
 		void encodeSortedFileRead(kmer_type anchor, int isRevComp, int readSize, int anchorPos, /*int anchorAddress,*/ vector<int> Npos,
 									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
@@ -251,9 +255,10 @@ class DnaEncoder : AbstractDnaCoder
 		int voteMutations(int pos, int depth, bool rightExtend);
 		
 		void encodeNoAnchorRead();
+		void saveNoAnchorRead();
 
 		int getBestPath(int pos, kmer_type& kmer, bitset<4>& initRes4, bool rightExtend);
-		
+
 		Sequence* _sequence;
 		char* _readseq;
 		vector<kmer_type> _kmers;
@@ -270,7 +275,7 @@ class DnaEncoder : AbstractDnaCoder
 		u_int64_t _totalDnaSize;
 		u_int64_t _readCount;
 		u_int64_t _MCtotal;
-		u_int64_t _readWithoutAnchorCount;
+		//u_int64_t _readWithoutAnchorCount;
 		u_int64_t _MCuniqSolid;
 		u_int64_t _MCuniqNoSolid;
 		u_int64_t _MCnoAternative;

@@ -1726,27 +1726,18 @@ void Leon::startDnaCompression(){
 	_coverage = nbestimated/10;
 	
 	if (_orderReads){
-	//create ordered read table
 
-		//old version : ordering structures of ReadInfos
-		/*
-		anchorsSequences = vector<list<struct ReadInfos>>(nbestimated/10, list<struct ReadInfos>());
-
-		cerr << "Leon::startDnaCompression - nbestimated = " << nbestimated << endl;
-		for (int i = 0; i<nbestimated/10; ++i){
-			cerr << "Leon::startDnaCompression - i = " << i << endl;
-			anchorsSequences[i] = list<ReadInfos>();
-		}
-		*/
-		//actual version : write a file and send it to a map reduce platform
-		//TODO : use tmpFile ?
-		//std::string tmpNameFile = std::tmpnam(nullptr);
+		//open files
+		//one for the reads to order (with map reduce)
+		//one for the no anchor reads
 
 		_baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
 		std::string unsortedReadsFilePath = _baseOutputname + ".ars.tosort";
   		unsortedReads.open (unsortedReadsFilePath);
-  		//unsortedReads << "test" << endl;
-	}
+
+  		std::string noAnchorReadsFilePath = _baseOutputname + ".noAnchors";
+  		noAnchorReadsOfstream.open (noAnchorReadsFilePath);
+  	}
 	
 	u_int64_t nbcreated ;
 	_anchorKmers = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated ); //creator with nb entries given
@@ -1788,11 +1779,21 @@ void Leon::startDnaCompression(){
 	//encode dna if leon mode
 	//launch dna sorting if peacock mode
 
-		
-	getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
-	
+	if (! _orderReads){
+		getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
+	}
+	else{
 
-	if (_orderReads){
+		DnaEncoder* de = new DnaEncoder(this);
+
+
+		//iterate without parallellism for now
+		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
+		{
+			++debug;
+			Sequence& seq = itSeq->item();
+			de->operator()(seq);
+		}
 
 		int nbReadsEncodedTest = 0;
 
@@ -1806,6 +1807,7 @@ void Leon::startDnaCompression(){
 
 		std::string unsortedReadsFileName = fileName + ".ars.tosort";
 		std::string sortedReadsFileName = fileName + ".ars";
+		std::string noAnchorReadsFileName = fileName + ".noAnchors";
 		std::string launch_mapred_sort_script_path = _binaryPath + "launch_mapred_sort.sh";
 
 		//Do and wait for the map reduce sort here
@@ -1816,7 +1818,7 @@ void Leon::startDnaCompression(){
 		// outputfile name : sortedReadsFileName
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
-	
+		/*
 		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
@@ -1838,31 +1840,37 @@ void Leon::startDnaCompression(){
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
 		  	}
-
+		*/  	
 		//AFTER MAP REDUCE SORT
-		
-		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);
 
-
-		DnaEncoder* de = new DnaEncoder(this);
+		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);	
+		std::ifstream noAnchorReadsIfstream(pathToFiles + noAnchorReadsFileName);
 		//TODO
 		//not normal having to reset _processedSquenceCount... why isn't it 0 already at construction ??
 		de->reset();
 
 
+		//Compression of the two read files
 
+		//Compression of noAnchorReads
+		//encode nb of reads without anchor, 
+		//then the reads with their size
+
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, de->_readWithoutAnchorCount);
+		std::string line;
+		/*noAnchorReadsIfstream.seekg (0, noAnchorReadsIfstream.beg);
+		while (std::getline(noAnchorReadsIfstream, line))
+		{
+			de->encodeSortedFileNoAnchorRead(line);
+		}*/
 		
-
 		_anchorKmersSorted = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated );
 
-		//cerr << "Leon::startDnaCompression - sortedReadsFilePath: " << sortedReadsFilePath << endl;
-
-		std::string line;
+		//Compression of sortedReads
 		bool readingNewAnchor = true;
 		kmer_type anchor;
 		u_int32_t nbReads = 0;
 
-		//we read all the file
 		cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading the file : " << sortedReadsFileName << endl;
 		while (std::getline(sortedReads, line))
 		{
@@ -1879,6 +1887,7 @@ void Leon::startDnaCompression(){
 				
 				de->encodeSortedFileAnchor(anchor);
 				//cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - ANCHOR : " << anchor.toString(_kmerSize) << endl << endl;
+				//cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - REV ANCHOR : " << revcomp(anchor, _kmerSize).toString(_kmerSize) << endl << endl;
 				readingNewAnchor = false;
 			}
 
@@ -1899,7 +1908,7 @@ void Leon::startDnaCompression(){
 
 
 					int isRevComp = atoi(pch);
-					//cerr << "debug Leon::startDnaCompression - readType : " << readType << endl;
+					//cerr << "debug Leon::startDnaCompression - isRevComp : " << isRevComp << endl;
 					pch = strtok (NULL, ":");
 					int readSize = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - readSize : " << readSize << endl;
@@ -1953,6 +1962,7 @@ void Leon::startDnaCompression(){
 						leftErrorPos.push_back(pos);
 						//cerr << "debug Leon::startDnaCompression - pos : " << pos << endl;
 					}
+
 					/*
 					for (int i = 0; i<leftErrorPos_size; ++i){
 					cerr << "debug Leon::startDnaCompression - leftErrorPos[i] : " << leftErrorPos[i] << endl;
@@ -1968,9 +1978,14 @@ void Leon::startDnaCompression(){
 	       			bifurcationTypes.clear();
 
 	       			pch = strtok (NULL, ":");
-        			int nbBifurcations = strlen(pch);
-        			//cerr << "debug Leon::startDnaCompression - nb bif : " << nbBifurcations << endl;
 
+	       			int nbBifurcations = 0;
+	       			if (pch != NULL){
+        				nbBifurcations = strlen(pch);
+        				//cerr << "debug Leon::startDnaCompression - pch : " << pch << endl;
+        			}
+        			//cerr << "debug Leon::startDnaCompression - nb bif : " << nbBifurcations << endl;
+      
           			for (int i=0; i<nbBifurcations; ++i){
 	          				
           				char bifurcation = pch[i];
@@ -1983,9 +1998,6 @@ void Leon::startDnaCompression(){
           					binaryBifurcations.push_back(bifurcation-'0'-4);
           				}
           			}
-
-          			//cerr << "debug Leon::startDnaCompression - pch : " << pch << endl;
-          			//cerr << "debug Leon::startDnaCompression - strlen(pch) : " << strlen(pch) << endl;
 
           			//debug
           			
@@ -2019,6 +2031,7 @@ void Leon::startDnaCompression(){
 					nbReads = 0;
 				}
 			}
+
 		}
 		
 		de->encodeSortedFileWriteBlock();
@@ -2047,6 +2060,8 @@ void Leon::endDnaCompression(){
 
 	if (_orderReads){
 		unsortedReads.close();
+		noAnchorReadsOfstream.close();
+		noAnchorReadsIfstream.close();
 		//TODO 
 		//write sortedAnchorDict
 		writeSortedAnchorDict();
@@ -2657,8 +2672,6 @@ void Leon::executeDecompression(){
 
 
 void Leon::startDecompressionAllStreams(){
-	
-	cout << "DEBUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUG" << endl;
 	
 	_filePosHeader = 0;
 	_filePosDna = 0;

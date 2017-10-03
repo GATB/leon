@@ -84,6 +84,10 @@ class Leon : public misc::impl::Tool
 {
 	public:
 
+		//DEBUG VARIABLES
+		//TO ERASE
+		int debug = 0;
+
 		//Path to binary
 		std::string _binaryPath;// = "/home/tbraquel/NGS/gatb-tool-leon/";
 		
@@ -160,6 +164,8 @@ class Leon : public misc::impl::Tool
 		bool _readSortedFileTest;
 
 		ofstream unsortedReads;
+		ofstream noAnchorReadsOfstream;
+		ifstream noAnchorReadsIfstream;
 		//list<struct ReadInfos>* anchorsSequences;
 		vector< list< struct ReadInfos > > anchorsSequences;
 

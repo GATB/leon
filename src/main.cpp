@@ -51,7 +51,7 @@ int main (int argc, char* argv[])
 	
 	std::string binary = argv[0];
 	std::string _binaryPath = binary.substr(0, binary.size()-4);
-	cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
+	//cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
     // We dump some information about the gatb core library
    // std::cout << LibraryInfo::getInfo() << endl;
 

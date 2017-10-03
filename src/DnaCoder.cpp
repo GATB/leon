@@ -485,14 +485,28 @@ void DnaEncoder::execute(){
 	#endif
 	
 	//cout << _readseq << endl;
-	
+
+	if (_orderReads)
+	{
+		//ofstream& _noAnchorReads = _leon->noAnchorReads;
+		//unsortedReads = _leon->unsortedReads;
+	}
+
 	_readCount +=1;
 	_Npos.clear();
 	
 	if(_readSize < _kmerSize){
-		encodeNoAnchorRead();
-		endRead();
-		return;
+
+		if (_orderReads)
+		{
+			saveNoAnchorRead();
+			endRead();
+		}
+		else
+		{
+			encodeNoAnchorRead();
+			endRead();
+		}
 	}
 
 
@@ -520,13 +534,24 @@ void DnaEncoder::execute(){
 	//cerr << "debug DnaEncoder::execute - orderReads = " << this->_orderReads << endl;
 
 	if(anchorPos == -1)
-		encodeNoAnchorRead();
+	{
+		if (! _orderReads)
+		{
+			encodeNoAnchorRead();
+		}
+		else
+		{
+			saveNoAnchorRead();
+			endRead();
+		}
+	}
 	else{
-		if (_orderReads){
-
-			//cerr << "DnaEncoder::execute() - current sequence : " << _readseq << endl;
+		if (_orderReads)
+		{
 
 			ofstream& unsortedReads = _leon->unsortedReads;
+
+			//cerr << "DnaEncoder::execute() - current sequence : " << _readseq << endl;
 			++_leon->_nbLinesToSort;
 
 			/*
@@ -643,7 +668,7 @@ void DnaEncoder::execute(){
 							<< ":" <<
 							int revcomp not necessary, determined at compression
 							*/
-			//cerr << "\tdebug DnaEncoder::execute - test unsortedReads = " << endl;
+			//cerr << "\tdebug DnaEncoder::execute - test _unsortedReads = " << endl;
 			//Save N positions
 			unsortedReads << _Npos.size() << ":";
 			int i = 0;
@@ -653,6 +678,9 @@ void DnaEncoder::execute(){
 			}
 			if (i != 0){
 				unsortedReads << _Npos[i];
+			}
+			if (_Npos.size() == 1){
+				unsortedReads << _Npos[0];
 			}
 			unsortedReads << ":";
 		
@@ -665,6 +693,9 @@ void DnaEncoder::execute(){
 			}
 			if (i != 0){
 				unsortedReads << _leftErrorPos[i];
+			}
+			if (_leftErrorPos.size() == 1){
+				unsortedReads << _leftErrorPos[0];
 			}
 			unsortedReads << ":";
 			
@@ -679,7 +710,7 @@ void DnaEncoder::execute(){
 
 				u_int8_t type = _bifurcationTypes[i];
 				//to save some place, type is merged with bif type here
-				//unsortedReads << (int) type;
+				//_unsortedReads << (int) type;
 				//cerr << "debug DnaEncoder::encodeReadsInfos -  _bifurcationTypes[i] : " <<  (int) _bifurcationTypes[i] << endl;
 
 				if(type == 0){
@@ -695,9 +726,10 @@ void DnaEncoder::execute(){
 				}
 			}
 			unsortedReads << endl;
-			//unsortedReads << ri->cread << endl;
+			//_unsortedReads.flush();
+			_Npos.clear();
+			//_unsortedReads << ri->cread << endl;
 			//cerr << "\t DnaEncoder::encodeAnchorRead - _processedSequenceCount : " << _processedSequenceCount << endl;
-
 		}
 		else{
 		encodeAnchorRead(anchorPos, anchorAddress);
@@ -708,8 +740,7 @@ void DnaEncoder::execute(){
 	if (!_orderReads){
 		endRead();
 	}
-
-}
+}	
 
 
 
@@ -1302,6 +1333,20 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	
 }
 
+void DnaEncoder::encodeSortedFileNoAnchorRead(string read)
+{
+
+	int readSize = read.size();
+	cerr << "DnaEncoder::encodeSortedFileNoAnchorRead - readSize : " << readSize << endl;
+	
+	CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeValueModel, readSize);
+	
+	for(int i=0; i<_readSize; i++)
+	{
+		_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(read[i]));
+	}
+}
+
 void DnaEncoder::encodeSortedFileAnchor(kmer_type anchor){
 
 	u_int64_t anchor_uint64t = anchor.getVal();
@@ -1862,6 +1907,20 @@ void DnaEncoder::encodeNoAnchorRead(){
 	
 }
 
+void DnaEncoder::saveNoAnchorRead()
+{
+
+	ofstream& noAnchorReads = _leon->noAnchorReadsOfstream;
+
+	for(int i=0; i<_Npos.size(); i++)
+	{
+		_readseq[_Npos[i]] = 'N';
+	}
+
+	_readWithoutAnchorCount +=1;
+
+	noAnchorReads << _readseq << endl;
+}
 
 QualDecoder::QualDecoder(Leon* leon, const string& inputFilename)
 {
@@ -2265,7 +2324,7 @@ bool DnaDecoder::getNextOrderedReadInfos(struct ReadInfos* ri){
 			ri->Npos.push_back(nPos);
 			_prevNpos = nPos;
 		}
-
+		
 		u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
 		//cerr << "DnaDecoder::decodeAnchorRead() - nbLeftError after" << endl;
 		//cerr << "DnaDecoder::getNextOrderedReadInfos() - nbLeftError : " << (int) nbLeftError << endl;
@@ -2276,24 +2335,25 @@ bool DnaDecoder::getNextOrderedReadInfos(struct ReadInfos* ri){
 			ri->leftErrorPos.push_back(errorPos);
 			_prevErrorPos = errorPos;
 		}
-
+				
 		//Extend anchor to the left
 		//cerr << "DnaDecoder::getNextOrderedReadInfos() - Extend anchor to the left" << endl;
 		kmer_type kmer = ri->anchor;
 		for(int i=anchorPos-1; i>=0; i--){
 			kmer = extendAnchor(kmer, i, false);
 		}
+
 		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
 		//cerr << "DnaDecoder::getNextOrderedReadInfos() - Extend anchor to the right" << endl;
 		//Extend anchor to the right
 		kmer = ri->anchor;
 		for(int i=anchorPos+_kmerSize; i<_readSize; i++){
 			kmer = extendAnchor(kmer, i, true);
-			//cerr << "\t" << kmer.toString(_kmerSize) << endl;
+			//cerr << "DnaDecoder::getNextOrderedReadInfos() - :" << kmer.toString(_kmerSize) << endl;
 		}
 		//cerr << "DnaDecoder::getNextOrderedReadInfos() - _currentSeq : " << _currentSeq << endl;
 
-			
+					
 		//Inject N in the decoded read sequence
 		//cerr << "DnaDecoder::getNextOrderedReadInfos() - Inject Ns" << endl;
 		//printf("npos s %i currseq %s \n",_Npos.size(),_currentSeq.c_str());
@@ -2309,7 +2369,6 @@ bool DnaDecoder::getNextOrderedReadInfos(struct ReadInfos* ri){
 
 		_buffer.clear();
 		//cerr << "\tDnaEncoder::encodeSortedFileRead - _processedSequenceCount : " << _processedSequenceCount << endl;
-
 		return true;
 
 	}
@@ -2332,25 +2391,33 @@ void DnaDecoder::execute(){
 	if (_orderReads){
 		//cerr << "\tDnaDecoder::execute() - reading sorted file" << endl;
 
-		//TODO : temporarily using _requests dict, until dict is encoded
+		/*
+		//TODO
+		//Decoding no anchor reads
 
-		//Hash16<kmer_type, u_int32_t >  * anchorKmersSorted = _requests->_anchorKmersSorted;
+		u_int64_t nbNoAnchorReads =  CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+
+		cerr << "DnaDecoder::execute() - nbNoAnchorReads : " << nbNoAnchorReads << endl;
+		exit(EXIT_FAILURE);
+		*/
+
+		//Decoding normal reads 
 		Hash16<kmer_type, u_int32_t >  * anchorKmersSorted = _requests->_anchorKmersSortedD;
 
 		bool decodingNewAnchor = true;
 		u_int32_t nbReads = 0; 
-		//int nbTestsMax = 2000;
+		int nbTestsMax = 3;
 		_nbTests = 0;
 		while(_processedSequenceCount < _sequenceCount /*&& _nbTests < nbTestsMax*/){
 			if (decodingNewAnchor){
-				//cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-				//cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
+				cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+				cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
 
 				u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
-				//cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
+				cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
 
 				_anchor.setVal(anchor_uint64t);
-				//cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
+				cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
 				decodingNewAnchor = false;
 				++_nbTests;
 			}
@@ -2358,15 +2425,15 @@ void DnaDecoder::execute(){
 				//get the number of reads encoded with actual anchor
 				//and verify if anchor is revcomp
 
-				u_int32_t nbReads; 
+				u_int32_t nbReads = 0; 
 				anchorKmersSorted->get(_anchor, &nbReads);
-				//cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
+				cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
 
 				for (int i=0; i<nbReads; ++i){
 					//if (_nbTests < nbTestsMax){
-						//cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-						//cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
-						//cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
+						cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+						cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
+						cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
 						decodeSortedAnchorRead();
 						endRead();
 						++_nbTests;	
@@ -2374,9 +2441,10 @@ void DnaDecoder::execute(){
 				}
 				decodingNewAnchor = true;		
 			}
-			//cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
-			//cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
-			//cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+			cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
+			cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
+			cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+			cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
 			//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
 		}
 	}
