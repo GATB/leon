@@ -193,7 +193,7 @@ class DnaEncoder : AbstractDnaCoder
 		void encodeSortedFileRead(kmer_type anchor, int isRevComp, int readSize, int anchorPos, /*int anchorAddress,*/ vector<int> Npos,
 									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
 									vector<u_int8_t> binaryBifurcations, vector<u_int8_t> bifurcationTypes);
-		void encodeSortedFileWriteBlock();
+		void encodeSortedFileWriteBlock(int* blockID);
 		//old version for ordering reads
 		//void encodeReadsInfos(vector< list< struct ReadInfos > > anchorsSequences);
 		

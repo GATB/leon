@@ -312,7 +312,7 @@ class Requests
 		vector<kmer_type> _vecAnchorKmers;
 		u_int64_t _filePos;
 		u_int64_t _blockCount;
-		static const int READ_PER_BLOCK = 50000;
+		//static const int READ_PER_BLOCK = 50000;
 		bool _isFasta;
 		bool _noHeader;
 		HeaderDecoder* _hdecoder;

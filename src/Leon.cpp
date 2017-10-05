@@ -1447,8 +1447,10 @@ void Leon::writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCou
 }
 
 void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID){
-	if(size <= 0) return;
-	
+	if(size <= 0)
+	{
+		return;
+	}
 	
 	//cout << "\t-----------------------" << endl;
 	//cout << "\tWrite block " << _blockSizes.size() << endl;
@@ -1457,8 +1459,10 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	//cout << "\tEncoded size (byte): " << size << endl;
 	
 	
-
-	
+		cerr << "Leon::writeBlock - data : " << data << endl;
+		cerr << "Leon::writeBlock - size : " << size << endl;
+		cerr << "Leon::writeBlock - encodedSequenceCount : " << encodedSequenceCount << endl;
+		cerr << "Leon::writeBlock - blockID : " << blockID << endl;
 	
 	
 	
@@ -1779,20 +1783,28 @@ void Leon::startDnaCompression(){
 	//encode dna if leon mode
 	//launch dna sorting if peacock mode
 
-	if (! _orderReads){
+	if (! _orderReads)
+	{
 		getDispatcher()->iterate (itSeq,  DnaEncoder(this), READ_PER_BLOCK);
 	}
-	else{
-
+	else
+	{
 		DnaEncoder* de = new DnaEncoder(this);
 
 
 		//iterate without parallellism for now
+		//int nbWritedReads = 0;
 		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
 		{
-			++debug;
+			//++nbWritedReads;
 			Sequence& seq = itSeq->item();
 			de->operator()(seq);
+			/*if (nbWritedReads >= READ_PER_BLOCK)
+			{
+				de->encodeSortedFileWriteBlock();
+				nbWritedReads = 0;
+				//break;
+			}*/
 		}
 
 		int nbReadsEncodedTest = 0;
@@ -1839,8 +1851,8 @@ void Leon::startDnaCompression(){
 		    else{
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
-		  	}
-		*/  	
+		  	}*/
+		  	
 		//AFTER MAP REDUCE SORT
 
 		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);	
@@ -1848,21 +1860,6 @@ void Leon::startDnaCompression(){
 		//TODO
 		//not normal having to reset _processedSquenceCount... why isn't it 0 already at construction ??
 		de->reset();
-
-
-		//Compression of the two read files
-
-		//Compression of noAnchorReads
-		//encode nb of reads without anchor, 
-		//then the reads with their size
-
-		//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, de->_readWithoutAnchorCount);
-		std::string line;
-		/*noAnchorReadsIfstream.seekg (0, noAnchorReadsIfstream.beg);
-		while (std::getline(noAnchorReadsIfstream, line))
-		{
-			de->encodeSortedFileNoAnchorRead(line);
-		}*/
 		
 		_anchorKmersSorted = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated );
 
@@ -1872,6 +1869,9 @@ void Leon::startDnaCompression(){
 		u_int32_t nbReads = 0;
 
 		cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading the file : " << sortedReadsFileName << endl;
+		std::string line;
+		int nbWritedLines = 0;
+		int blockID = 0;
 		while (std::getline(sortedReads, line))
 		{
 			//cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading line : " << line << endl;
@@ -1884,8 +1884,9 @@ void Leon::startDnaCompression(){
 				//cerr << "readSortedFileTest : " << kmer_long << endl;
 				anchor.setVal((u_int64_t) kmer_long);	
 				//cerr << "\tdebug Leon::startDnaCompression - kmer_type anchor : " << anchor.toString(_kmerSize) << endl;
-				
+
 				de->encodeSortedFileAnchor(anchor);
+				//++nbWritedLines;
 				//cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - ANCHOR : " << anchor.toString(_kmerSize) << endl << endl;
 				//cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - REV ANCHOR : " << revcomp(anchor, _kmerSize).toString(_kmerSize) << endl << endl;
 				readingNewAnchor = false;
@@ -2012,11 +2013,11 @@ void Leon::startDnaCompression(){
 					for (int i = 0; i<binaryBifurcations.size(); ++i){
 						//cerr << "debug Leon::startDnaCompression - binaryBifurcations[i] : " << (int) binaryBifurcations[i] << endl;
 					}
-					
 
 					de->encodeSortedFileRead(anchor, isRevComp, readSize, anchorPos, Npos,
 											leftErrorPos, bifurcations, binaryBifurcations, bifurcationTypes);
 					nbReadsEncodedTest++;
+					++nbWritedLines;
 					//cerr << "debug Leon::startDnaCompression - nbReadsEncodedTest : " << (int) nbReadsEncodedTest << endl;
 				}
 				// at the end of the list of actual anchor's read
@@ -2030,11 +2031,22 @@ void Leon::startDnaCompression(){
 					readingNewAnchor = true;
 					nbReads = 0;
 				}
+				
+			}
+
+			if (nbWritedLines  >= READ_PER_BLOCK)
+				{
+					de->encodeSortedFileWriteBlock(&blockID);
+					cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
+					//exit(EXIT_FAILURE);
+					nbWritedLines = 0;
 			}
 
 		}
 		
-		de->encodeSortedFileWriteBlock();
+		cerr << "\nLeon::startDnaCompression - flush dna encoder" << endl;
+		cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
+		de->encodeSortedFileWriteBlock(&blockID);
 		delete de;
 	}
 
@@ -2061,11 +2073,22 @@ void Leon::endDnaCompression(){
 	if (_orderReads){
 		unsortedReads.close();
 		noAnchorReadsOfstream.close();
-		noAnchorReadsIfstream.close();
-		//TODO 
-		//write sortedAnchorDict
+
 		writeSortedAnchorDict();
-		//writeAnchorDict();
+
+		//Compression of noAnchorReads
+		//encode nb of reads without anchor, 
+		//then the reads with their size
+
+		/*CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, de->_readWithoutAnchorCount);
+		std::string line;
+		noAnchorReadsIfstream.seekg (0, noAnchorReadsIfstream.beg);
+		while (std::getline(noAnchorReadsIfstream, line))
+		{
+			de->encodeSortedFileNoAnchorRead(line);
+		}*/
+
+		noAnchorReadsIfstream.close();
 	}
 
 	else{

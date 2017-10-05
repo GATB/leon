@@ -1412,10 +1412,35 @@ void DnaEncoder::encodeSortedFileRead(kmer_type anchor, int isRevComp, int readS
 	//cerr << "\tDnaEncoder::encodeSortedFileRead - _processedSequenceCount : " << _processedSequenceCount << endl;
 }
 
-void DnaEncoder::encodeSortedFileWriteBlock(){
-	cerr << "DnaEncoder::operator() - call writeBlock()" << endl;
-	writeBlock();
-	//startBlock();
+void DnaEncoder::encodeSortedFileWriteBlock(int* blockID){
+
+	cerr << "DnaEncoder::encodeSortedFileWriteBlock() - begin" << endl;
+
+	if(_processedSequenceCount == 0) return;
+	
+	if(_rangeEncoder.getBufferSize() > 0){
+		cerr << "DnaEncoder::encodeSortedFileWriteBlock() - _rangeEncoder.getBufferSize() > 0" << endl;
+		_rangeEncoder.flush();
+	}
+	
+	//int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
+	cerr << "DnaEncoder::encodeSortedFileWriteBlock() - _processedSequenceCount : " << _processedSequenceCount << endl;
+	//cerr << "DnaEncoder::encodeSortedFileWriteBlock() - _seqId : " << _seqId << endl;
+	//cerr << "DnaEncoder::encodeSortedFileWriteBlock() - Leon::READ_PER_BLOCK : " << Leon::READ_PER_BLOCK << endl;
+	cerr << "DnaEncoder::encodeSortedFileWriteBlock() - blockID : " << *blockID << endl;
+
+	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount, *blockID);
+	_rangeEncoder.clear();
+	
+	if(! _leon->_isFasta)
+	{
+		_leon->writeBlockLena((u_int8_t*) _bufferQuals, _bufferQuals_idx ,_processedSequenceCount, *blockID);
+		_bufferQuals_idx = 0;
+	}
+
+	//writeBlock();
+	++(*blockID);
+	startBlock();
 }
 	
 kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightExtend){
@@ -2410,14 +2435,14 @@ void DnaDecoder::execute(){
 		_nbTests = 0;
 		while(_processedSequenceCount < _sequenceCount /*&& _nbTests < nbTestsMax*/){
 			if (decodingNewAnchor){
-				cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-				cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
+				//cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+				//cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
 
 				u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
-				cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
+				//cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
 
 				_anchor.setVal(anchor_uint64t);
-				cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
+				//cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
 				decodingNewAnchor = false;
 				++_nbTests;
 			}
@@ -2427,13 +2452,13 @@ void DnaDecoder::execute(){
 
 				u_int32_t nbReads = 0; 
 				anchorKmersSorted->get(_anchor, &nbReads);
-				cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
+				//cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
 
 				for (int i=0; i<nbReads; ++i){
 					//if (_nbTests < nbTestsMax){
-						cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-						cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
-						cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
+						//cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+						//cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
+						//cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
 						decodeSortedAnchorRead();
 						endRead();
 						++_nbTests;	
@@ -2441,10 +2466,10 @@ void DnaDecoder::execute(){
 				}
 				decodingNewAnchor = true;		
 			}
-			cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
-			cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
-			cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
-			cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
+			//cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
+			//cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
+			//cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+			//cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
 			//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
 		}
 	}
