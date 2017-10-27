@@ -60,6 +60,9 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 #include <stdio.h>
 #include <sys/wait.h>
 #include <cstdlib>
+#include <ctime>
+#include <ratio>
+#include <chrono>
 #include "HeaderCoder.hpp"
 #include "DnaCoder.hpp"
 #include "Requests.hpp"
@@ -76,6 +79,8 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 #include <pthread.h>
 
+using namespace std::chrono;
+
 class HeaderEncoder;
 class HeaderDecoder;
 class DnaEncoder;
@@ -84,9 +89,31 @@ class Leon : public misc::impl::Tool
 {
 	public:
 
-		//DEBUG VARIABLES
+		//DEBUG FUNCTIONS / VARIABLES
 		//TO ERASE
 		int debug = 0;
+		std::time_t _startCompressionTime;
+		std::time_t _endCompressionTime;
+		std::time_t _startInitReq;
+		std::time_t _endInitReq;
+		std::time_t _startRequestTime;
+		std::time_t _endRequestTime;
+		std::time_t _time_span;
+		int _seconds, _hours, _minutes;
+		//string _requestsTimesFile = "requests_time/test1";
+		//ofstream _output_times;
+
+		void getTimeHMS(time_t t/*, ofstream *outputFile*/)
+		{
+			_seconds = t;
+			_minutes = _seconds / 60;
+			_hours = _minutes / 60;
+			cout /**outputFile*/ << int(_hours) << " hours " << int(_minutes%60) 
+     		<< " minutes " << int(_seconds%60) << " seconds." << endl;
+		}
+
+		//DEBUG PART END
+
 
 		//Path to binary
 		std::string _binaryPath;// = "/home/tbraquel/NGS/gatb-tool-leon/";

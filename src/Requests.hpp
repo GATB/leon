@@ -73,13 +73,14 @@ class Requests
 	public:
 
 		/*****constructor*****/
-		Requests(IBank* inputBank, string outputFilename, Graph graph, 
+		Requests(IBank* inputBank, 
+			string outputFilename, 
+			Graph graph, 
 			Kmer<>::ModelCanonical model, 
-			Partition<kmer_count> & solidCollection, size_t kmerSize, 
-			Hash16<kmer_type, 
-			u_int32_t >  * anchorKmers,
-			Hash16<kmer_type, 
-			u_int32_t >  * anchorKmersSorted,
+			Partition<kmer_count> & solidCollection, 
+			size_t kmerSize, 
+			Hash16<kmer_type, u_int32_t >  * anchorKmers,
+			Hash16<kmer_type, u_int32_t >  * anchorKmersSorted,
 			Leon* leon,
 			DnaDecoder* dnadec/*, 
 			Order0Model generalModel,

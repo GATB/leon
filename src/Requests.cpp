@@ -1,4 +1,5 @@
 #include "Requests.hpp"
+#define TIME_MESURES
 
 /*****constructor*****/
 Requests::Requests(IBank* inputBank, string outputFilename, Graph graph, 
@@ -582,37 +583,37 @@ void Requests::decodeSortedAnchorDict(){
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\tDecode anchor dict" << endl;
 	#endif
-	cerr << "\tRequests::decodeSortedAnchorDict() - begin" << endl;
-	cerr << "\tRequests::decodeSortedAnchorDict() - _filePos : " << _filePos << endl;
-	cerr << "\tRequests::decodeSortedAnchorDict() - _inputFile->tellg() : " << _inputFile->tellg() << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - begin" << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - _filePos : " << _filePos << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - _inputFile->tellg() : " << _inputFile->tellg() << endl;
 	u_int64_t anchorDictSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor DictSize : " << anchorDictSize << endl;
 	u_int64_t anchorCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
-		cerr << "\tRequests::decodeSortedAnchorDict() - _inputFile->tellg() : " << _inputFile->tellg() << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after decoding anchor count : " << anchorCount << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - _inputFile->tellg() : " << _inputFile->tellg() << endl;
 	
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile eof : " << _inputFile->eof() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile bad : " << _inputFile->bad() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile fail : " << _inputFile->fail() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile is_open : " << _inputFile->is_open() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile bad : " << _inputFile->bad() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile fail : " << _inputFile->fail() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - before setInputFile _inputFile is_open : " << _inputFile->is_open() << endl;
 
 	_anchorRangeDecoder.setInputFile(_inputFile);
-	 cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile eof : " << _inputFile->eof() << endl;
-	 cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile bad : " << _inputFile->bad() << endl;
-	 cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile fail : " << _inputFile->fail() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile eof : " << _inputFile->eof() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile bad : " << _inputFile->bad() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after setInputFile _inputFile fail : " << _inputFile->fail() << endl;
 	string anchorKmer = "";
 	//return;
 	u_int64_t dictPos = _inputFile->tellg();
-	 cerr << "Requests::decodeSortedAnchorDict() - after _inputFile->tellg() _inputFile eof : " << _inputFile->eof() << endl;
-	 cerr << "Requests::decodeSortedAnchorDict() - after _inputFile->tellg() _inputFile bad : " << _inputFile->bad() << endl;
-	 cerr << "Requests::decodeSortedAnchorDict() - after _inputFile->tellg() _inputFile fail : " << _inputFile->fail() << endl;
-	cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after _inputFile->tellg() _inputFile eof : " << _inputFile->eof() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after _inputFile->tellg() _inputFile bad : " << _inputFile->bad() << endl;
+	 //cerr << "Requests::decodeSortedAnchorDict() - after _inputFile->tellg() _inputFile fail : " << _inputFile->fail() << endl;
+	//cerr << "Requests::decodeSortedAnchorDict() - dictPos : " << dictPos << endl;
 	u_int64_t currentAnchorCount = 0;
 
 	kmer_type anchor;
 	u_int64_t nbcreated ;
 	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
-	cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
+	//cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
 	
 	while(currentAnchorCount < anchorCount){
 
@@ -650,6 +651,12 @@ void Requests::fgetRequests(){
 
 	char kmer_req[_kmerSize+3];
 	char sequence_req[sequenceMaxSize+3];
+	
+	//#ifdef TIME_MESURES
+	//ofstream output_times;
+	//output_times.open (_leon->_requestsTimesFile, std::ofstream::app);
+	//#endif
+
 
 	do{
 
@@ -718,6 +725,12 @@ void Requests::fgetRequests(){
 		"##########################################" << endl << endl;
 
 		fgets(request, req_buffer_size, stdin);
+		
+		#ifdef TIME_MESURES
+		cout << "Request : " << request << endl;
+		_leon->_startRequestTime = std::time(nullptr);
+		#endif
+
 		request[strlen(request)-1]='\0';
 
 		//cout << req << " strlen req : " << strlen(req) << endl;
@@ -1142,6 +1155,19 @@ void Requests::fgetRequests(){
 			this->end_requests = true;
 		}
 
+		#ifdef TIME_MESURES
+		_leon->_endRequestTime = std::time(nullptr);
+		cout << "Request start time : ";
+		_leon->getTimeHMS(_leon->_startRequestTime/*, &output_times*/);
+		cout << "Request end time : ";
+		_leon->getTimeHMS(_leon->_endRequestTime/*, &output_times*/);
+		_leon->_time_span = _leon->_endRequestTime - _leon->_startRequestTime;
+		cout << "Request duration time : ";
+		_leon->getTimeHMS(_leon->_time_span/*, &output_times*/);
+		cout << endl;
+		#endif
+
+
 	}while(!this->end_requests);
 
 }
@@ -1177,6 +1203,13 @@ bool Requests::fgetSequence(char* sequence){
 	this->fgetString(sequence, sequenceMaxSize+3, "enter the sequence : "); 
 	//+3 for \n \0 and if the string is longer than sequenceMaxSize
 	//we need to store at least one char to know it	
+
+	#ifdef TIME_MESURES
+//	ofstream output_times;
+//	output_times.open (_leon->_requestsTimesFile, std::ofstream::app);
+	cout << "Sequence : " << sequence << endl << endl;
+	#endif
+
 
 	if (strlen(sequence) > sequenceMaxSize){
 		cout << "error : the size of the sequence cannot exceed " << sequenceMaxSize << endl;

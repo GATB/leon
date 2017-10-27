@@ -73,7 +73,7 @@ using namespace std;
 //#define SERIAL //this macro is also define in the execute() method
 //#define PRINT_DEBUG
 //#define PRINT_DEBUG_DECODER
-
+#define TIME_MESURES
 
 
 const u_int64_t ANCHOR_KMERS_HASH_SIZE = 500000000;
@@ -131,8 +131,12 @@ _anchorDictSize(0), _anchorAdressSize(0), _anchorPosSize(0), _otherSize(0), _rea
 _progress_decode(0), _inputBank(0),_total_nb_quals_smoothed(0),_lossless(false),_input_qualSize(0),_compressed_qualSize(0), _qualwriter(NULL)
 
 {
-_binaryPath = binaryPath;
-_isFasta = true;
+
+	#ifdef TIME_MESURES
+		_startCompressionTime = std::time(nullptr);
+	#endif
+	_binaryPath = binaryPath;
+	_isFasta = true;
 	std::cout.setf(std::ios_base::fixed, std::ios_base::floatfield);
 
     //_kmerSize(27)
@@ -1320,9 +1324,29 @@ void Leon::executeCompression(){
 
 	cout << _anchorKmers->size() << endl;
 	//anchorExist(, anchorAddress);
+	#ifdef TIME_MESURES
+	_endCompressionTime = std::time(nullptr);
+	
+	//_output_times.open (_requestsTimesFile, std::ofstream::app);
+
+	cout << "\n#####\n EVALUATION BEGIN \n#####\n" << endl;
+	cout << "Compression start time : ";
+	getTimeHMS(_startCompressionTime/*, &_output_times*/);
+	cout << "Compression end time : ";
+	getTimeHMS(_endCompressionTime/*, &_output_times*/);
+	_time_span = _endCompressionTime - _startCompressionTime;
+	cout << "Compression duration time : ";
+	getTimeHMS(_time_span/*, &_output_times*/);
+	cout << endl;
+	#endif
+
+
 	if (_request){
 
 		cout << "option requests catched" << endl;
+		#ifdef TIME_MESURES
+		_startInitReq = std::time(nullptr);
+		#endif
 
 
 	Kmer<>::ModelCanonical model (_kmerSize);
@@ -1348,6 +1372,19 @@ void Leon::executeCompression(){
 			_generalModel, _numericModel, _anchorDictModel*/);
 
 		//do{
+		#ifdef TIME_MESURES
+		_endInitReq = std::time(nullptr);
+		cout << "Requests Initialization start time : ";
+		getTimeHMS(_startInitReq/*, &_output_times*/);
+		cout << "Requests Initialization end time : ";
+		getTimeHMS(_endInitReq/*, &_output_times*/);
+		_time_span = _endInitReq - _startInitReq;
+		cout << "Requests Initialization duration time : ";
+		getTimeHMS(_time_span/*, &_output_times*/);
+		cout << endl;
+		#endif
+			
+
 
 		requests.fgetRequests();
 
