@@ -38,7 +38,7 @@ hdfs dfs -rm -r -f $INPUTFILE
 hdfs dfs -copyFromLocal $PATH_TO_FILES$INPUTFILE
 
 hdfs dfs -rm -r -f $OUTPUTFILE
-yarn jar peacok_mapred_sort/target/sort-mapreduce-0.0.1.jar "$HDFS_PATH$INPUTFILE" "$HDFS_PATH$OUTPUTFILE" $NB_LINES $NB_REDUCERS
+yarn jar "$ABSOLUTE_PATH_TO_REPOSITORY"/peacok_mapred_sort/target/sort-mapreduce-0.0.1.jar "$HDFS_PATH$INPUTFILE" "$HDFS_PATH$OUTPUTFILE" $NB_LINES $NB_REDUCERS
 
 rm -r -f $PATH_TO_FILES$OUTPUTFILE
 hdfs dfs -getmerge $OUTPUTFILE $PATH_TO_FILES$OUTPUTFILE
