@@ -3,6 +3,14 @@
 set -e 
 #set -o pipefail
 
+ABSOLUTE_PATH_TO_REPOSITORY=""
+
+if [ "$ABSOLUTE_PATH_TO_REPOSITORY" = "" ]; then
+	echo "please give the absolute path to the leon repository in the script in the variable ABSOLUTE_PATH_TO_REPOSITORY"
+	exit 1
+fi
+
+
 if [ "$#" -ne 5 ]; then
  	echo "args are : \n- path to input/output files\n- inputfile (to sort)\n- outputfile (sorted)\n- number of lines of the inputfile\n- number of reducers required"
 	exit 1
