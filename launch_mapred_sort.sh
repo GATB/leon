@@ -6,7 +6,7 @@ set -e
 ABSOLUTE_PATH_TO_REPOSITORY=""
 
 if [ "$ABSOLUTE_PATH_TO_REPOSITORY" = "" ]; then
-	echo "please give the absolute path to the leon repository in the script in the variable ABSOLUTE_PATH_TO_REPOSITORY"
+	echo "please give the absolute path to the leon repository in the script launch_mapred_sort.sh, in the variable ABSOLUTE_PATH_TO_REPOSITORY"
 	exit 1
 fi
 

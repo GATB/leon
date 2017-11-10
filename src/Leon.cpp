@@ -1867,7 +1867,7 @@ void Leon::startDnaCompression(){
 		// outputfile name : sortedReadsFileName
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
-		/*
+		
 		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
@@ -1888,7 +1888,7 @@ void Leon::startDnaCompression(){
 		    else{
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
-		  	}*/
+		  	}
 		  	
 		//AFTER MAP REDUCE SORT
 
@@ -1942,15 +1942,27 @@ void Leon::startDnaCompression(){
 					strcpy(str, str_const); 
 					char* pch;
 					//printf ("Splitting string \"%s\" into tokens:\n",str);
-					pch = strtok (str,":");
+					if (!(pch = strtok (str,":")))
+                    {
+                        cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        exit(EXIT_FAILURE);
+                    }
 
 
 					int isRevComp = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - isRevComp : " << isRevComp << endl;
-					pch = strtok (NULL, ":");
+					if (!(pch = strtok (NULL,":")))
+                    {
+                        cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        exit(EXIT_FAILURE);
+                    }
 					int readSize = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - readSize : " << readSize << endl;
-					pch = strtok (NULL, ":");
+					if (!(pch = strtok (NULL,":")))
+                    {
+                        cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        exit(EXIT_FAILURE);
+                    }
 					int anchorPos = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - anchorPos : " << anchorPos << endl;
 					
@@ -1958,7 +1970,11 @@ void Leon::startDnaCompression(){
 					//int anchorAddress = atoi(pch);
 					
 					//cerr << "debug Leon::startDnaCompression - anchorAddress : " << anchorAddress << endl;
-					pch = strtok (NULL, ":");
+					if (!(pch = strtok (NULL,":")))
+                    {
+                        cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        exit(EXIT_FAILURE);
+                    }
 					int Npos_size = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - Npos_size : " << Npos_size << endl;
 						
@@ -1966,12 +1982,20 @@ void Leon::startDnaCompression(){
 					if (Npos_size != 0){
 						for (int i = 0; i<Npos_size-1; ++i){
 
-							pch = strtok (NULL, ",");
+							if (!(pch = strtok (NULL,",")))
+                    		{
+                        		cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        		exit(EXIT_FAILURE);
+                    		}
 							int pos = atoi(pch);
 							Npos.push_back(pos);
 							//cerr << "debug Leon::startDnaCompression - pos : " << pos << endl;
 						}
-						pch = strtok (NULL, ":");
+						if (!(pch = strtok (NULL,":")))
+                   		{
+                        	cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        	exit(EXIT_FAILURE);
+                    	}
 						int pos = atoi(pch);
 						Npos.push_back(pos);
 						//cerr << "debug Leon::startDnaCompression - pos : " << pos << endl;
@@ -1982,7 +2006,11 @@ void Leon::startDnaCompression(){
 					}
 					*/
 
-					pch = strtok (NULL, ":");
+					if (!(pch = strtok (NULL,":")))
+                    {
+                        cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        exit(EXIT_FAILURE);
+                    }
 					int leftErrorPos_size = atoi(pch);
 					//cerr << "debug Leon::startDnaCompression - leftErrorPos_size : " << leftErrorPos_size << endl;
 						
@@ -1990,12 +2018,20 @@ void Leon::startDnaCompression(){
 	       			if (leftErrorPos_size != 0){
 						for (int i = 0; i<leftErrorPos_size-1; ++i){
 
-							pch = strtok (NULL, ",");
+							if (!(pch = strtok (NULL,",")))
+                    		{
+                        		cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        		exit(EXIT_FAILURE);
+                    		}
 							int pos = atoi(pch);
 							leftErrorPos.push_back(pos);
 							//cerr << "debug Leon::startDnaCompression - pos : " << pos << endl;
 						}
-						pch = strtok (NULL, ":");
+						if (!(pch = strtok (NULL,":")))
+                    	{
+                        	cerr << "innappropriate returned value of strtok, reading .ars file" << endl;
+                        	exit(EXIT_FAILURE);
+                    	}
 						int pos = atoi(pch);
 						leftErrorPos.push_back(pos);
 						//cerr << "debug Leon::startDnaCompression - pos : " << pos << endl;
