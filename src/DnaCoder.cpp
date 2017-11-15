@@ -2435,14 +2435,15 @@ void DnaDecoder::execute(){
 		_nbTests = 0;
 		while(_processedSequenceCount < _sequenceCount /*&& _nbTests < nbTestsMax*/){
 			if (decodingNewAnchor){
-				//cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-				//cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
+				++_nbAnchorTest;
+				cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+				cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
 
 				u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
-				//cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
+				cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
 
 				_anchor.setVal(anchor_uint64t);
-				//cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
+				cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
 				decodingNewAnchor = false;
 				++_nbTests;
 			}
@@ -2451,14 +2452,18 @@ void DnaDecoder::execute(){
 				//and verify if anchor is revcomp
 
 				u_int32_t nbReads = 0; 
-				anchorKmersSorted->get(_anchor, &nbReads);
-				//cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
+				if (! anchorKmersSorted->get(_anchor, &nbReads))
+				{
+					cerr << "\n\tDnaDecoder::execute() - error : anchor " << _anchor.toString(_kmerSize) << " is not in anchor dictionnary." << endl;
+					exit(EXIT_FAILURE);
+				}
+				cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
 
 				for (int i=0; i<nbReads; ++i){
 					//if (_nbTests < nbTestsMax){
-						//cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-						//cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
-						//cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
+						cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+						cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
+						cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
 						decodeSortedAnchorRead();
 						endRead();
 						++_nbTests;	
@@ -2466,9 +2471,9 @@ void DnaDecoder::execute(){
 				}
 				decodingNewAnchor = true;		
 			}
-			//cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
-			//cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
-			//cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+			cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
+			cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
+			cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
 			//cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
 			//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
 		}
@@ -2703,7 +2708,9 @@ void DnaDecoder::decodeAnchorRead(){
 
 void DnaDecoder::decodeSortedAnchorRead(){
 
-
+	//debug
+	_nbReadTest++;
+	//end debug
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecode anchor read" << endl;
 	#endif
@@ -2779,7 +2786,7 @@ void DnaDecoder::decodeSortedAnchorRead(){
 	
 	//Decode error pos
 	//cout << "debug dnadecoder - nbLeftError before" << endl;
-	u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
+	u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel, _nbReadTest);
 	//cerr << "\tDnaDecoder::decodeSortedAnchorRead() - nbLeftError : " << nbLeftError << endl;
 	//cout << "debug dnadecoder - nbLeftError after" << endl;
 	//cout << "debug dnadecoder - nbLeftError : " << (int) nbLeftError << endl;

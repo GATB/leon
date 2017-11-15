@@ -290,22 +290,42 @@ void Leon::execute()
 
 void Leon::executeRequest(){
 
+	cout << "Starting answering request " << endl;
+	string pathToFileName = getInput()->getStr(STR_URI_FILE);
+	//cerr << "Leon::executeRequest() - pathToFileName : " << pathToFileName << endl;
 
-		_filePos = 0;
+	/** We look for the begining of the suffix. */
+	int lastindex = pathToFileName.find_last_of (".");
+	
+	/** We build the strings for file names. */
+	string baseInputname = pathToFileName.substr(0,lastindex);
+	string extension = pathToFileName.substr(lastindex+1);
+
+	string signaturesFile = baseInputname + ".signatures_file";
+	string colorsFile = baseInputname + ".colors_file";
+
+	cerr << "Leon::executeRequest() - pathToFileName : " << pathToFileName << endl;
+	cerr << "Leon::executeRequest() - lastindex : " << lastindex << endl;
+	cerr << "Leon::executeRequest() - baseInputname : " << baseInputname << endl;
+	cerr << "Leon::executeRequest() - extension : " << extension << endl;
+	cerr << "Leon::executeRequest() - signaturesFile : " << signaturesFile << endl;
+	cerr << "Leon::executeRequest() - colorsFile : " << colorsFile << endl;
+
+	_filePos = 0;
 	
 	cout << "Starting answering request " << endl;
-	_inputFilename = getInput()->getStr(STR_URI_FILE);
+	//pathToFileName = getInput()->getStr(STR_URI_FILE);
 
-	cout << "Reading file : " << _inputFilename << endl;
+	cout << "Reading file : " << pathToFileName << endl;
 
 	
-	_descInputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
-	_inputFile = new ifstream(_inputFilename.c_str(), ios::in|ios::binary);
+	_descInputFile = new ifstream(pathToFileName.c_str(), ios::in|ios::binary);
+	_inputFile = new ifstream(pathToFileName.c_str(), ios::in|ios::binary);
 	
 	
 	if ( (_inputFile->rdstate() & std::ifstream::failbit ) != 0 )
 	{
-		fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
+		fprintf(stderr,"cannot open file %s\n",pathToFileName.c_str());
 		exit( EXIT_FAILURE);
 	}
 
@@ -388,12 +408,12 @@ void Leon::executeRequest(){
 	
 	decodeBloom();*/
 	
-	string _h5OutputFilename = System::file().getBaseName(_inputFilename) + ".h5" ;
+	string _h5InputFilename = /*System::file().getBaseName(*/baseInputname/*)*/ + ".h5" ;
 	 //_h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
 	
-	printf("_h5OutputFilename %s \n",_h5OutputFilename.c_str());
+	printf("_h5InputFilename %s \n",_h5InputFilename.c_str());
 	
-	_graph =  Graph::load(_h5OutputFilename.c_str() );
+	_graph =  Graph::load(_h5InputFilename.c_str() );
 	
 
 	
@@ -438,7 +458,7 @@ void Leon::executeRequest(){
 
 
 
-    const char* signatures_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
+    /*const char* signatures_file_path = (getInput()->getStr(STR_URI_FILE)).c_str();
 	char* signatures_file_ext = ".signatures_file";
 	char signatures_file_path_ext[1024];
 	strcpy(signatures_file_path_ext, signatures_file_path);
@@ -449,19 +469,19 @@ void Leon::executeRequest(){
 	char* colors_file_ext = ".colors_file";
 	char colors_file_path_ext[1024];
 	strcpy(colors_file_path_ext, colors_file_path);
-	strcat(colors_file_path_ext, colors_file_ext);
+	strcat(colors_file_path_ext, colors_file_ext);*/
 
-	cout << "\nheyooooo\n" << endl;
+	//cout << "\nheyooooo\n" << endl;
 
-    FILE* signatures_file = fopen(signatures_file_path_ext, "r");
-    FILE* colors_file = fopen(colors_file_path_ext, "r");
+    FILE* signatures_file = fopen(signaturesFile.c_str(), "r");
+    FILE* colors_file = fopen(colorsFile.c_str(), "r");
 
     fread(_signature_array, 1, solidFileSize, signatures_file); 
 
     fread(_color_array, 1, solidFileSize, colors_file); 
 
 	//Test we have all needed data
-
+/*
 	cout << "kmers, colors and signatures : \n" << endl;
 
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
@@ -470,9 +490,9 @@ void Leon::executeRequest(){
 		//uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
 		
 		Node node(Node::Value(itKmers->item().getValue()));
-		printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));	
+		//printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));	
 		
-		cout << "heyooooo 2222\n" << endl;
+		//cout << "heyooooo 2222\n" << endl;
 		 //std::cout <<  model.toString (itKmers->item().getValue())  << "\t"  << std::bitset<8>(_signature_array[index]) << "\t" << std::bitset<8>(_color_array[index]) << endl;
 		//PT666
 	 	std::cout <<  model.toString (itKmers->item().getValue())  << "\t" << "heyooooo 3333\n" <<
@@ -480,60 +500,46 @@ void Leon::executeRequest(){
 		std::bitset<8>(_signature_array[  _graph.nodeMPHFIndex(node)]) << std::endl;
 
 		
-	}
+	}*/
+
+	cout << "option requests catched" << endl;
+	#ifdef TIME_MESURES
+	_startInitReq = std::time(nullptr);
+	#endif
+
+	
+	DnaDecoder* dd = new DnaDecoder(this, _outputFilename);
+
+		//TEST LOAD GRAPH ...
+		// string _h5OutputFilename = System::file().getBaseName(_outputFilename);
+		// _h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
+		// cerr << "_h5OutputFilename : " << _h5OutputFilename.c_str() << endl;
+		// _graph =  Graph::load(_h5OutputFilename.c_str() );
+		//END TEST LOAD GRAPH...
+
+	Requests requests = Requests(_inputBank, pathToFileName, _graph, 
+		model, solidCollection, _kmerSize, _anchorKmers,  _anchorKmersSorted, this, dd/*, 
+		_generalModel, _numericModel, _anchorDictModel*/);
+
+	//do{
+	#ifdef TIME_MESURES
+	_endInitReq = std::time(nullptr);
+	cout << "Requests Initialization start time : ";
+	getTimeHMS(_startInitReq/*, &_output_times*/);
+	cout << "Requests Initialization end time : ";
+	getTimeHMS(_endInitReq/*, &_output_times*/);
+	_time_span = _endInitReq - _startInitReq;
+	cout << "Requests Initialization duration time : ";
+	getTimeHMS(_time_span/*, &_output_times*/);
+	cout << endl;
+	#endif
+			
 
 
-	//fseek(signature_file, SEEK_SET, 0);
-	//fseek(color_file, SEEK_SET, 0);
-    unsigned char* _signature_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
-    unsigned char* _color_array2 =  (unsigned char  *)  malloc(solidFileSize*sizeof(char));
+	requests.fgetRequests();
 
-    memset(_signature_array2, 0, solidFileSize);
-    memset(_color_array2, 0, solidFileSize);
-
-    FILE* signature_file2 = fopen(signatures_file_path_ext, "r");
-    FILE* color_file2 = fopen(colors_file_path_ext, "r");
-
-    fread(_signature_array2, 1, solidFileSize, signature_file2); 
-
-    fread(_color_array2, 1, solidFileSize, color_file2); 
-                                                              
-    std::cout << "original signature and color arrays" << endl;
-
-    for (int i=solidFileSize-10; i<solidFileSize; ++i){
-    	cout << std::bitset<8>(_signature_array[i])  << "\t" << std::bitset<8>(_color_array[i]) << endl;
-    }
-
-    std::cout << "saved signature and color arrays" << endl;
-    /*for (int i=solidFileSize-10; i<solidFileSize; ++i){
-        cout << model.toString (itKmers->item().getValue())  << "\t" <<
-        std::bitset<8>(_signature_array2[i]) << "\t" << 
-        std::bitset<8>(_color_array2[i]) << endl;
-    }*/
-
-	Iterator<kmer_count>* itKmers_test = createIterator<kmer_count> (
-																solidCollection.iterator(),
-																nb_kmers_infile
-																);
-
-    for (itKmers_test->first(); !itKmers_test->isDone(); itKmers_test->next())
-	{
-		
-		//uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
-		
-		Node node(Node::Value(itKmers_test->item().getValue()));
-		
-		printf("_graph.nodeMPHFIndex(node) %d\n", _graph.nodeMPHFIndex(node));
-		 //std::cout <<  model.toString (itKmers->item().getValue())  << "\t"  << std::bitset<8>(_signature_array[index]) << "\t" << std::bitset<8>(_color_array[index]) << endl;
-		
-		 std::cout <<  model.toString (itKmers_test->item().getValue())  << "\t" <<
-		std::bitset<8>(_color_array2[  _graph.nodeMPHFIndex(node)]) << "\t" <<
-		std::bitset<8>(_signature_array2[  _graph.nodeMPHFIndex(node)]) << std::endl;
-
-		
-	} 
-
-
+	//}while(!requests.end_requests);
+	return;
 
 	printf("end request\n");
 }
@@ -1343,6 +1349,7 @@ void Leon::executeCompression(){
 
 	if (_request){
 
+
 		cout << "option requests catched" << endl;
 		#ifdef TIME_MESURES
 		_startInitReq = std::time(nullptr);
@@ -1367,7 +1374,7 @@ void Leon::executeCompression(){
 		// _graph =  Graph::load(_h5OutputFilename.c_str() );
 		//END TEST LOAD GRAPH...
 
-		Requests requests = Requests(_inputBank, _baseOutputname, _graph, 
+		Requests requests = Requests(_inputBank, _outputFilename, _graph, 
 			model, solidCollection, _kmerSize, _anchorKmers,  _anchorKmersSorted, this, dd/*, 
 			_generalModel, _numericModel, _anchorDictModel*/);
 
@@ -1868,7 +1875,7 @@ void Leon::startDnaCompression(){
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
 		
-		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
+		/*cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
 						pathToFiles + " " +
@@ -1888,8 +1895,8 @@ void Leon::startDnaCompression(){
 		    else{
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
-		  	}
-		  	
+		  	}*/
+		 	
 		//AFTER MAP REDUCE SORT
 
 		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);	

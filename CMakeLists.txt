@@ -1,6 +1,9 @@
 project(leon)
 
 cmake_minimum_required(VERSION 2.6)
+####debug mode####
+#set(CMAKE_BUILD_TYPE Debug)
+####debug mode####
 
 ################################################################################
 # The version number.

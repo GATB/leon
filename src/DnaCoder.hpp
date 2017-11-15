@@ -298,6 +298,11 @@ class DnaDecoder : AbstractDnaCoder
 {
 		
 	public:
+
+		//debug
+		int _nbReadTest = 0;
+		int _nbAnchorTest = 0;
+		//end debug
 		
 		DnaDecoder(Leon* leon, const string& inputFilename);
 		DnaDecoder(Leon* leon, Requests* req, const string& inputFilename);

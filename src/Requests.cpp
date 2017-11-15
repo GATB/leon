@@ -2,7 +2,7 @@
 #define TIME_MESURES
 
 /*****constructor*****/
-Requests::Requests(IBank* inputBank, string outputFilename, Graph graph, 
+Requests::Requests(IBank* inputBank, string inputFilename, Graph graph, 
 	Kmer<>::ModelCanonical model, 
 	Partition<kmer_count> & solidCollection, size_t kmerSize, 
 	Hash16<kmer_type, u_int32_t >  * anchorKmers,
@@ -16,16 +16,21 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	end_requests = false;
 	sequenceMaxSize = 1024;
 
-	_inputBank = inputBank;
-	_itBank = _inputBank->iterator();
-	_itBanks =  _itBank->getComposition();
-	_nbBanks = _itBanks.size();
-
-	cout << "nb banks : " << _nbBanks << endl; 
-
 	_leon = leon;
 	_graph = graph;
 	_model = model;
+
+	//TODO
+	//remove this part when -r works alone
+	if (_leon->_compress)
+	{
+		_inputBank = inputBank;
+		_itBank = _inputBank->iterator();
+		_itBanks =  _itBank->getComposition();
+		_nbBanks = _itBanks.size();
+
+		cout << "nb banks : " << _nbBanks << endl; 
+	}
 
 	_kmerSize = kmerSize;
 	_kmerModel = new KmerModel(_kmerSize);
@@ -34,7 +39,7 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 	_anchorAdress = 0;
 	_orderReads = _leon->_orderReads;
 
-	_outputFilename = outputFilename; 
+	_inputFilename = inputFilename; 
 	_solidFileSize = solidCollection.getNbItems();
 	_nb_kmers_infile = solidCollection.getNbItems();
 	_itKmers = solidCollection.iterator();
@@ -47,37 +52,45 @@ Requests::Requests(IBank* inputBank, string outputFilename, Graph graph,
 
 	cout << "nb kmers : " << _nb_kmers_infile << endl;
 
-	_signature_array =  (unsigned char  *)  malloc(_solidFileSize*sizeof(char));
-    _color_array =  (unsigned char  *)  malloc(_solidFileSize*sizeof(char));
+	//TODO
+	//remove this part when -r works alone
+	if (_leon->_compress)
+	{
+		int lastindex = inputFilename.find_last_of (".");
+		string baseInputname = inputFilename.substr(0,lastindex);
+
+		_signature_array =  (unsigned char  *)  malloc(_solidFileSize*sizeof(char));
+	    _color_array =  (unsigned char  *)  malloc(_solidFileSize*sizeof(char));
 
 
-    memset(_signature_array, 0, _solidFileSize);
-    memset(_color_array, 0, _solidFileSize);
+	    memset(_signature_array, 0, _solidFileSize);
+	    memset(_color_array, 0, _solidFileSize);
 
 
 
-    const char* signatures_file_path = outputFilename.c_str();
-	char* signatures_file_ext = ".signatures_file";
-	char signatures_file_path_ext[1024];
-	strcpy(signatures_file_path_ext, signatures_file_path);
-	strcat(signatures_file_path_ext, signatures_file_ext);
-	printf("signatures_file_path_ext : %s", signatures_file_path_ext);
+	    const char* signatures_file_path = baseInputname.c_str();
+		char* signatures_file_ext = ".signatures_file";
+		char signatures_file_path_ext[1024];
+		strcpy(signatures_file_path_ext, signatures_file_path);
+		strcat(signatures_file_path_ext, signatures_file_ext);
+		printf("signatures_file_path_ext : %s", signatures_file_path_ext);
 
-	const char* colors_file_path = outputFilename.c_str();
-	char* colors_file_ext = ".colors_file";
-	char colors_file_path_ext[1024];
-	strcpy(colors_file_path_ext, colors_file_path);
-	strcat(colors_file_path_ext, colors_file_ext);
+		const char* colors_file_path = baseInputname.c_str();
+		char* colors_file_ext = ".colors_file";
+		char colors_file_path_ext[1024];
+		strcpy(colors_file_path_ext, colors_file_path);
+		strcat(colors_file_path_ext, colors_file_ext);
 
-    FILE* signatures_file = fopen(signatures_file_path_ext, "r");
-    FILE* colors_file = fopen(colors_file_path_ext, "r");
+	    FILE* signatures_file = fopen(signatures_file_path_ext, "r");
+	    FILE* colors_file = fopen(colors_file_path_ext, "r");
 
-    fread(_signature_array, 1, _solidFileSize, signatures_file); 
+	    fread(_signature_array, 1, _solidFileSize, signatures_file); 
 
-    fread(_color_array, 1, _solidFileSize, colors_file); 
+	    fread(_color_array, 1, _solidFileSize, colors_file); 
 
-    fclose(signatures_file);
-    fclose(colors_file);
+	    fclose(signatures_file);
+	    fclose(colors_file);
+	}
 
 }
 
@@ -349,12 +362,7 @@ bitset<NB_MAX_COLORS> Requests::getReadColor(ReadInfos* ri){
 
 void Requests::initializeRangeDecoder(){
 
-	if (_leon->_orderReads){
-		_decodeFilename = _outputFilename + ".peacock";
-	}
-	else{
-		_decodeFilename = _outputFilename + ".leon";
-	}
+	_decodeFilename = _inputFilename;
 
 	//cout << "debug initializeRangeDecoder : outputFilename : " << _outputFilename << endl;
 	//cout << "debug initializeRangeDecoder : filename : " << _decodeFilename << endl;

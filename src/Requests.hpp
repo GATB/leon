@@ -74,7 +74,7 @@ class Requests
 
 		/*****constructor*****/
 		Requests(IBank* inputBank, 
-			string outputFilename, 
+			string inputFilename, 
 			Graph graph, 
 			Kmer<>::ModelCanonical model, 
 			Partition<kmer_count> & solidCollection, 
@@ -284,7 +284,7 @@ class Requests
 		Iterator<Sequence>* _itSubBank;
 		int _nbBanks;
 
-		string _outputFilename;
+		string _inputFilename;
 
 		//Kmer<>::ModelCanonical::Iterator _itKmer;
 
