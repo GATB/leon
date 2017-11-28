@@ -2786,7 +2786,7 @@ void DnaDecoder::decodeSortedAnchorRead(){
 	
 	//Decode error pos
 	//cout << "debug dnadecoder - nbLeftError before" << endl;
-	u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel, _nbReadTest);
+	u_int64_t nbLeftError = CompressionUtils::decodeNumeric(_rangeDecoder, _leftErrorModel);
 	//cerr << "\tDnaDecoder::decodeSortedAnchorRead() - nbLeftError : " << nbLeftError << endl;
 	//cout << "debug dnadecoder - nbLeftError after" << endl;
 	//cout << "debug dnadecoder - nbLeftError : " << (int) nbLeftError << endl;
