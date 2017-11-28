@@ -112,6 +112,18 @@ class Leon : public misc::impl::Tool
      		<< " minutes " << int(_seconds%60) << " seconds." << endl;
 		}
 
+		ofstream noRangeEncoderOfstream;
+		ifstream noRangeDecoderIfstream;
+		ofstream noRangeEncoderDictInfosOfstream;
+		ifstream noRangeDecoderDictInfosIfstream;
+		ofstream noRangeEncoderBlocksInfosOfstream;
+		ifstream noRangeDecoderBlocksInfosIfstream;
+
+		ofstream noAnchorRangeEncoderOfstream;
+		ifstream noAnchorRangeDecoderIfstream;
+		string _line;
+		std::istringstream iss;
+
 		//DEBUG PART END
 
 
@@ -148,7 +160,8 @@ class Leon : public misc::impl::Tool
 		
 		//Global compression
 		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
-	
+		void writeBlockNoRangeEncoder(int encodedSequenceCount,u_int64_t blockID);
+		
 		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 
 		//Peacock file Compression (for requests)

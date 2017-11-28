@@ -229,6 +229,7 @@ class DnaEncoder : AbstractDnaCoder
 	
 	
 		RangeEncoder _rangeEncoder;
+		uint64_t noRangeEncoderBlockSize;
 		
 		#ifdef LEON_PRINT_STAT
 			RangeEncoder _rangeEncoder1;
