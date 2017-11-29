@@ -1592,7 +1592,7 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	
 }
 
-void Leon::writeBlockNoRangeEncoder(int encodedSequenceCount,u_int64_t blockID)
+void Leon::writeBlockNoRangeEncoder(u_int64_t size, int encodedSequenceCount,u_int64_t blockID)
 {
 	/*if(size <= 0)
 	{
@@ -1627,7 +1627,7 @@ void Leon::writeBlockNoRangeEncoder(int encodedSequenceCount,u_int64_t blockID)
 		_blockSizes.resize(2*(blockID+1));
 	}
 	
-	_blockSizes[2*blockID] = /*size*/0 ;
+	_blockSizes[2*blockID] = size ;
 	_blockSizes[2*blockID+1] = encodedSequenceCount;
 	
 	
@@ -2978,6 +2978,7 @@ void Leon::startDecompressionAllStreams(){
 	
 	
 	cout << "\tBlock count: " << _blockCount/2 << endl;
+	cout << "\t_nb_cores: " << _nb_cores << endl;
 
 
 	//delete _progress_decode;
@@ -3038,7 +3039,9 @@ void Leon::startDecompressionAllStreams(){
 			if(! _noHeader)
 			{
 				blockSize = _headerBlockSizes[i];
+				cerr << "Leon::startDecompressionAllStreams - _headerBlockSizes[" << i << "] : " << _headerBlockSizes[i] << endl;
 				sequenceCount = _headerBlockSizes[i+1];
+				cerr << "Leon::startDecompressionAllStreams - _headerBlockSizes[" << i << "+1] : " << _headerBlockSizes[i+1] << endl;
 				hdecoder = headerdecoders[j];
 				hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
 				_filePosHeader += blockSize;

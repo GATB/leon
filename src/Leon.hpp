@@ -160,7 +160,7 @@ class Leon : public misc::impl::Tool
 		
 		//Global compression
 		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
-		void writeBlockNoRangeEncoder(int encodedSequenceCount,u_int64_t blockID);
+		void writeBlockNoRangeEncoder(uint64_t size, int encodedSequenceCount,u_int64_t blockID);
 		
 		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 

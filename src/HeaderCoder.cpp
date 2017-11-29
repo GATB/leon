@@ -343,8 +343,9 @@ void HeaderEncoder::writeBlock(){
 
 	//printf("\nheader coder writeblock   bid %i   tid %i \n",blockId, _thread_id);
 	
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
-	//_leon->writeBlockNoRangeEncoder(_processedSequenceCount, blockId);
+	//_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
+	_leon->writeBlockNoRangeEncoder(noRangeEncoderBlockSize, _processedSequenceCount, blockId);
+	noRangeEncoderBlockSize = 0;
 	_rangeEncoder.clear();
 }
 
@@ -360,6 +361,8 @@ void HeaderEncoder::processNextHeader(){
 }
 
 void HeaderEncoder::compareHeader(){
+	ofstream& noRangeEncoderOfstream = _leon->noRangeEncoderOfstream;
+
 	_fieldPos = 0;
 	_misCurrentStartPos = -1;
 	
@@ -469,13 +472,19 @@ void HeaderEncoder::compareHeader(){
 	//if the last field match, we have to signal to the decoder to add the last matching field of the prev header
 	
 	if(_lastMatchFieldIndex == _fieldIndex-1){
-		_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END_MATCH);
-		_rangeEncoder.encode(_headerSizeModel, _currentHeader.size());
+		//_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END_MATCH);
+		noRangeEncoderOfstream << HEADER_END_MATCH << endl;
+		noRangeEncoderBlockSize += to_string(HEADER_END_MATCH).size();
+		//_rangeEncoder.encode(_headerSizeModel, _currentHeader.size());
+		noRangeEncoderOfstream << _currentHeader.size() << endl;
+		noRangeEncoderBlockSize += to_string(_currentHeader.size()).size();
 		//_misCurrentStartPos = _currentFieldSize;
 		//encodeAscii();
 	}
 	else{
-		_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END);
+		//_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END);
+		noRangeEncoderOfstream << HEADER_END << endl;
+		noRangeEncoderBlockSize += to_string(HEADER_END).size();
 	}
 	//_misIndex += 1;
 	
@@ -515,6 +524,8 @@ void HeaderEncoder::encodeMismatch(){
 }*/
 
 void HeaderEncoder::encodeNumeric(){
+	ofstream& noRangeEncoderOfstream = _leon->noRangeEncoderOfstream;
+
 	u_int64_t zeroCount = _currentFieldZeroValues[_fieldIndex];
 	u_int64_t fieldValue = _currentFieldValues[_fieldIndex];
 	
@@ -525,9 +536,15 @@ void HeaderEncoder::encodeNumeric(){
 			cout << "\t\t\tField with zero only" << endl;
 			cout << "\t\t\tEnconding zero count: " << zeroCount << endl;
 		#endif
-		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ZERO_ONLY);
-		_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
-		_rangeEncoder.encode(_zeroModel[_misIndex], zeroCount);
+		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ZERO_ONLY);
+		noRangeEncoderOfstream << FIELD_ZERO_ONLY << endl;
+		noRangeEncoderBlockSize += to_string(FIELD_ZERO_ONLY).size();
+		//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
+		noRangeEncoderOfstream << _fieldIndex << endl;
+		noRangeEncoderBlockSize += to_string(_fieldIndex).size();
+		//_rangeEncoder.encode(_zeroModel[_misIndex], zeroCount);
+		noRangeEncoderOfstream << zeroCount << endl;
+		noRangeEncoderBlockSize += to_string(zeroCount).size();
 		_misIndex += 1;
 		return;
 	}
@@ -536,9 +553,15 @@ void HeaderEncoder::encodeNumeric(){
 			cout << "\t\t\tField with zero and numeric" << endl;
 			cout << "\t\t\tEnconding zero count: " << zeroCount << endl;
 		#endif
-		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ZERO_AND_NUMERIC);
-		_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
-		_rangeEncoder.encode(_zeroModel[_misIndex], zeroCount);
+		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ZERO_AND_NUMERIC);
+		noRangeEncoderOfstream << FIELD_ZERO_AND_NUMERIC << endl;
+		noRangeEncoderBlockSize += to_string(FIELD_ZERO_AND_NUMERIC).size();
+		//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
+		noRangeEncoderOfstream << _fieldIndex << endl;
+		noRangeEncoderBlockSize += to_string(_fieldIndex).size();
+		//_rangeEncoder.encode(_zeroModel[_misIndex], zeroCount);
+		noRangeEncoderOfstream << zeroCount << endl;
+		noRangeEncoderBlockSize += to_string(zeroCount).size();
 		_misIndex += 1;
 	}
 	
@@ -590,14 +613,20 @@ void HeaderEncoder::encodeNumeric(){
 	int deltaType = CompressionUtils::getDeltaValue(value, prevValue, &deltaValue);
 	
 	if(deltaType == 0){
-		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
+		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
+		noRangeEncoderOfstream << FIELD_NUMERIC << endl;
+		noRangeEncoderBlockSize += to_string(FIELD_NUMERIC).size();
 	}
 	else if(deltaType == 1){
-		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
+		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
+		noRangeEncoderOfstream << FIELD_DELTA << endl;
+		noRangeEncoderBlockSize += to_string(FIELD_DELTA).size();
 		value = deltaValue;
 	}
 	else if(deltaType == 2){
-		_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
+		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
+		noRangeEncoderOfstream << FIELD_DELTA_2 << endl;
+		noRangeEncoderBlockSize += to_string(FIELD_DELTA_2).size();
 		value = deltaValue;
 	}
 	/*
@@ -636,8 +665,12 @@ void HeaderEncoder::encodeNumeric(){
 
 		
 	  
-	_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModels[_misIndex], value);
+	//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
+	noRangeEncoderOfstream << _fieldIndex << endl;
+	noRangeEncoderBlockSize += to_string(_fieldIndex).size();
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModels[_misIndex], value);
+	noRangeEncoderOfstream << value << endl;
+	noRangeEncoderBlockSize += to_string(value).size();
 	//_rangeEncoder->encode(&_fieldColumnModel[_misIndex], 0);
 	//_prevFieldValues[_fieldIndex] = fieldValue;
 	
@@ -645,12 +678,22 @@ void HeaderEncoder::encodeNumeric(){
 }
 
 void HeaderEncoder::encodeAscii(){
+	ofstream& noRangeEncoderOfstream = _leon->noRangeEncoderOfstream;
+
 	int missSize = _currentFieldSize - _misCurrentStartPos;//_currentPos - _misCurrentStartPos;
 	//cout << _currentFieldSize <<  " " << _fieldPos << endl;
-	_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ASCII);
-	_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
-	_rangeEncoder.encode(_fieldColumnModel[_misIndex], _misCurrentStartPos);
-	_rangeEncoder.encode(_misSizeModel[_misIndex], missSize);
+	//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ASCII);
+	noRangeEncoderOfstream << FIELD_ASCII << endl;
+	noRangeEncoderBlockSize += to_string(FIELD_ASCII).size();
+	//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
+	noRangeEncoderOfstream << _fieldIndex << endl;
+	noRangeEncoderBlockSize += to_string(_fieldIndex).size();
+	//_rangeEncoder.encode(_fieldColumnModel[_misIndex], _misCurrentStartPos);
+	noRangeEncoderOfstream << _misCurrentStartPos << endl;
+	noRangeEncoderBlockSize += to_string(_misCurrentStartPos).size();
+	//_rangeEncoder.encode(_misSizeModel[_misIndex], missSize);
+	noRangeEncoderOfstream << missSize << endl;
+	noRangeEncoderBlockSize += to_string(missSize).size();
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\t\t\t<Mismatch> " << "    Type: " << "ASCII" << "    Field: " << _fieldIndex << "    Column: " << _misCurrentStartPos << "    Size: " << missSize << endl;
 	#endif
@@ -660,7 +703,9 @@ void HeaderEncoder::encodeAscii(){
 			cout << "\t\t\tEncoding: " << _currentHeader[_currentFieldPos[_fieldIndex]+i] << endl;
 		#endif
 		//cout << _currentHeader[j] << flush;
-		_rangeEncoder.encode(_asciiModel[_misIndex], _currentHeader[_currentFieldPos[_fieldIndex]+i]);
+		//_rangeEncoder.encode(_asciiModel[_misIndex], _currentHeader[_currentFieldPos[_fieldIndex]+i]);
+		noRangeEncoderOfstream << _currentHeader[_currentFieldPos[_fieldIndex]+i];
+		noRangeEncoderBlockSize += to_string(_currentHeader[_currentFieldPos[_fieldIndex]+i]).size();
 	}
 
 	_misIndex += 1;
@@ -748,6 +793,9 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequ
 }
 
 void HeaderDecoder::execute(){
+	cerr << "HeaderDecoder::execute - start" << endl;
+	cerr << "HeaderDecoder::execute - _sequenceCount : " << _sequenceCount << endl;
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
 	//cerr << endl << "DEBUG HEADER CODER EXECUTE BEGIN" << endl;
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
@@ -762,7 +810,9 @@ void HeaderDecoder::execute(){
 		
 	//while(!_inputFile->eof()){
 		//cerr << "debug header decoder : readType before" << endl;
-		u_int8_t type = _rangeDecoder.nextByte(_typeModel[_misIndex]);
+		u_int8_t type; //= _rangeDecoder.nextByte(_typeModel[_misIndex]);
+		noRangeDecoderIfstream >> type;
+		cerr << "HeaderDecoder::execute - type : " << type << endl;
 		//cerr << "debug header decoder : readType after" << endl;
 		//cerr << "debug header decoder : type = " << (int) type << endl;
 		#ifdef PRINT_DEBUG_DECODER
@@ -790,7 +840,9 @@ void HeaderDecoder::execute(){
 		else if(type == HEADER_END_MATCH){
 			//decodeMatch();
 			//cout << "debug header decoder : headerSize before" << endl;
-			u_int8_t headerSize = _rangeDecoder.nextByte(_headerSizeModel);
+			u_int8_t headerSize;// = _rangeDecoder.nextByte(_headerSizeModel);
+			noRangeDecoderIfstream >> headerSize;
+			cerr << "HeaderDecoder::execute - headerSize : " << headerSize << endl;
 			//cout << "debug header decoder : headerSize before" << endl;
 
 			for(/*_fieldIndex*/; _fieldIndex < _prevFieldCount; _fieldIndex++){
@@ -860,8 +912,11 @@ void HeaderDecoder::decodeFirstHeader(){
 */
 
 void HeaderDecoder::decodeMatch(){
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
 	//cout << "debug header decoder : decodeMAtch read misFieldIndex before" << endl;
-	u_int8_t misFieldIndex = _rangeDecoder.nextByte(_fieldIndexModel[_misIndex]);
+	u_int8_t misFieldIndex;// = _rangeDecoder.nextByte(_fieldIndexModel[_misIndex]);
+	noRangeDecoderIfstream >> misFieldIndex;
+	cerr << "HeaderDecoder::decodeMatch - misFieldIndex : " << misFieldIndex << endl;
 	//cout << "debug header decoder : decodeMAtch read misFieldIndex after" << endl;
 	//cout << "debug header decoder : misFieldIndex = " << (int) misFieldIndex << endl;
 	#ifdef PRINT_DEBUG_DECODER
@@ -876,8 +931,13 @@ void HeaderDecoder::decodeMatch(){
 }
 
 void HeaderDecoder::decodeAscii(){
-	u_int8_t misColumn = _rangeDecoder.nextByte(_fieldColumnModel[_misIndex]);
-	u_int8_t misSize = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
+	u_int8_t misColumn;// = _rangeDecoder.nextByte(_fieldColumnModel[_misIndex]);
+	noRangeDecoderIfstream >> misColumn;
+	cerr << "HeaderDecoder::decodeAscii - misColumn : " << misColumn << endl;
+	u_int8_t misSize;// = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	noRangeDecoderIfstream >> misSize;
+	cerr << "HeaderDecoder::decodeAscii - misSize : " << misSize << endl;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: ASCII     Column: " << (int)misColumn << "    Size: " << (int)misSize << endl;
 	#endif
@@ -889,8 +949,10 @@ void HeaderDecoder::decodeAscii(){
 	}
 	
 	for(int i=0; i<misSize; i++){
-		u_int8_t c = _rangeDecoder.nextByte(_asciiModel[_misIndex]);
-		
+		u_int8_t c;// = _rangeDecoder.nextByte(_asciiModel[_misIndex]);
+		noRangeDecoderIfstream >> c;
+		cerr << "HeaderDecoder::decodeAscii - c : " << c << endl;
+
 		#ifdef PRINT_DEBUG_DECODER
 			cout << "\t\t\tAdding: " << c << " (" << (int)c << ")"<< endl;
 		#endif
@@ -903,11 +965,14 @@ void HeaderDecoder::decodeAscii(){
 
 void HeaderDecoder::decodeNumeric(){
 	//u_int8_t misSize = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: NUMERIC" << endl; //"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	u_int64_t value;// = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	noRangeDecoderIfstream >> value;
+	cerr << "HeaderDecoder::decodeNumeric - value : " << value << endl;
 	//_currentHeader += CompressionUtils::numberToString(value);
 	
 	char temp[200];
@@ -922,11 +987,14 @@ void HeaderDecoder::decodeNumeric(){
 
 void HeaderDecoder::decodeDelta(){
 	//u_int8_t misSize = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: DELTA" << endl;//"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	u_int64_t value;// = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	noRangeDecoderIfstream >> value;
+	cerr << "HeaderDecoder::decodeDelta - value : " << value << endl;
 	/*
 	u_int64_t value = 0;
 	for(int i=0; i<misSize; i++){
@@ -949,11 +1017,14 @@ void HeaderDecoder::decodeDelta(){
 
 void HeaderDecoder::decodeDelta2(){
 	//u_int8_t misSize = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: DELTA 2" << endl;//"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	u_int64_t value;// = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	noRangeDecoderIfstream >> value;
+	cerr << "HeaderDecoder::decodeDelta2 - value : " << value << endl;
 	/*
 	u_int64_t value = 0;
 	for(int i=0; i<misSize; i++){
@@ -974,7 +1045,10 @@ void HeaderDecoder::decodeDelta2(){
 }
 
 void HeaderDecoder::decodeZero(){
-	u_int8_t zeroCount = _rangeDecoder.nextByte(_zeroModel[_misIndex]);
+	ifstream& noRangeDecoderIfstream = _leon->noRangeDecoderIfstream;
+	u_int8_t zeroCount;// = _rangeDecoder.nextByte(_zeroModel[_misIndex]);
+	noRangeDecoderIfstream >> zeroCount;
+	cerr << "HeaderDecoder::decodeZero - zeroCount : " << zeroCount << endl;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: ZERO     Size: " << (int)zeroCount << endl;
 	#endif

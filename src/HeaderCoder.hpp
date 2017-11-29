@@ -118,7 +118,7 @@ class HeaderEncoder : AbstractHeaderCoder
 	private:
 		
 		RangeEncoder _rangeEncoder;
-		uint64_t noRangeEncoderBlockSize;
+		uint64_t noRangeEncoderBlockSize = 0;
 		
 		u_int64_t _totalHeaderSize;
 	
