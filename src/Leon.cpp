@@ -2809,11 +2809,16 @@ void Leon::startDecompressionAllStreams(){
 	
 	decodeBloom();
 	
-	string _h5OutputFilename = System::file().getBaseName(_inputFilename);
-	 _h5OutputFilename = System::file().getBaseName(_h5OutputFilename) + ".h5" ;
+	/** We look for the begining of the suffix. */
+	int lastindex = _inputFilename.find_last_of (".");
 	
-	printf("_h5OutputFilename : %s \n",_h5OutputFilename.c_str());
+	/** We build the strings for file names. */
+	string baseInputFilename = _inputFilename.substr(0,lastindex);
+
+	string inputFileGraphName = baseInputFilename + ".h5" ;
 	
+	printf("inputFileGraphName : %s \n",inputFileGraphName.c_str());
+
 	_graph =  Graph::load(_h5OutputFilename.c_str());
 	
 
