@@ -2814,9 +2814,18 @@ void Leon::startDecompressionAllStreams(){
 	
 	printf("_h5OutputFilename : %s \n",_h5OutputFilename.c_str());
 	
-	_graph =  Graph::load(_h5OutputFilename.c_str() );
+	_graph =  Graph::load(_h5OutputFilename.c_str());
 	
 
+	//test
+	cerr << "test0" << endl;
+	kmer_type kmer = _kmerModel->codeSeed("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", Data::ASCII).value();
+	cerr << "test1" << endl;
+	Node node = Node(Node::Value(kmer));
+	cerr << "test2" << endl;
+	_graph.contains(node);
+	cerr << "test3" << endl;
+	//end test
 	
 	decodeAnchorDict();
 	
