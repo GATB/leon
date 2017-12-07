@@ -36,6 +36,8 @@
 #include "Leon.hpp"
 #include "Requests.hpp"
 
+ #define NB_MODELS 8
+
 //#include "CompressionUtils.hpp"
 
 using namespace std;
@@ -48,6 +50,20 @@ class AbstractHeaderCoder
 {
 	public:
 		AbstractHeaderCoder(Leon* leon);
+
+		ofstream ofstreams[NB_MODELS];
+		//vector<ofstreams> numericHeadModels
+
+		enum TypeModel{TYPE_MODEL,
+						FIELD_INDEX_MODEL,
+						FIELD_COLUMN_MODEL,
+						MIS_SIZE_MODEL,
+						ASCII_MODEL,
+						NUMERIC_HEAD_MODELS,
+						ZERO_MODEL,
+						HEADER_SIZE_MODEL 
+		};
+
 
 		
 	protected:

@@ -1712,7 +1712,11 @@ void Leon::startHeaderCompression(){
 	#endif
 
 	//getDispatcher()->iterate (itSeq,  HeaderEncoder(this, &nb_threads_living), 10000);
+	cerr << "Leon::startHeaderCompression - testseg before" << endl;
+	cerr << "Leon::startHeaderCompression - _baseOutputname : " << _baseOutputname << endl;
+			//_baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
 	getDispatcher()->iterate (itSeq,  HeaderEncoder(this), READ_PER_BLOCK);
+		cerr << "Leon::startHeaderCompression - testseg after" << endl;
 	endHeaderCompression();
 }
 
