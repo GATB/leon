@@ -112,6 +112,24 @@ class Leon : public misc::impl::Tool
      		<< " minutes " << int(_seconds%60) << " seconds." << endl;
 		}
 
+		ofstream noRangeEncoderOfstream_generalModel;
+		ifstream noRangeDecoderIfstream_generalModel;
+		ofstream noRangeEncoderOfstream_numericModel;
+		ifstream noRangeDecoderIfstream_numericModel;
+		//ofstream noRangeEncoderOfstream_nbReadsPerAnchorModel;
+		//ifstream noRangeDecoderIfstream_nbReadsPerAnchorModel;
+		ofstream noRangeEncoderOfstream_anchorDictModel;
+		ifstream noRangeDecoderIfstream_anchorDictModel;
+
+
+		ofstream noRangeEncoderDictInfosOfstream;
+		ifstream noRangeDecoderDictInfosIfstream;
+		ofstream noRangeEncoderBlocksInfosOfstream;
+		ifstream noRangeDecoderBlocksInfosIfstream;
+
+		//private
+		string _baseOutputname;
+
 		//DEBUG PART END
 
 
@@ -287,7 +305,6 @@ class Leon : public misc::impl::Tool
 		
 		//Global compression
 		string _inputFilename;
-		string _baseOutputname;
 		string _outputFilename;
 		string _outputFileRequestsName;
 	

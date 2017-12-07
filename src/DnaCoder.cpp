@@ -90,6 +90,98 @@ _errorPosDeltaTypeModel(3),_seqId(0)
 		}
 	}
 
+	string _baseOutputname = _leon->_baseOutputname;
+	//nbModels = 14;
+	string typeModel[NB_MODELS];
+
+	typeModel[READ_TYPE_MODEL] = "_readTypeModel";
+	typeModel[ANCHOR_ADDRESS_MODEL] = "_anchorAddressModel"; 
+	typeModel[ANCHOR_KMER_TYPE_MODEL] = "_anchorKmerTypeModel"; 
+	typeModel[ANCHOR_POS_MODEL] = "_anchorPosModel";
+	typeModel[NUMERIC_DNA_MODEL] = "_numericDnaModel";
+	typeModel[LEFT_ERROR_MODEL] = "_leftErrorModel";
+	typeModel[N_POS_MODEL] = "_NposModel";
+	typeModel[LEFT_ERROR_POS_MODEL] = "_leftErrorPosModel";
+	typeModel[READ_SIZE_VALUE_MODEL] = "_readSizeValueModel";
+	typeModel[READ_ANCHOR_REVCOMP_MODEL] = "_readAnchorRevcompModel";
+	typeModel[BIFURCATION_MODEL] = "_bifurcationModel";
+	typeModel[BIFURCATION_BINARY_MODEL] = "_bifurcationBinaryModel";
+	typeModel[NO_ANCHOR_READ_MODEL] = "_noAnchorReadModel";
+	typeModel[NO_ANCHOR_READ_SIZE_VALUE_MODEL] = "_noAnchorReadSizeValueModel";
+
+	for(int i=0; i<NB_MODELS; ++i)
+	{
+		string ofstreamPath = _baseOutputname + typeModel[i];
+		ofstreams[i].open(ofstreamPath, std::ofstream::app);
+	}
+
+	/*string typeModel[14] = {"_readTypeModel",
+						"_anchorAddressModel", 
+						"_anchorKmerTypeModel", 
+						"_anchorPosModel",
+						"_numericDnaModel",
+						"_leftErrorModel",
+						"_NposModel",
+						"_leftErrorPosModel",
+						"_readSizeValueModel",
+						"_readAnchorRevcompModel",
+						"_bifurcationModel",
+						"_bifurcationBinaryModel",
+						"_noAnchorReadModel",
+						"_noAnchorReadSizeValueModel"};
+	*/
+/*
+
+	std::string noRangeEncoderOfstream_readTypeModelFilePath = _baseOutputname + ".noRangeEncoder_readTypeModel";
+  	noRangeEncoderOfstream_readTypeModel.open (noRangeEncoderOfstream_readTypeModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_anchorAddressModelFilePath = _baseOutputname + ".noRangeEncoder_anchorAddressModel";
+  	noRangeEncoderOfstream_anchorAddressModel.open (noRangeEncoderOfstream_anchorAddressModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_anchorKmerTypeModelFilePath = _baseOutputname + ".noRangeEncoder_anchorKmerTypeModel";
+  	noRangeEncoderOfstream_anchorKmerTypeModel.open (noRangeEncoderOfstream_anchorKmerTypeModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_anchorPosModelFilePath = _baseOutputname + ".noRangeEncoder_anchorPosModel";
+  	noRangeEncoderOfstream_anchorPosModel.open (noRangeEncoderOfstream_anchorPosModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_numericDnaModelFilePath = _baseOutputname + ".noRangeEncoder_numericDnaModel";
+  	noRangeEncoderOfstream_numericDnaModel.open (noRangeEncoderOfstream_numericDnaModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_leftErrorModelFilePath = _baseOutputname + ".noRangeEncoder_leftErrorModel";
+  	noRangeEncoderOfstream_leftErrorModel.open (noRangeEncoderOfstream_leftErrorModelFilePath, std::ofstream::app);
+
+  	//std::string noRangeEncoderOfstream_rightErrorModelFilePath = _baseOutputname + ".noRangeEncoder_rightErrorModel";
+  	//noRangeEncoderOfstream_rightErrorModel.open (noRangeEncoderOfstream_rightErrorModelFilePath);
+
+  	std::string noRangeEncoderOfstream_NposModelFilePath = _baseOutputname + ".noRangeEncoder_NposModel";
+  	noRangeEncoderOfstream_NposModel.open (noRangeEncoderOfstream_NposModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_leftErrorPosModelFilePath = _baseOutputname + ".noRangeEncoder_leftErrorPosModel";
+  	noRangeEncoderOfstream_leftErrorPosModel.open (noRangeEncoderOfstream_leftErrorPosModelFilePath, std::ofstream::app);
+
+  	//std::string noRangeEncoderOfstream_rightErrorPosModelFilePath = _baseOutputname + ".noRangeEncoder_rightErrorPosModel";
+  	//noRangeEncoderOfstream_rightErrorPosModel.open (noRangeEncoderOfstream_rightErrorPosModelFilePath);
+
+  	std::string noRangeEncoderOfstream_readSizeValueModelFilePath = _baseOutputname + ".noRangeEncoder_readSizeValueModel";
+  	noRangeEncoderOfstream_readSizeValueModel.open (noRangeEncoderOfstream_readSizeValueModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_readAnchorRevcompModelFilePath = _baseOutputname + ".noRangeEncoder_readAnchorRevcompModel";
+  	noRangeEncoderOfstream_readAnchorRevcompModel.open (noRangeEncoderOfstream_readAnchorRevcompModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_bifurcationModelFilePath = _baseOutputname + ".noRangeEncoder_bifurcationModel";
+  	noRangeEncoderOfstream_bifurcationModel.open (noRangeEncoderOfstream_bifurcationModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_bifurcationBinaryModelFilePath = _baseOutputname + ".noRangeEncoder_bifurcationBinaryModel";
+  	noRangeEncoderOfstream_bifurcationBinaryModel.open (noRangeEncoderOfstream_bifurcationBinaryModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_noAnchorReadModelFilePath = _baseOutputname + ".noRangeEncoder_noAnchorReadModel";
+  	noRangeEncoderOfstream_noAnchorReadModel.open (noRangeEncoderOfstream_noAnchorReadModelFilePath, std::ofstream::app);
+
+  	std::string noRangeEncoderOfstream_noAnchorReadSizeValueModelFilePath = _baseOutputname + ".noRangeEncoder_noAnchorReadSizeValueModel";
+  	noRangeEncoderOfstream_noAnchorReadSizeValueModel.open (noRangeEncoderOfstream_noAnchorReadSizeValueModelFilePath, std::ofstream::app);
+
+*/
+
 	//cerr << "debug AbstractDnaCoder::AbstractDnaCoder - seg falt : here (1) ?" << endl;
 }
 
@@ -1131,7 +1223,9 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef LEON_PRINT_STAT
 		_rangeEncoder6.encode(_readTypeModel, 0);
 	#endif
-	_rangeEncoder.encode(_readTypeModel, 0);
+	//_rangeEncoder.encode(_readTypeModel, 0);	
+	ofstreams[READ_TYPE_MODEL] << (int) 0 << endl;
+	
 	//cerr << "debug DnaEncoder::encodeAnchorRead - _rangeEncoder.encode(_readTypeModel, 0);" << endl;
 	
 	u_int64_t deltaValue;
@@ -1144,7 +1238,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		CompressionUtils::encodeNumeric(_rangeEncoder1, _readSizeValueModel, _readSize);
 	#endif
 	//_rangeEncoder.encode(_readSizeDeltaTypeModel, deltaType);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeValueModel, _readSize);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeValueModel, _readSize);
+	ofstreams[READ_SIZE_VALUE_MODEL] << (int) _readSize << endl;
 	//cerr << "debug DnaEncoder::encodeAnchorRead - encodeNumeric(_rangeEncoder, _readSizeValueModel, _readSize)" << endl;
 	//_prevReadSize = _readSize;
 	//printf("read size %i  deltaValue %i\n",_readSize,deltaValue);
@@ -1156,7 +1251,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		CompressionUtils::encodeNumeric(_rangeEncoder2, _anchorPosModel, anchorPos);
 	#endif
 	//_rangeEncoder.encode(_anchorPosDeltaTypeModel, deltaType);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);
+	ofstreams[ANCHOR_POS_MODEL] << (int) anchorPos << endl;
 	//cerr << "debug DnaEncoder::encodeAnchorRead - encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);" << endl;
 	//_prevAnchorPos = anchorPos;
 	//printf("anchor pos %i \n",anchorPos);
@@ -1174,7 +1270,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		//}
 		//else{
 		//_rangeEncoder.encode(_isPrevReadAnchorableModel, 1);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressModel, anchorAddress);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _anchorAddressModel, anchorAddress);
+	ofstreams[ANCHOR_ADDRESS_MODEL] << (int) anchorAddress << endl;
 		//CompressionUtils::encodeNumeric(_rangeEncoder, _isPrevReadAnchorablePosModel, _isPrevReadAnchorablePos);
 		//}
 	//_prevAnchorAddress = anchorAddress;
@@ -1188,14 +1285,16 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 		#ifdef LEON_PRINT_STAT
 			_rangeEncoder6.encode(_readAnchorRevcompModel, 0);
 		#endif
-		_rangeEncoder.encode(_readAnchorRevcompModel, 0);
+		//_rangeEncoder.encode(_readAnchorRevcompModel, 0);
+		ofstreams[READ_ANCHOR_REVCOMP_MODEL] << (int) 0 << endl;
 		//cerr << "debug DnaEncoder::encodeAnchorRead - revcomp : " << 0 << endl;
 	}
 	else{
 		#ifdef LEON_PRINT_STAT
 			_rangeEncoder6.encode(_readAnchorRevcompModel, 1);
 		#endif
-		_rangeEncoder.encode(_readAnchorRevcompModel, 1);
+		//_rangeEncoder.encode(_readAnchorRevcompModel, 1);
+		ofstreams[READ_ANCHOR_REVCOMP_MODEL] << (int) 1 << endl;
 		//cerr << "debug DnaEncoder::encodeAnchorRead - revcomp : " << 1 << endl;
 	}
 
@@ -1233,14 +1332,16 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef LEON_PRINT_STAT
 		CompressionUtils::encodeNumeric(_rangeEncoder6, _numericModel, _Npos.size());
 	#endif
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _Npos.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _Npos.size());
+	ofstreams[NUMERIC_DNA_MODEL] << (int) _Npos.size() << endl;
 	for(int i=0; i<_Npos.size(); i++){
 		//deltaType = CompressionUtils::getDeltaValue(_Npos[i], _prevNpos, &deltaValue);
 		//_rangeEncoder.encode(_NposDeltaTypeModel, deltaType);
 		#ifdef LEON_PRINT_STAT
 			CompressionUtils::encodeNumeric(_rangeEncoder6, _NposModel, _Npos[i]-_prevNpos);
 		#endif
-		CompressionUtils::encodeNumeric(_rangeEncoder, _NposModel, _Npos[i]-_prevNpos);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _NposModel, _Npos[i]-_prevNpos);
+		ofstreams[N_POS_MODEL] << (int) (_Npos[i]-_prevNpos) << endl;
 		_prevNpos = _Npos[i];
 		//cerr << "debug DnaEncoder::encodeAnchorRead - _prevNpos : " << _Npos[i] << endl;
 	}
@@ -1248,14 +1349,16 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 	#ifdef LEON_PRINT_STAT
 		CompressionUtils::encodeNumeric(_rangeEncoder6, _leftErrorModel, _leftErrorPos.size());
 	#endif
-	CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorModel, _leftErrorPos.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorModel, _leftErrorPos.size());
+	ofstreams[LEFT_ERROR_MODEL] << (int) _leftErrorPos.size() << endl;
 	sort(_leftErrorPos.begin(), _leftErrorPos.end());
 	_prevErrorPos = 0;
 	for(int i=0; i<_leftErrorPos.size(); i++){
 		#ifdef LEON_PRINT_STAT
 			CompressionUtils::encodeNumeric(_rangeEncoder6, _leftErrorPosModel, _leftErrorPos[i]-_prevErrorPos);
 		#endif
-		CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, _leftErrorPos[i]-_prevErrorPos);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, _leftErrorPos[i]-_prevErrorPos);
+		ofstreams[LEFT_ERROR_POS_MODEL] << (int) (_leftErrorPos[i]-_prevErrorPos) << endl;
 		_prevErrorPos = _leftErrorPos[i];
 		//cerr << "debug DnaEncoder::encodeAnchorRead - _prevErrorPos : " << _leftErrorPos[i] << endl;
 	}
@@ -1314,7 +1417,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 				_rangeEncoder4.encode(_bifurcationModel, _bifurcations[bifType0]);
 			#endif
 			//cout << Leon::nt2bin(_bifurcations[i]) << " ";
-			_rangeEncoder.encode(_bifurcationModel, _bifurcations[bifType0]);
+			//_rangeEncoder.encode(_bifurcationModel, _bifurcations[bifType0]);
+			ofstreams[BIFURCATION_MODEL] << (int) _bifurcations[bifType0] << endl;
 			bifType0 += 1;
 			//cerr << "debug DnaEncoder::encodeAnchorRead - bifType0 : " << bifType0 << endl;
 		}
@@ -1323,7 +1427,8 @@ void DnaEncoder::encodeAnchorRead(int anchorPos, u_int32_t anchorAddress){
 				_rangeEncoder4.encode(_bifurcationBinaryModel, _binaryBifurcations[bifType1]);
 			#endif
 			//cout << Leon::nt2bin(_bifurcations[i]) << " ";
-			_rangeEncoder.encode(_bifurcationBinaryModel, _binaryBifurcations[bifType1]);
+			//_rangeEncoder.encode(_bifurcationBinaryModel, _binaryBifurcations[bifType1]);
+			ofstreams[BIFURCATION_BINARY_MODEL] << (int) _binaryBifurcations[bifType1] << endl;
 			bifType1 += 1;
 			//cerr << "debug DnaEncoder::encodeAnchorRead - bifType1 : " << bifType1 << endl;
 		}
@@ -1339,11 +1444,13 @@ void DnaEncoder::encodeSortedFileNoAnchorRead(string read)
 	int readSize = read.size();
 	cerr << "DnaEncoder::encodeSortedFileNoAnchorRead - readSize : " << readSize << endl;
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeValueModel, readSize);
-	
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeValueModel, readSize);
+	ofstreams[READ_SIZE_VALUE_MODEL] << (int) readSize << endl;
+
 	for(int i=0; i<_readSize; i++)
 	{
-		_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(read[i]));
+		//_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(read[i]));
+		ofstreams[NO_ANCHOR_READ_MODEL] << (int) Leon::nt2bin(read[i]) << endl;
 	}
 }
 
@@ -1351,7 +1458,8 @@ void DnaEncoder::encodeSortedFileAnchor(kmer_type anchor){
 
 	u_int64_t anchor_uint64t = anchor.getVal();
 	//cerr << "\tDnaEncoder::encodeSortedFileAnchor(kmer_type anchor) - anchor_uint64t : " << anchor_uint64t << endl;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorKmerTypeModel, anchor_uint64t);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _anchorKmerTypeModel, anchor_uint64t);
+	ofstreams[ANCHOR_KMER_TYPE_MODEL] << (int) anchor_uint64t << endl;
 	//endRead();
 	//cerr << "\tDnaEncoder::encodeSortedFileAnchor(kmer_type anchor) - _processedSequenceCount : " << _processedSequenceCount << endl;
 }
@@ -1363,26 +1471,33 @@ void DnaEncoder::encodeSortedFileRead(kmer_type anchor, int isRevComp, int readS
 	//readTypeModel is not needed anymore for sorted file
 	//_rangeEncoder.encode(_readTypeModel, 0);
 
-	CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeValueModel, readSize);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _readSizeValueModel, readSize);
+	ofstreams[READ_SIZE_VALUE_MODEL] << (int) _readSize << endl;
 	//cerr << "\tDnaEncoder::encodeSortedFileRead - readSize : " << readSize << endl;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _anchorPosModel, anchorPos);
+	ofstreams[ANCHOR_POS_MODEL] << (int) anchorPos << endl;
 	//cerr << "\tDnaEncoder::encodeSortedFileRead - anchorPos : " << anchorPos << endl;
 
-	_rangeEncoder.encode(_readAnchorRevcompModel, isRevComp);
+	//_rangeEncoder.encode(_readAnchorRevcompModel, isRevComp);
+	ofstreams[READ_ANCHOR_REVCOMP_MODEL] << (int) isRevComp << endl;
 
 	int prevNpos = 0;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, Npos.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, Npos.size());
+	ofstreams[NUMERIC_DNA_MODEL] << (int) Npos.size() << endl;
 	for(int i=0; i<Npos.size(); i++){
-		CompressionUtils::encodeNumeric(_rangeEncoder, _NposModel, Npos[i]-prevNpos);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _NposModel, Npos[i]-prevNpos);
+		ofstreams[N_POS_MODEL] << (int) (_Npos[i]-_prevNpos) << endl;
 		prevNpos = Npos[i];
 		//cerr << "\tDnaEncoder::encodeSortedFileRead - prevNpos : " << Npos[i] << endl;
 	}
 
-	CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorModel, leftErrorPos.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorModel, leftErrorPos.size());
+	ofstreams[LEFT_ERROR_MODEL] << (int) _leftErrorPos.size() << endl;
 	sort(leftErrorPos.begin(), leftErrorPos.end());
 	int prevErrorPos = 0;
 	for(int i=0; i<leftErrorPos.size(); i++){
-		CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, leftErrorPos[i]-prevErrorPos);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _leftErrorPosModel, leftErrorPos[i]-prevErrorPos);
+		ofstreams[LEFT_ERROR_POS_MODEL] << (int) (_leftErrorPos[i]-_prevErrorPos) << endl;
 		prevErrorPos = leftErrorPos[i];
 		//cerr << "\tDnaEncoder::encodeSortedFileRead - prevErrorPos : " << leftErrorPos[i] << endl;
 	}
@@ -1395,13 +1510,15 @@ void DnaEncoder::encodeSortedFileRead(kmer_type anchor, int isRevComp, int readS
 		u_int8_t type = bifurcationTypes[i];
 		if(type == 0){
 			//cout << Leon::nt2bin(_bifurcations[i]) << " ";
-			_rangeEncoder.encode(_bifurcationModel, bifurcations[bifType0]);
+			//_rangeEncoder.encode(_bifurcationModel, bifurcations[bifType0]);
+			ofstreams[BIFURCATION_MODEL] << (int) _bifurcations[bifType0] << endl;
 			bifType0 += 1;
 			//cerr << "\tDnaEncoder::encodeSortedFileRead - bifType0 : " << bifType0 << endl;
 		}
 		else{
 			//cout << Leon::nt2bin(_bifurcations[i]) << " ";
-			_rangeEncoder.encode(_bifurcationBinaryModel, binaryBifurcations[bifType1]);
+			//_rangeEncoder.encode(_bifurcationBinaryModel, binaryBifurcations[bifType1]);
+			ofstreams[BIFURCATION_BINARY_MODEL] << (int) _binaryBifurcations[bifType1] << endl;
 			bifType1 += 1;
 			//cerr << "\tDnaEncoder::encodeSortedFileRead - bifType1 : " << bifType1 << endl;
 		}
@@ -1891,7 +2008,8 @@ void DnaEncoder::encodeNoAnchorRead(){
 	#ifdef LEON_PRINT_STAT
 		_rangeEncoder6.encode(_readTypeModel, 1);
 	#endif
-	_rangeEncoder.encode(_readTypeModel, 1);
+	//_rangeEncoder.encode(_readTypeModel, 1);
+	ofstreams[READ_TYPE_MODEL] << (int) 1 << endl;
 	
 	//_leon->_readWithoutAnchorSize += _readSize*0.375;
 	_readWithoutAnchorCount +=1;
@@ -1918,16 +2036,16 @@ void DnaEncoder::encodeNoAnchorRead(){
 	#ifdef LEON_PRINT_STAT
 		CompressionUtils::encodeNumeric(_rangeEncoder5, _noAnchorReadSizeValueModel, _readSize);
 	#endif
-	CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeValueModel, _readSize);
-	
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _noAnchorReadSizeValueModel, _readSize);
+	ofstreams[NO_ANCHOR_READ_SIZE_VALUE_MODEL] << (int) _readSize << endl;
 			
 	for(int i=0; i<_readSize; i++){
 		
 		#ifdef LEON_PRINT_STAT
 			_rangeEncoder5.encode(_noAnchorReadModel, Leon::nt2bin(_readseq[i]));
 		#endif
-		_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(_readseq[i]));
-		
+		//_rangeEncoder.encode(_noAnchorReadModel, Leon::nt2bin(_readseq[i]));
+		ofstreams[NO_ANCHOR_READ_MODEL] << (int) Leon::nt2bin(_readseq[i]) << endl;
 	}
 	
 }

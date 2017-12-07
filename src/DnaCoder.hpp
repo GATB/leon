@@ -37,6 +37,7 @@
 #include <unordered_map>
 #endif
 
+#define NB_MODELS 14
 
 using namespace std;
 class Leon;
@@ -98,6 +99,62 @@ class AbstractDnaCoder
 {
 	public:
 		AbstractDnaCoder(Leon* leon);
+
+		//debug variables
+
+		ofstream noRangeEncoderOfstream_readTypeModel;
+		ifstream noRangeDecoderIfstream_readTypeModel;
+		ofstream noRangeEncoderOfstream_anchorAddressModel;
+		ifstream noRangeDecoderIfstream_anchorAddressModel;
+		ofstream noRangeEncoderOfstream_anchorKmerTypeModel;
+		ifstream noRangeDecoderIfstream_anchorKmerTypeModel;
+		ofstream noRangeEncoderOfstream_anchorPosModel;
+		ifstream noRangeDecoderIfstream_anchorPosModel;
+		ofstream noRangeEncoderOfstream_numericDnaModel;
+		ifstream noRangeDecoderIfstream_numericDnaModel;
+		ofstream noRangeEncoderOfstream_leftErrorModel;
+		ifstream noRangeDecoderIfstream_leftErrorModel;
+		ofstream noRangeEncoderOfstream_rightErrorModel;
+		ifstream noRangeDecoderIfstream_rightErrorModel;
+		ofstream noRangeEncoderOfstream_NposModel;
+		ifstream noRangeDecoderIfstream_NposModel;
+		ofstream noRangeEncoderOfstream_leftErrorPosModel;
+		ifstream noRangeDecoderIfstream_leftErrorPosModel;
+		ofstream noRangeEncoderOfstream_rightErrorPosModel;
+		ifstream noRangeDecoderIfstream_rightErrorPosModel;
+		ofstream noRangeEncoderOfstream_readSizeValueModel;
+		ifstream noRangeDecoderIfstream_readSizeValueModel;
+		ofstream noRangeEncoderOfstream_readAnchorRevcompModel;
+		ifstream noRangeDecoderIfstream_readAnchorRevcompModel;
+		ofstream noRangeEncoderOfstream_bifurcationModel;
+		ifstream noRangeDecoderIfstream_bifurcationModel;
+		ofstream noRangeEncoderOfstream_bifurcationBinaryModel;
+		ifstream noRangeDecoderIfstream_bifurcationBinaryModel;
+		ofstream noRangeEncoderOfstream_noAnchorReadModel;
+		ifstream noRangeDecoderIfstream_noAnchorReadModel;
+		ofstream noRangeEncoderOfstream_noAnchorReadSizeValueModel;
+		ifstream noRangeDecoderIfstream_noAnchorReadSizeValueModel;
+
+		ofstream ofstreams[NB_MODELS];
+
+		enum TypeModel{READ_TYPE_MODEL, 
+			ANCHOR_ADDRESS_MODEL,
+			ANCHOR_KMER_TYPE_MODEL,
+			ANCHOR_POS_MODEL,
+			NUMERIC_DNA_MODEL,
+			LEFT_ERROR_MODEL,
+			N_POS_MODEL,
+			LEFT_ERROR_POS_MODEL,
+			READ_SIZE_VALUE_MODEL,
+			READ_ANCHOR_REVCOMP_MODEL,
+			BIFURCATION_MODEL,
+			BIFURCATION_BINARY_MODEL,
+			NO_ANCHOR_READ_MODEL,
+			NO_ANCHOR_READ_SIZE_VALUE_MODEL};
+
+
+
+		//end debug
 		
 	protected:
 		Leon* _leon;

@@ -1165,18 +1165,40 @@ void Leon::executeCompression(){
 		return;
 	}
 
-	_rangeEncoder.encode(_generalModel, infoByte);
+	_baseOutputname = getInput()->getStr(STR_OUTPUT_FILE);
 
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
+	std::string noRangeEncoderOfstream_generalModelFilePath = _baseOutputname + ".noRangeEncoder_generalModel";
+  	noRangeEncoderOfstream_generalModel.open (noRangeEncoderOfstream_generalModelFilePath);
 
+  	std::string noRangeEncoderOfstream_numericModelFilePath = _baseOutputname + ".noRangeEncoder_numericModel";
+  	noRangeEncoderOfstream_numericModel.open (noRangeEncoderOfstream_numericModelFilePath);
+
+	std::string noRangeEncoderOfstream_anchorDictModelFilePath = _baseOutputname + ".noRangeEncoder_anchorDictModel";
+  	noRangeEncoderOfstream_anchorDictModel.open (noRangeEncoderOfstream_anchorDictModelFilePath);
+
+
+	//_rangeEncoder.encode(_generalModel, infoByte);
+	noRangeEncoderOfstream_generalModel << "infoByte" << endl;
+  	noRangeEncoderOfstream_generalModel << (int) infoByte << endl;
+
+
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _kmerSize);
+	noRangeEncoderOfstream_numericModel << "_kmerSize" << endl;
+	noRangeEncoderOfstream_numericModel << (int) _kmerSize << endl;
 	
 	u_int8_t version_major = LEON_VERSION_MAJOR;
 	u_int8_t version_minor = LEON_VERSION_MINOR;
 	u_int8_t version_patch = LEON_VERSION_PATCH;
 
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_major);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_minor);
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_patch);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_major);
+	noRangeEncoderOfstream_numericModel << "version_major" << endl;
+	noRangeEncoderOfstream_numericModel << (int) version_major << endl;
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_minor);
+	noRangeEncoderOfstream_numericModel << "version_minor" << endl;
+	noRangeEncoderOfstream_numericModel << (int) version_minor << endl;
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, version_patch);
+	noRangeEncoderOfstream_numericModel << "version_patch" << endl;
+	noRangeEncoderOfstream_numericModel << (int) version_patch << endl;
 
     //Redundant from dsk solid file !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1663,9 +1685,13 @@ void Leon::startHeaderCompression(){
 	_totalHeaderSize += _firstHeader.size();
 	
 	//encode the size of the first header on 2 byte and the header itself
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
+	noRangeEncoderOfstream_numericModel << "_firstHeader.size()" << endl;
+	noRangeEncoderOfstream_numericModel << (int) _firstHeader.size() << endl;
 	for(int i=0; i < _firstHeader.size(); i++){
 		_rangeEncoder.encode(_generalModel, _firstHeader[i]);
+		noRangeEncoderOfstream_generalModel << "_firstHeader[" << i << "]" << endl;
+		noRangeEncoderOfstream_generalModel << _firstHeader[i] << endl;
 	}
 	//_rangeEncoder.flush();
 	//_totalHeaderCompressedSize += _rangeEncoder.getBufferSize();
@@ -1697,10 +1723,15 @@ void Leon::endHeaderCompression(){
 	//u_int64_t descriptionStartPos = _outputFile->tell();
 	//cout << "Description start pos: " << descriptionStartPos << endl;
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
+	noRangeEncoderOfstream_numericModel << "_blockSizes.size()" << endl;
+	noRangeEncoderOfstream_numericModel << (int) _blockSizes.size() << endl;
+
 	for(int i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
-		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
+		noRangeEncoderOfstream_numericModel << "_blockSizes[" << i << "]" << endl;
+		noRangeEncoderOfstream_numericModel << (int) _blockSizes[i] << endl;
 	}
 	
 
@@ -2141,10 +2172,14 @@ void Leon::startDnaCompression(){
 
 void Leon::endDnaCompression(){
 	
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
+	noRangeEncoderOfstream_numericModel << "_blockSizes.size()" << endl;
+	noRangeEncoderOfstream_numericModel << (int) _blockSizes.size() << endl;
 	for(int i=0; i<_blockSizes.size(); i++){
 		cout << "Leon::endDnaCompression() - block size: " << _blockSizes[i] << endl;
-		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
+		//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
+		noRangeEncoderOfstream_numericModel << "_blockSizes[" << i << "]" << endl;
+		noRangeEncoderOfstream_numericModel << (int) _blockSizes[i] << endl;
 	}
 	_blockSizes.clear();
 	
@@ -2298,10 +2333,14 @@ void Leon::writeAnchorDict(){
 	_anchorDictSize = size;
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
 	_compressedSize += size;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
+	noRangeEncoderOfstream_numericModel << "int" << endl;
+	noRangeEncoderOfstream_numericModel << (int) size << endl;
 	cerr << "Leon::writeAnchorDict - encode dict size : " << size << endl;
 	//Encode anchors count
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	noRangeEncoderOfstream_numericModel << "_anchorAdress" << endl;
+	noRangeEncoderOfstream_numericModel << (int) _anchorAdress << endl;
 	cerr << "Leon::writeAnchorDict - encode anchor count : " << _anchorAdress << endl;
 	//printf("should encode %u anchors \n",_anchorAdress);
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
@@ -2343,10 +2382,14 @@ void Leon::writeSortedAnchorDict(){
 
 	_compressedSize += size;
 	cerr << "Leon::writeSortedAnchorDict - encode dict size : " << size << endl;
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
-	
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
+	noRangeEncoderOfstream_numericModel << "size" << endl;
+	noRangeEncoderOfstream_numericModel << (int) size << endl;
+
 	//Encode anchors count
-	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
+	noRangeEncoderOfstream_numericModel << "_anchorAdress" << endl;
+	noRangeEncoderOfstream_numericModel << (int) _anchorAdress << endl;
 	cerr << "Leon::writeSortedAnchorDict - encode anchor count : " << _anchorAdress << endl;
 	ifstream tempFile((_outputFilename + ".adtemp").c_str(), ios::in|ios::binary);
 	
@@ -2550,7 +2593,9 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 	string kmerStr = kmer.toString(_kmerSize);
 	//cerr << "Leon::encodeInsertedAnchor - encoding anchor : " << kmerStr << endl;
 	for(int i=0; i<kmerStr.size(); i++){
-		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		//_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		noRangeEncoderOfstream_anchorDictModel <<  "Leon::nt2bin(kmerStr[" << i << "])" << endl;
+		noRangeEncoderOfstream_anchorDictModel << (int) Leon::nt2bin(kmerStr[i]) << endl;
 		//cerr << "Leon::encodeSortedAnchor - encode : " << kmerStr[i] << endl;
 		//cerr << "Leon::encodeSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
 	}
@@ -2573,7 +2618,9 @@ void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads
 	string kmerStr = kmer.toString(_kmerSize);
 	//cerr << "Leon::encodeInsertedSortedAnchor - encoding anchor : " << kmerStr << endl;
 	for(int i=0; i<kmerStr.size(); i++){
-		_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		//_anchorRangeEncoder.encode(_anchorDictModel, Leon::nt2bin(kmerStr[i]));
+		noRangeEncoderOfstream_anchorDictModel << "Leon::nt2bin(kmerStr[" << i << "])" << endl;
+		noRangeEncoderOfstream_anchorDictModel << (int) Leon::nt2bin(kmerStr[i]) << endl;
 		// cerr << "Leon::encodeInsertedSortedAnchor - encode : " << kmerStr[i] << endl;
 		// cerr << "Leon::encodeInsertedSortedAnchor - encode Leon::nt2bin(kmerStr[i]) : " << Leon::nt2bin(kmerStr[i]) << endl;
 	}
