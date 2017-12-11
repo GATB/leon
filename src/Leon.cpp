@@ -2706,6 +2706,9 @@ void * decoder_qual_thread(void * args)
 }
 
 void Leon::executeDecompression(){
+
+	string textDecodeInfo;
+	string decodeValue;
 	
 	_filePos = 0;
 	
@@ -2727,7 +2730,22 @@ void Leon::executeDecompression(){
 		fprintf(stderr,"cannot open file %s\n",_inputFilename.c_str());
 		exit( EXIT_FAILURE);
 	}
+
+	/** We look for the begining of the suffix. */
+	int lastindex = _inputFilename.find_last_of (".");
 	
+	/** We build the strings for file names. */
+	string baseInputFilename = _inputFilename.substr(0,lastindex);
+
+	std::string noRangeDecoderIfstream_generalModelFilePath = baseInputFilename + ".noRangeEncoder_generalModel";
+  	noRangeDecoderIfstream_generalModel.open (noRangeDecoderIfstream_generalModelFilePath);
+
+  	std::string noRangeDecoderIfstream_numericModelFilePath = baseInputFilename + ".noRangeEncoder_numericModel";
+  	noRangeDecoderIfstream_numericModel.open (noRangeDecoderIfstream_numericModelFilePath);
+
+	std::string noRangeDecoderIfstream_anchorDictModelFilePath = baseInputFilename + ".noRangeEncoder_anchorDictModel";
+  	noRangeDecoderIfstream_anchorDictModel.open (noRangeDecoderIfstream_anchorDictModelFilePath);
+
 	//remove .leon at the end :
 	string inputFilename_leon_removed = System::file().getBaseName(_inputFilename);
 
@@ -2754,7 +2772,12 @@ void Leon::executeDecompression(){
 	//printf("_outputFilename %s \n",_outputFilename.c_str());
 
 	//Decode the first byte of the compressed file which is an info byte
-	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
+	u_int8_t infoByte;// = _rangeDecoder.nextByte(_generalModel);
+	std::getline(noRangeDecoderIfstream_generalModel,textDecodeInfo);
+	cerr << textDecodeInfo << endl;
+	std::getline(noRangeDecoderIfstream_generalModel, decodeValue);
+	infoByte = (u_int8_t) decodeValue;
+	cerr << infoByte << endl;
 	
 	//the first bit holds the file format. 0: fastq, 1: fasta
 	_isFasta = ((infoByte & 0x01) == 0x01);
@@ -2792,15 +2815,30 @@ void Leon::executeDecompression(){
 	_outputFile = System::file().newFile(_outputFilename, "wb");
 
 	//Get kmer size
-	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	//_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	cerr << noRangeDecoderIfstream_numericModel << endl;
+	noRangeDecoderIfstream_numericModel >> _kmerSize;
 	cout << "\tKmer size: " << _kmerSize << endl;
 	cout << endl;
 	
 	//get version
-	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	
+	//size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_major;
+	std::getline(noRangeDecoderIfstream_numericModel, textDecodeInfo);
+	cerr << textDecodeInfo << endl;
+	std::getline(noRangeDecoderIfstream_numericModel, decodeValue);
+	version_major = (size_t) decodeValue;
+	cerr << version_major << endl;
+	//size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_minor;
+	cerr << noRangeDecoderIfstream_numericModel << endl;
+	noRangeDecoderIfstream_numericModel >> version_minor;
+	//size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	size_t version_patch;
+	cerr << noRangeDecoderIfstream_numericModel << endl;
+	noRangeDecoderIfstream_numericModel >> version_patch;
+
+	cerr << "infobyte, versma versionmi versionpa : " << infoByte << " " << version_major << " " << version_minor << " " << version_patch;
 	
 	cout << "\tInput File was compressed with leon version " << version_major << "."  << version_minor << "."  << version_patch  << endl;
 	
