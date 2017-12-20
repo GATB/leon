@@ -129,6 +129,10 @@ class Leon : public misc::impl::Tool
 
 		//private
 		string _baseOutputname;
+		string _baseInputname;
+		string _textDecodeInfo;
+
+		void decodeNoDecoderInfo(ifstream ifs, string textDecodeInfo);
 
 		//DEBUG PART END
 
@@ -166,7 +170,8 @@ class Leon : public misc::impl::Tool
 		
 		//Global compression
 		void writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
-	
+		void writeBlockNoRangeEncoder(u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
+		
 		void writeBlockLena(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u_int64_t blockID);
 
 		//Peacock file Compression (for requests)

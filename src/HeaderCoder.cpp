@@ -59,11 +59,12 @@ _headerSizeModel(256)
 		_currentFieldTypes.push_back(FIELD_ASCII);
 		_currentFieldZeroValues.push_back(0);
 	}*/
-	cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.0" << endl;
+	//cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.0" << endl;
 	string _baseOutputname = _leon->_baseOutputname;
-	cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.1" << endl;
+	string _baseInputname = _leon->_baseInputname;
+	//cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.1" << endl;
 	string typeModel[NB_MODELS];
-	cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.2" << endl;
+	//cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.2" << endl;
 	typeModel[TYPE_MODEL] = "_typeModel";
 	typeModel[FIELD_INDEX_MODEL] = "_fieldIndexModel"; 
 	typeModel[FIELD_COLUMN_MODEL] = "_fieldColumnModel"; 
@@ -72,16 +73,33 @@ _headerSizeModel(256)
 	typeModel[NUMERIC_HEAD_MODELS] = "_numericHeadModels";
 	typeModel[ZERO_MODEL] = "_zeroModel";
 	typeModel[HEADER_SIZE_MODEL] = "_headerSizeModel";
-	cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.3" << endl;
-	cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 1" << endl;
+	//cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 0.3" << endl;
+	//cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 1" << endl;
 
-	for(int i=0; i<NB_MODELS; ++i)
+	if (_leon->_compress)
 	{
-		string ofstreamPath = _baseOutputname + typeModel[i];
-		ofstreams[i].open(ofstreamPath, std::ofstream::app);
+		//cerr << "lol compression" << endl;
+		//exit(EXIT_FAILURE);
+		for(int i=0; i<NB_MODELS; ++i)
+		{
+			string ofstreamPath = _baseOutputname + ".noRangeEncoder" + typeModel[i];
+			ofstreams[i].open(ofstreamPath, std::ofstream::app);
+		}
+	}
+	if (_leon->_decompress)
+	{
+		//cerr << "lol _decompress" << endl;
+		//exit(EXIT_FAILURE);
+		for(int i=0; i<NB_MODELS; ++i)
+		{
+			string ifstreamPath = _baseInputname + ".noRangeEncoder" + typeModel[i];
+			ifstreams[i].open(ifstreamPath, std::ifstream::in);
+			//cerr << ifstreamPath << endl;
+		}
+		//exit(EXIT_FAILURE);
 	}
 
-	cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 2" << endl;
+	//cerr << "AbstractHeaderCoder::AbstractHeaderCoder - test seg 2" << endl;
 }
 	
 void AbstractHeaderCoder::addFieldColumn(){
@@ -234,6 +252,8 @@ void AbstractHeaderCoder::endHeader(){
 void AbstractHeaderCoder::startBlock(){
 
 	_currentHeader = _leon->_firstHeader;
+	cerr << "HeaderEncoder::operator - _currentHeader : " << _currentHeader<< endl;
+	
 	
 	for(int i=0; i<_typeModel.size(); i++){
 		_typeModel[i].clear();
@@ -360,16 +380,19 @@ void HeaderEncoder::operator()(Sequence& sequence){
 }
 
 void HeaderEncoder::writeBlock(){
-	if(_rangeEncoder.getBufferSize() > 0){
+	/*if(_rangeEncoder.getBufferSize() > 0){
 		_rangeEncoder.flush();
-	}
+	}*/
 	
 	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
 
 	//printf("\nheader coder writeblock   bid %i   tid %i \n",blockId, _thread_id);
-	
-	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
-	_rangeEncoder.clear();
+	cerr << "iofstreams_bufferSize : " << iofstreams_bufferSize << endl;
+	//exit(EXIT_FAILURE);
+
+	//_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount, blockId);
+	_leon->writeBlockNoRangeEncoder(iofstreams_bufferSize, _processedSequenceCount, blockId);
+	//_rangeEncoder.clear();
 }
 
 void HeaderEncoder::processNextHeader(){
@@ -495,14 +518,20 @@ void HeaderEncoder::compareHeader(){
 	if(_lastMatchFieldIndex == _fieldIndex-1){
 		//_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END_MATCH);
 		ofstreams[TYPE_MODEL] << (int) HEADER_END_MATCH << endl;
+		//cerr << "HEADER_END_MATCH : " << HEADER_END_MATCH << endl;
+		//cerr << "test : " << std::to_string((int)HEADER_END_MATCH).length() << endl;
+		//exit(EXIT_FAILURE);
+		iofstreams_bufferSize += std::to_string((int) HEADER_END_MATCH).length();
 		//_rangeEncoder.encode(_headerSizeModel, _currentHeader.size());
 		ofstreams[HEADER_SIZE_MODEL] << (int) _currentHeader.size() << endl;
+		iofstreams_bufferSize += std::to_string((int) _currentHeader.size()).length();
 		//_misCurrentStartPos = _currentFieldSize;
 		//encodeAscii();
 	}
 	else{
 		//_rangeEncoder.encode(_typeModel[_misIndex], HEADER_END);
 		ofstreams[TYPE_MODEL] << (int) HEADER_END << endl;
+		iofstreams_bufferSize += std::to_string((int) HEADER_END).length();
 	}
 	//_misIndex += 1;
 	
@@ -554,10 +583,13 @@ void HeaderEncoder::encodeNumeric(){
 		#endif
 		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ZERO_ONLY);
 		ofstreams[TYPE_MODEL] << (int) FIELD_ZERO_ONLY << endl;
+		iofstreams_bufferSize += std::to_string((int) FIELD_ZERO_ONLY).length();
 		//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
 		ofstreams[FIELD_INDEX_MODEL] << (int) _fieldIndex << endl;
+		iofstreams_bufferSize += std::to_string((int) _fieldIndex).length();
 		//_rangeEncoder.encode(_zeroModel[_misIndex], zeroCount);
 		ofstreams[ZERO_MODEL] << (int) zeroCount << endl;
+		iofstreams_bufferSize += std::to_string((int) zeroCount).length();
 		_misIndex += 1;
 		return;
 	}
@@ -568,10 +600,13 @@ void HeaderEncoder::encodeNumeric(){
 		#endif
 		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ZERO_AND_NUMERIC);
 		ofstreams[TYPE_MODEL] << (int) FIELD_ZERO_AND_NUMERIC << endl;
+		iofstreams_bufferSize += std::to_string((int) FIELD_ZERO_AND_NUMERIC).length();
 		//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
 		ofstreams[FIELD_INDEX_MODEL] << (int) _fieldIndex << endl;
+		iofstreams_bufferSize += std::to_string((int) _fieldIndex).length();
 		//_rangeEncoder.encode(_zeroModel[_misIndex], zeroCount);
 		ofstreams[ZERO_MODEL] << (int) zeroCount << endl;
+		iofstreams_bufferSize += std::to_string((int) zeroCount).length();
 		_misIndex += 1;
 	}
 	
@@ -625,15 +660,18 @@ void HeaderEncoder::encodeNumeric(){
 	if(deltaType == 0){
 		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_NUMERIC);
 		ofstreams[TYPE_MODEL] << (int) FIELD_NUMERIC << endl;
+		iofstreams_bufferSize += std::to_string((int) FIELD_NUMERIC).length();
 	}
 	else if(deltaType == 1){
 		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA);
 		ofstreams[TYPE_MODEL] << (int) FIELD_DELTA << endl;
+		iofstreams_bufferSize += std::to_string((int) FIELD_DELTA).length();
 		value = deltaValue;
 	}
 	else if(deltaType == 2){
 		//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_DELTA_2);
 		ofstreams[TYPE_MODEL] << (int) FIELD_DELTA_2 << endl;
+		iofstreams_bufferSize += std::to_string((int) FIELD_DELTA_2).length();
 		value = deltaValue;
 	}
 	/*
@@ -674,8 +712,12 @@ void HeaderEncoder::encodeNumeric(){
 	  
 	//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
 	ofstreams[FIELD_INDEX_MODEL] << (int) _fieldIndex << endl;
+	iofstreams_bufferSize += std::to_string((int) _fieldIndex).length();
 	//CompressionUtils::encodeNumeric(_rangeEncoder, _numericModels[_misIndex], value);
+	//cerr << "value : " << value<< endl;
+	//exit(EXIT_FAILURE);
 	ofstreams[NUMERIC_HEAD_MODELS] << (int) value << endl;
+	iofstreams_bufferSize += std::to_string((int) value).length();
 	//_rangeEncoder->encode(&_fieldColumnModel[_misIndex], 0);
 	//_prevFieldValues[_fieldIndex] = fieldValue;
 	
@@ -687,12 +729,16 @@ void HeaderEncoder::encodeAscii(){
 	//cout << _currentFieldSize <<  " " << _fieldPos << endl;
 	//_rangeEncoder.encode(_typeModel[_misIndex], FIELD_ASCII);
 	ofstreams[TYPE_MODEL] << (int) FIELD_ASCII << endl;
+	iofstreams_bufferSize += std::to_string((int) FIELD_ASCII).length();
 	//_rangeEncoder.encode(_fieldIndexModel[_misIndex], _fieldIndex);
 	ofstreams[FIELD_INDEX_MODEL] << (int) _fieldIndex << endl;
+	iofstreams_bufferSize += std::to_string((int) _fieldIndex).length();
 	//_rangeEncoder.encode(_fieldColumnModel[_misIndex], _misCurrentStartPos);
 	ofstreams[FIELD_COLUMN_MODEL] << (int) _misCurrentStartPos << endl;
+	iofstreams_bufferSize += std::to_string((int) _misCurrentStartPos).length();
 	//_rangeEncoder.encode(_misSizeModel[_misIndex], missSize);
 	ofstreams[MIS_SIZE_MODEL] << (int) missSize << endl;
+	iofstreams_bufferSize += std::to_string((int) missSize).length();
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\t\t\t<Mismatch> " << "    Type: " << "ASCII" << "    Field: " << _fieldIndex << "    Column: " << _misCurrentStartPos << "    Size: " << missSize << endl;
 	#endif
@@ -704,6 +750,7 @@ void HeaderEncoder::encodeAscii(){
 		//cout << _currentHeader[j] << flush;
 		//_rangeEncoder.encode(_asciiModel[_misIndex], _currentHeader[_currentFieldPos[_fieldIndex]+i]);
 		ofstreams[ASCII_MODEL] << (int) _currentHeader[_currentFieldPos[_fieldIndex]+i] << endl;
+		iofstreams_bufferSize += std::to_string((int) _currentHeader[_currentFieldPos[_fieldIndex]+i]).length();
 	}
 
 	_misIndex += 1;
@@ -794,18 +841,31 @@ void HeaderDecoder::execute(){
 	//cerr << endl << "DEBUG HEADER CODER EXECUTE BEGIN" << endl;
 	//cout << "executing" << endl;
 	//decodeFirstHeader();
-	
+	cerr << "HeaderDecoder::execute - BEGIN" << endl;
+	cerr << "HeaderDecoder::execute - _processedSequenceCount : " << _processedSequenceCount << endl;
+	cerr << "HeaderDecoder::execute - _sequenceCount : " << _sequenceCount << endl;
 	while(_processedSequenceCount < _sequenceCount){
-	//int i=0;
-	//while(_inputFile->tellg() <= _blockStartPos+_blockSize){
-		
-		//cout << "tellg: " << _inputFile->tellg() << endl;
-		//if(i>= 1) return;
-	//for(u_int64_t i=0; i<_blockSize; i++){
-		
-	//while(!_inputFile->eof()){
+		//cerr << "HeaderDecoder::execute - HERE" << endl;
+		//int i=0;
+		//while(_inputFile->tellg() <= _blockStartPos+_blockSize){
+			
+			//cout << "tellg: " << _inputFile->tellg() << endl;
+			//if(i>= 1) return;
+		//for(u_int64_t i=0; i<_blockSize; i++){
+			
+		//while(!_inputFile->eof()){
 		//cerr << "debug header decoder : readType before" << endl;
-		u_int8_t type = _rangeDecoder.nextByte(_typeModel[_misIndex]);
+		int type;// = _rangeDecoder.nextByte(_typeModel[_misIndex]);
+		//std::getline(noRangeDecoderIfstream_numericModel, _textDecodeInfo);
+		//std::getline(ifstreams[TYPE_MODEL], _textDecodeInfo);
+		//std::getline(ifstreams[TYPE_MODEL], _textDecodeInfo);
+		//cerr << _textDecodeInfo << endl;
+		//int type2;
+		ifstreams[TYPE_MODEL] >> type;
+		//ifstreams[TYPE_MODEL] >> type2;
+		cerr << "isopen : " << ifstreams[TYPE_MODEL].is_open() << endl;
+		cerr << "TYPE_MODEL : " << type << endl;
+				//exit(EXIT_FAILURE);
 		//cerr << "debug header decoder : readType after" << endl;
 		//cerr << "debug header decoder : type = " << (int) type << endl;
 		#ifdef PRINT_DEBUG_DECODER
@@ -833,7 +893,12 @@ void HeaderDecoder::execute(){
 		else if(type == HEADER_END_MATCH){
 			//decodeMatch();
 			//cout << "debug header decoder : headerSize before" << endl;
-			u_int8_t headerSize = _rangeDecoder.nextByte(_headerSizeModel);
+			/*u_int8_t*/int headerSize;// = _rangeDecoder.nextByte(_headerSizeModel);
+			//std::getline(ifstreams[HEADER_SIZE_MODEL], _textDecodeInfo);
+			//std::getline(ifstreams[HEADER_SIZE_MODEL], _textDecodeInfo);
+			//cerr << _textDecodeInfo << endl;
+			ifstreams[HEADER_SIZE_MODEL] >> headerSize;
+			cerr << "HEADER_SIZE_MODEL : " << headerSize << endl;
 			//cout << "debug header decoder : headerSize before" << endl;
 
 			for(/*_fieldIndex*/; _fieldIndex < _prevFieldCount; _fieldIndex++){
@@ -843,6 +908,7 @@ void HeaderDecoder::execute(){
 				_currentHeader += _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]);
 				if(_currentHeader.size() >= headerSize) break;
 			}
+			cerr << "_currentHeader : " << _currentHeader << endl;	
 			
 			endHeader();
 		}
@@ -850,7 +916,7 @@ void HeaderDecoder::execute(){
 	//		cout << "debug header decoder : enter decodeMatch" << endl;
 			decodeMatch();
 	//		cout << "debug header decoder : enter decodeMatch" << endl;
-			
+
 			if(type == FIELD_ASCII){
 				decodeAscii();
 				_fieldIndex += 1;
@@ -904,23 +970,48 @@ void HeaderDecoder::decodeFirstHeader(){
 
 void HeaderDecoder::decodeMatch(){
 	//cout << "debug header decoder : decodeMAtch read misFieldIndex before" << endl;
-	u_int8_t misFieldIndex = _rangeDecoder.nextByte(_fieldIndexModel[_misIndex]);
+	/*u_int8_t*/ int misFieldIndex;// = _rangeDecoder.nextByte(_fieldIndexModel[_misIndex]);
+	//std::getline(ifstreams[FIELD_INDEX_MODEL], _textDecodeInfo);
+	// std::getline(ifstreams[FIELD_INDEX_MODEL], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[FIELD_INDEX_MODEL] >> misFieldIndex;
+	cerr << "FIELD_INDEX_MODEL : " << misFieldIndex << endl;
 	//cout << "debug header decoder : decodeMAtch read misFieldIndex after" << endl;
 	//cout << "debug header decoder : misFieldIndex = " << (int) misFieldIndex << endl;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tMatch to field: " << (int)misFieldIndex << endl;
 	#endif
+	//				cerr << "HERE" << endl;
+	cerr << "_fieldIndex : " << (int) _fieldIndex << endl;
+	cerr << "_prevHeader : " << _prevHeader << endl;
 	for(/*_fieldIndex*/; _fieldIndex < misFieldIndex; _fieldIndex++){
-		#ifdef PRINT_DEBUG_DECODER
-			cout << "\t\t\tAdding from prev header: " << _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]) << endl;
-		#endif
+		//#ifdef PRINT_DEBUG_DECODER
+		//	cout << "\t\t\tAdding from prev header: " << _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]) << endl;
+		//#endif
+		cerr << "_fieldIndex : " << (int) _fieldIndex << endl;
+		cerr << "misFieldIndex : " << (int) misFieldIndex << endl;
 		_currentHeader += _prevHeader.substr(_prevFieldPos[_fieldIndex], _prevFieldPos[_fieldIndex+1]-_prevFieldPos[_fieldIndex]);
+		//cerr << "_currentHeader : " << _currentHeader << endl;
 	}
+	cerr << "_currentHeader : " << _currentHeader << endl;	
+	//cerr << "HERE" << endl;
+			//exit(EXIT_FAILURE);
 }
 
 void HeaderDecoder::decodeAscii(){
-	u_int8_t misColumn = _rangeDecoder.nextByte(_fieldColumnModel[_misIndex]);
-	u_int8_t misSize = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	/*u_int8_t*/int misColumn;// = _rangeDecoder.nextByte(_fieldColumnModel[_misIndex]);
+	// std::getline(ifstreams[FIELD_COLUMN_MODEL], _textDecodeInfo);
+	// std::getline(ifstreams[FIELD_COLUMN_MODEL], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[FIELD_COLUMN_MODEL] >> misColumn;
+	cerr << "FIELD_COLUMN_MODEL : " << misColumn << endl;
+
+	/*u_int8_t*/int misSize;// = _rangeDecoder.nextByte(_misSizeModel[_misIndex]);
+	// std::getline(ifstreams[MIS_SIZE_MODEL], _textDecodeInfo);
+	// std::getline(ifstreams[MIS_SIZE_MODEL], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[MIS_SIZE_MODEL] >> misSize;
+	cerr << "MIS_SIZE_MODEL : " << misSize << endl;
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: ASCII     Column: " << (int)misColumn << "    Size: " << (int)misSize << endl;
 	#endif
@@ -929,11 +1020,16 @@ void HeaderDecoder::decodeAscii(){
 		for(int fieldPos=0; fieldPos<misColumn; fieldPos++){
 			_currentHeader += _prevHeader[_prevFieldPos[_fieldIndex]+fieldPos];
 		}
+		cerr << "_currentHeader : " << _currentHeader << endl;	
 	}
 	
 	for(int i=0; i<misSize; i++){
-		u_int8_t c = _rangeDecoder.nextByte(_asciiModel[_misIndex]);
-		
+		/*u_int8_t*/int c;// = _rangeDecoder.nextByte(_asciiModel[_misIndex]);
+		// std::getline(ifstreams[ASCII_MODEL], _textDecodeInfo);
+		// std::getline(ifstreams[ASCII_MODEL], _textDecodeInfo);
+		// cerr << _textDecodeInfo << endl;
+		ifstreams[ASCII_MODEL] >> c;
+		cerr << "ASCII_MODEL : " << c << endl;
 		#ifdef PRINT_DEBUG_DECODER
 			cout << "\t\t\tAdding: " << c << " (" << (int)c << ")"<< endl;
 		#endif
@@ -941,6 +1037,7 @@ void HeaderDecoder::decodeAscii(){
 		_currentHeader += c;
 		//_currentPos += 1;
 	}
+	cerr << "_currentHeader : " << _currentHeader << endl;	
 	
 }	
 
@@ -950,14 +1047,20 @@ void HeaderDecoder::decodeNumeric(){
 		cout << "\t\tDecoding   Type: NUMERIC" << endl; //"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	int value;// = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	// std::getline(ifstreams[NUMERIC_HEAD_MODELS], _textDecodeInfo);
+	// std::getline(ifstreams[NUMERIC_HEAD_MODELS], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[NUMERIC_HEAD_MODELS] >> value;
+	cerr << "NUMERIC_HEAD_MODELS : " << value << endl;
 	//_currentHeader += CompressionUtils::numberToString(value);
 	
 	char temp[200];
 	snprintf(temp,200,"%llu",value);
 	_currentHeader += string(temp);
 	//_currentHeader += to_string(value); // C++11
-	
+	cerr << "_currentHeader : " << _currentHeader << endl;	
+
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tAdding: " << string(temp) << endl;
 	#endif
@@ -969,7 +1072,12 @@ void HeaderDecoder::decodeDelta(){
 		cout << "\t\tDecoding   Type: DELTA" << endl;//"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	u_int64_t value;// = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	// std::getline(ifstreams[NUMERIC_HEAD_MODELS], _textDecodeInfo);
+	// std::getline(ifstreams[NUMERIC_HEAD_MODELS], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[NUMERIC_HEAD_MODELS] >> value;
+	cerr << "NUMERIC_HEAD_MODELS : " << value << endl;
 	/*
 	u_int64_t value = 0;
 	for(int i=0; i<misSize; i++){
@@ -984,7 +1092,7 @@ void HeaderDecoder::decodeDelta(){
 	snprintf(temp,200,"%llu",value);
 	_currentHeader += string(temp);
 	//_currentHeader += to_string(value);
-	
+	cerr << "_currentHeader : " << _currentHeader << endl;	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tAdding: " << string(temp) << endl;
 	#endif
@@ -996,7 +1104,12 @@ void HeaderDecoder::decodeDelta2(){
 		cout << "\t\tDecoding   Type: DELTA 2" << endl;//"    Size: " << (int)misSize << endl;
 	#endif
 	
-	u_int64_t value = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	u_int64_t value;// = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModels[_misIndex]);
+	// std::getline(ifstreams[NUMERIC_HEAD_MODELS], _textDecodeInfo);
+	// std::getline(ifstreams[NUMERIC_HEAD_MODELS], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[NUMERIC_HEAD_MODELS] >> value;
+	cerr << "NUMERIC_HEAD_MODELS : " << value << endl;
 	/*
 	u_int64_t value = 0;
 	for(int i=0; i<misSize; i++){
@@ -1010,14 +1123,20 @@ void HeaderDecoder::decodeDelta2(){
 	snprintf(temp,200,"%llu",value);
 	_currentHeader += string(temp);
 	//_currentHeader += to_string(value);
-	
+	cerr << "_currentHeader : " << _currentHeader << endl;	
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\t\tAdding: " << string(temp) << endl;
 	#endif
 }
 
 void HeaderDecoder::decodeZero(){
-	u_int8_t zeroCount = _rangeDecoder.nextByte(_zeroModel[_misIndex]);
+	/*u_int8_t*/int zeroCount;// = _rangeDecoder.nextByte(_zeroModel[_misIndex]);
+	// std::getline(ifstreams[ZERO_MODEL], _textDecodeInfo);
+	// std::getline(ifstreams[ZERO_MODEL], _textDecodeInfo);
+	// cerr << _textDecodeInfo << endl;
+	ifstreams[ZERO_MODEL] >> zeroCount;
+	cerr << "ZERO_MODEL : " << zeroCount << endl;
+
 	#ifdef PRINT_DEBUG_DECODER
 		cout << "\t\tDecoding   Type: ZERO     Size: " << (int)zeroCount << endl;
 	#endif
@@ -1029,6 +1148,7 @@ void HeaderDecoder::decodeZero(){
 		#endif
 		
 		_currentHeader += '0';
+		cerr << "_currentHeader : " << _currentHeader << endl;	
 	}
 }
 

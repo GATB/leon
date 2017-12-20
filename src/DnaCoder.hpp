@@ -102,7 +102,7 @@ class AbstractDnaCoder
 
 		//debug variables
 
-		ofstream noRangeEncoderOfstream_readTypeModel;
+/*		ofstream noRangeEncoderOfstream_readTypeModel;
 		ifstream noRangeDecoderIfstream_readTypeModel;
 		ofstream noRangeEncoderOfstream_anchorAddressModel;
 		ifstream noRangeDecoderIfstream_anchorAddressModel;
@@ -133,9 +133,10 @@ class AbstractDnaCoder
 		ofstream noRangeEncoderOfstream_noAnchorReadModel;
 		ifstream noRangeDecoderIfstream_noAnchorReadModel;
 		ofstream noRangeEncoderOfstream_noAnchorReadSizeValueModel;
-		ifstream noRangeDecoderIfstream_noAnchorReadSizeValueModel;
+		ifstream noRangeDecoderIfstream_noAnchorReadSizeValueModel;*/
 
 		ofstream ofstreams[NB_MODELS];
+		ifstream ifstreams[NB_MODELS];
 
 		enum TypeModel{READ_TYPE_MODEL, 
 			ANCHOR_ADDRESS_MODEL,
@@ -152,8 +153,13 @@ class AbstractDnaCoder
 			NO_ANCHOR_READ_MODEL,
 			NO_ANCHOR_READ_SIZE_VALUE_MODEL};
 
+		string _textDecodeInfo;
+		u_int64_t iofstreams_bufferSize = 0;
 
-
+		int _debugNbReads = 0;
+		int _debugNbNt = 1;
+		int _debugNbBinNt = 1;
+		int _debugPosNt = 0;
 		//end debug
 		
 	protected:

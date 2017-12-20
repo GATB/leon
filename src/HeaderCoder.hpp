@@ -52,6 +52,7 @@ class AbstractHeaderCoder
 		AbstractHeaderCoder(Leon* leon);
 
 		ofstream ofstreams[NB_MODELS];
+		ifstream ifstreams[NB_MODELS];
 		//vector<ofstreams> numericHeadModels
 
 		enum TypeModel{TYPE_MODEL,
@@ -63,6 +64,9 @@ class AbstractHeaderCoder
 						ZERO_MODEL,
 						HEADER_SIZE_MODEL 
 		};
+
+		string _textDecodeInfo;
+		u_int64_t iofstreams_bufferSize = 0;
 
 
 		
