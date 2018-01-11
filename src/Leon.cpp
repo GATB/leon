@@ -1228,7 +1228,6 @@ void Leon::executeCompression(){
 	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out kcount -out %s",_kmerSize, _h5OutputFilename.c_str());
 //	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s", _kmerSize, _h5OutputFilename.c_str());
 	
-
 /* TEST GRAPH CONTAINS (with toy.fasta)
      //string kmer_chars = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz";
 	cout << "kmer size : " << _kmerSize << endl;
@@ -1352,7 +1351,24 @@ void Leon::executeCompression(){
 	
 	endCompression();
 
+	//debug graph
+	/*
+	auto itNodes = _graph.getNodes ();
+	int size = itNodes.size();
+	cerr << "it size : " << size << endl;
+	*/
 
+	/*for (itNodes.first(); !itNodes.isDone(); itNodes.next()) 
+	{
+    // if the current index is needed:
+   // auto i = std::distance(itNodes.begin(), it); 
+
+    // access element as *it
+
+    // any code including continue, break, return
+	}
+	exit(EXIT_FAILURE);
+	*/
 	//TMP REQUEST EMPLACEMENT CODE TEST
 
 	//DnaDecoder* dd = new DnaDecoder(this, _inputFilename);

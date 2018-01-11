@@ -1691,7 +1691,9 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		//mutatedKmer.printASCII(_kmerSize);
 		
 		res4[nt] = _leon->_graph.contains(node);
+		cerr << "DnaEncoder::buildBifurcationList - requested kmer : " << mutatedKmer.toString(_kmerSize).c_str() << endl;
 	}
+	cerr << "DnaEncoder::buildBifurcationList - kmer : " << kmer.toString(_kmerSize).c_str() << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[0] : " << res4[0] << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[1] : " << res4[1] << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[2] : " << res4[2] << endl;
@@ -3347,7 +3349,7 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 	//cout << kmer.toString(_kmerSize) << endl;
 	
 	
-	
+	cerr << "DnaDecoder::extendAnchor - kmer : " << kmer.toString(_kmerSize).c_str() << endl;
 	std::bitset<4> res4;
 	for(int nt=0; nt<4; nt++){
 
