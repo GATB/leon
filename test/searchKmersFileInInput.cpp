@@ -9,6 +9,18 @@ using namespace std;
 
 //#define PRINT_DEBUG
 
+/*
+This program tests the number of kmers of a fasta file that are found in an other file.
+parameters :
+- input fasta file
+- file to find the kmers
+- kmer size
+
+Originally, the file to find kmers was a file containing solid kmers found by leon kmer counting (executed during graph building).
+It may also be an other file for other uses
+*/
+
+
 struct KmersStats{
 
 	int nbKmers = 0;
