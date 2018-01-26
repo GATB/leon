@@ -1,0 +1,4 @@
+mainFunctionsTestsFiles : is the directory for tests used separately from Leon, using a main, 
+with their own binary
+
+functionsTestsFiles : is the directory for tests functions thar can called in Leon program
