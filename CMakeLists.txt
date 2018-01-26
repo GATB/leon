@@ -70,10 +70,11 @@ include_directories (${gatb-core-includes})
 link_directories (${gatb-core-extra-libraries-path})
 
 set (PROGRAM_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
+set (PROGRAM_TEST_DIR ${PROJECT_SOURCE_DIR}/test/functionTestsFiles)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 include_directories (${PROGRAM_SOURCE_DIR})
-file (GLOB_RECURSE  ProjectFiles  ${PROGRAM_SOURCE_DIR}/*.cpp)
+file (GLOB_RECURSE  ProjectFiles  ${PROGRAM_SOURCE_DIR}/*.cpp ${PROGRAM_TEST_DIR}/*.cpp)
 add_executable(${PROJECT_NAME} ${ProjectFiles})
 target_link_libraries(${PROJECT_NAME} ${gatb-core-libraries})
 
