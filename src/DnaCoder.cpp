@@ -1684,8 +1684,8 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		kmer_type mutatedKmer = kmer;
 		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
 		Node node;
-		//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-		kmer_type mutatedKmerMin = mutatedKmer;
+		kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+		//kmer_type mutatedKmerMin = mutatedKmer;
 		node = Node(Node::Value(mutatedKmerMin));
 		
 		//mutatedKmer.printASCII(_kmerSize);
@@ -1693,13 +1693,18 @@ kmer_type DnaEncoder::buildBifurcationList(int pos, kmer_type kmer, bool rightEx
 		res4[nt] = _leon->_graph.contains(node);
 		cerr << "DnaEncoder::buildBifurcationList - requested kmer : " << mutatedKmer.toString(_kmerSize).c_str() << endl;
 	}
+
 	cerr << "DnaEncoder::buildBifurcationList - kmer : " << kmer.toString(_kmerSize).c_str() << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[0] : " << res4[0] << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[1] : " << res4[1] << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[2] : " << res4[2] << endl;
 	cerr << "DnaEncoder::buildBifurcationList - res4[3] : " << res4[3] << endl;
 	
-	
+	/*if(kmer.toString(_kmerSize).compare("GAAGTCCCATTAGTGCTCGGACCGGAGCTTT") == 0)
+	{
+		testGraphContainsAll("data/toy.fasta", _leon->_graph, _kmerSize, &_kmerModel);
+		exit(EXIT_FAILURE);
+	}*/
 //	std::bitset<4> res4  = _bloom->contains4(kmer,rightExtend);
 	for(int nt=0; nt<4; nt++){
 		
@@ -3317,8 +3322,8 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 				kmer_type mutatedKmer = kmer;
 				codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
 				Node node;
-				//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-				kmer_type mutatedKmerMin = mutatedKmer;
+				kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+				//kmer_type mutatedKmerMin = mutatedKmer;
 				node = Node(Node::Value(mutatedKmerMin));
 		
 		//mutatedKmer.printASCII(_kmerSize);
@@ -3356,8 +3361,8 @@ kmer_type DnaDecoder::extendAnchor(kmer_type kmer, int pos, bool rightExtend){
 		kmer_type mutatedKmer = kmer;
 		codeSeedBin(&_kmerModel, &mutatedKmer, nt, rightExtend);
 		Node node;
-		//kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
-		kmer_type mutatedKmerMin = mutatedKmer;
+		kmer_type mutatedKmerMin = min(mutatedKmer, revcomp(mutatedKmer, _kmerSize));
+		//kmer_type mutatedKmerMin = mutatedKmer;
 		node = Node(Node::Value(mutatedKmerMin));
 		
 		//mutatedKmer.printASCII(_kmerSize);

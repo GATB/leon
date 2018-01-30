@@ -36,5 +36,8 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 //ask the graph if it contains the kmers in the vector "kmers", and
 //fill the informations in "graphStats"
-void graphContains(Graph graph, vector<string>* kmers, struct GraphStats* graphStats, size_t kmerSize, KmerModel* kmerModel);
-void testGraphContains(string inputFileName, Graph graph, size_t kmerSize, KmerModel* kmerModel);
+void graphContainsKmersRead(Graph graph, vector<string>* kmers, struct GraphStats* graphStats, size_t kmerSize, KmerModel* kmerModel);
+//ask the graph if it constains all kmers from input file
+void testGraphContainsAll(string inputFileName, Graph graph, size_t kmerSize, KmerModel* kmerModel);
+//ask the graph if it constains specific kmer
+void testGraphContainsKmer(kmer_type kmer, Graph graph, size_t kmerSize, KmerModel* kmerModel);

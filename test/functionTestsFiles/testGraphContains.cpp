@@ -13,7 +13,7 @@ struct GraphStats {
 	vector<string>* missingKmers;
 };
 
-void graphContains(Graph graph, vector<string>* kmers, struct GraphStats* graphStats, size_t kmerSize, KmerModel* kmerModel)
+void graphContainsKmersRead(Graph graph, vector<string>* kmers, struct GraphStats* graphStats, size_t kmerSize, KmerModel* kmerModel)
 {
 	kmer_type kmer, kmerMin;
 	Node node;
@@ -47,9 +47,9 @@ void graphContains(Graph graph, vector<string>* kmers, struct GraphStats* graphS
 	}
 }
 
-void testGraphContains(string inputFileName, Graph graph, size_t kmerSize, KmerModel* kmerModel)
+void testGraphContainsAll(string inputFileName, Graph graph, size_t kmerSize, KmerModel* kmerModel)
 {
-	//cerr << "testGraphContains begin" << endl;
+	cerr << "testGraphContainsAll : " << endl;
 
 	ifstream fastaFile;
   	fastaFile.open (inputFileName);
@@ -71,7 +71,7 @@ void testGraphContains(string inputFileName, Graph graph, size_t kmerSize, KmerM
  		getKmers(read, &kmers, kmerSize);
 
  		//ask graph if it contains vector's kmers
- 		graphContains(graph, &kmers, graphStats, kmerSize, kmerModel);
+ 		graphContainsKmersRead(graph, &kmers, graphStats, kmerSize, kmerModel);
 
  	}
 
@@ -90,5 +90,12 @@ void testGraphContains(string inputFileName, Graph graph, size_t kmerSize, KmerM
 	delete(graphStats->missingKmers);
 	free(graphStats);
 
-	exit(EXIT_FAILURE);
+	//exit(EXIT_FAILURE);
 }
+
+/*void testGraphContainsKmer(kmer_type kmer, Graph graph, size_t kmerSize, KmerModel* kmerModel)
+{
+	cerr << "testGraphContainKmer : " << endl;
+
+
+}*/

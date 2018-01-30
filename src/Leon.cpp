@@ -606,11 +606,12 @@ void Leon::coloriage (){
 	//int maxIndex = 0;
 	for (itKmers->first(); !itKmers->isDone(); itKmers->next())
 	{
+			cerr << "SEGHERE??? 1" << endl;
 		//cerr << "debug Leon::coloriage - kmer : " << itKmers->item().getValue().toString(_kmerSize) <<  " abundance "  << itKmers->item().getAbundance() <<  endl;
 		uint64_t hashvalue = 	hash1(itKmers->item().getValue(),0);
-
+	cerr << "SEGHERE??? 2" << endl;
 		Node node(Node::Value(itKmers->item().getValue()));
-
+	cerr << "SEGHERE??? 3" << endl;
 		//if (maxIndex < _graph.nodeMPHFIndex(node)){
 			//maxIndex = _graph.nodeMPHFIndex(node);
 			//cerr << "\t\tmaxIndex : " << maxIndex << endl;
@@ -623,7 +624,7 @@ void Leon::coloriage (){
 		//}
 		_signature_array[  _graph.nodeMPHFIndex(node) ]  = hashvalue  & 255 ;
 		//cerr << "debug Leon::coloriage - _signature_array[  _graph.nodeMPHFIndex(node) ]  = hashvalue  & 255 ; after" << endl;
-		
+			cerr << "SEGHERE??? 4" << endl;
 			//cerr << (unsigned long) _signature_array[  _graph.nodeMPHFIndex(node) ] << endl;
 			//cerr << "test kmerSignature array : " << (unsigned long) _signature_array[_graph.nodeMPHFIndex(node)] << endl;
 			//cerr << "test kmerSignature compute :  " << (unsigned long) (hash1(itKmers->item().getValue(),0) & 255) << endl;
@@ -1227,7 +1228,12 @@ void Leon::executeCompression(){
        // _graph =  Graph::create (_inputBank, "-abundance-min 1 -debloom original -solid-kmers-out kcount.h5 -out %s",_h5OutputFilename.c_str());
 	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out kcount -out %s",_kmerSize, _h5OutputFilename.c_str());
 //	_graph =  Graph::create (_inputBank, "-kmer-size %d -abundance-min 1 -debloom original -solid-kmers-out ajeter -out %s", _kmerSize, _h5OutputFilename.c_str());
-	
+	testGraphContainsAll(_inputFilename, _graph, _kmerSize, _kmerModel);
+	//exit(EXIT_FAILURE);
+	//test debug graph contains
+	//_graph =  Graph::load(_h5OutputFilename.c_str() );
+	//test debug graph contains end
+
 /* TEST GRAPH CONTAINS (with toy.fasta)
      //string kmer_chars = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz";
 	cout << "kmer size : " << _kmerSize << endl;

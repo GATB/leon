@@ -79,6 +79,10 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 #include <pthread.h>
 
+//tests and debug includes
+#include "../test/functionTestsFiles/testGraphContains.hpp"
+//tests and debug includes end
+
 using namespace std::chrono;
 
 class HeaderEncoder;
