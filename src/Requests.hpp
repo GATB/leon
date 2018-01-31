@@ -142,6 +142,7 @@ class Requests
 		void decodeInfos();
 		void headerSetUp();
 		void dnaSetUp();
+		void dnaSetUp2();
 		void initializeDecoders();
 		void clearDecoders();
 		void headerDecoderSetup(int blockIndice);
@@ -313,6 +314,7 @@ class Requests
 		ifstream* _descInputFile;
 		ifstream* _inputFile;
 		DnaDecoder* _dnadec;
+		u_int16_t _firstHeaderSize;
 		vector<u_int64_t> _headerBlockSizes;
 		vector<u_int64_t> _dnaBlockSizes;
 		vector<kmer_type> _vecAnchorKmers;
@@ -332,6 +334,12 @@ class Requests
 		vector<Order0Model> _numericModel;
 		Order0Model _anchorDictModel;
 		vector<Order0Model> _nbReadsPerAnchorModel;
+
+		//not necessary, infos decode :
+		size_t _version_major;
+		size_t _version_minor;
+		size_t _version_patch;
+
 		//uint64_t blablalol;
 		
 		//int a1;

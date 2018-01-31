@@ -112,12 +112,13 @@ bool Requests::getSequenceKmer(const char* seq, uint pos, char* kmer){
 }
 
 bool Requests::getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t anchorAddress){
-
+	cerr << "Requests::getNextAnchor - BEGIN" << endl;
 	char kmer[_kmerSize+1];
-
+	cerr << "Requests::getNextAnchor - search segflt 0" << endl;
 	while (this->getSequenceKmer(sequence, *pos, kmer)){
-
+		cerr << "Requests::getNextAnchor - search segflt 1" << endl;
 		if (this->anchorExist(kmer, &anchorAddress)){
+			cerr << "Requests::getNextAnchor - search segflt 2" << endl;
 			strncpy(anchor, kmer, _kmerSize+1);
 			return true;
 		}
@@ -130,30 +131,36 @@ bool Requests::getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t 
 void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers,
 										char* sequence){
 
+	cerr << "Requests::fillSequenceAnchorsDict - BEGIN" << endl;
+	cerr << "Requests::fillSequenceAnchorsDict - sequence : " << sequence << endl;
+
 	u_int32_t anchorAddress;
 	u_int32_t pos = 0;
 	list<u_int32_t>* listPos;
 	char kmer_chars[_kmerSize+1];
 	char anchor_chars[_kmerSize+1];
-
+	cerr << "Requests::fillSequenceAnchorsDict - search segflt 0" << endl;
 	while(getSequenceKmer(sequence, pos, kmer_chars))
 	{	
-
+		cerr << "Requests::fillSequenceAnchorsDict - search segflt 1" << endl;
 		if (getNextAnchor(sequence, &pos, anchor_chars, anchorAddress)){
-
+			cerr << "Requests::fillSequenceAnchorsDict - search segflt 2" << endl;
 			kmer_type anchor = getKmerType(anchor_chars);
 	
 			/* if list empty, create the list
 			** the list is empty if the hash table doesn't contain the kmer 
 			** (first time we add it)
 			*/
+			cerr << "Requests::fillSequenceAnchorsDict - search segflt 3" << endl;
 			if (!sequenceAnchorKmers->get(anchor, &listPos)){
 
 				listPos = new list<u_int32_t>();	
 			}
 
 			listPos->push_back(pos);
+			cerr << "Requests::fillSequenceAnchorsDict - search segflt 4" << endl;
 			sequenceAnchorKmers->insert(anchor, listPos);
+			cerr << "Requests::fillSequenceAnchorsDict - search segflt 5" << endl;
 		}
 
 		pos++;
@@ -254,10 +261,13 @@ kmer_type Requests::getAnchor(ifstream* anchorDictFile, u_int32_t address){
 }
 
 bool Requests::anchorExist(char* kmer_chars, u_int32_t* anchorAddress){
-	
+	cerr << "Requests::anchorExist - BEGIN" << endl;
 	kmer_type kmer, kmerMin;
+	cerr << "Requests::anchorExist - search segflt 0" << endl;
 	kmer = this->getKmerType(kmer_chars);
+	cerr << "Requests::anchorExist - search segflt 1" << endl;
 	kmerMin = min(kmer, revcomp(kmer, _kmerSize));
+	cerr << "Requests::anchorExist - search segflt 2" << endl;
 
 	return _leon->anchorExist(kmerMin, anchorAddress);
 }
@@ -410,9 +420,9 @@ void Requests::decodeInfos(){
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 
-	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 }
 
 void Requests::headerSetUp(){
@@ -422,11 +432,11 @@ void Requests::headerSetUp(){
 	if(! _noHeader)
 	{	
 	//Decode the first header
-	cerr << "Requests::headerSetUp() - _headerBlockSizes : " << _headerBlockSizes.size() << endl;
-	u_int16_t _firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	cerr << "Requests::headerSetUp() - _firstHeaderSize : " << _firstHeaderSize << endl;
 	for(int i=0; i<_firstHeaderSize; i++){
-		cerr << "Requests::headerSetUp() - _headerBlockSize : " << _headerBlockSizes[i] << endl;
 		_firstHeader += _rangeDecoder.nextByte(_generalModel);
+		cerr << "Requests::headerSetUp() - _firstHeader : " << _firstHeader << endl;
 	}
 	setupNextComponent(_headerBlockSizes);
 	
@@ -441,15 +451,30 @@ void Requests::dnaSetUp(){
 	_filePosDna = 0;
 
 	cerr << "Requests::dnaSetUp() - _headerBlockSizes : " << _headerBlockSizes.size() << endl;
+	cerr << "Requests::dnaSetUp() - _filePosDna : " << _filePosDna << endl;
 	for(int i=0; i<_headerBlockSizes.size(); i+=2 )
 	{
-		cerr << "Requests::dnaSetUp() - _headerBlockSize : " << _headerBlockSizes[i] << endl;
 		_filePosDna += _headerBlockSizes[i];
+		cerr << "Requests::dnaSetUp() - _filePosDna : " << _filePosDna << endl;
 	}
 	
 	setupNextComponent(_dnaBlockSizes);
 }
 
+void Requests::dnaSetUp2(){
+	cerr << "Requests::testPrintAllHeadersReadsFile - dna setup" << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - _filePosDna : " << _filePosDna << endl;
+	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
+	{
+		_filePosDna += _headerBlockSizes[ii];
+		cerr << "Requests::testPrintAllHeadersReadsFile - file pos dna : " << _filePosDna << endl;
+	}
+	
+	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	setupNextComponent(_dnaBlockSizes);
+	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	
+}
 void Requests::initializeDecoders(){
 	if(! _noHeader)
 	{
@@ -1437,46 +1462,60 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 void Requests::testPrintAllHeadersReadsFile(){
 
 	_filePos = 0;
-
+	_filePosHeader = 0;
+	_filePosDna = 0;
 	initializeRangeDecoder();
 
+	decodeInfos();
+	headerSetUp();
+	dnaSetUp();
+	decodeBloom();
+	decodeAnchorDict();
+
+
+	//previous code :
+
 	//original decoding order :
+
+/*
+	initializeRangeDecoder();
 
 	u_int8_t infoByte = _rangeDecoder.nextByte(_generalModel);
 	//cout << endl << "\tinfoByte : " << bitset<8>(infoByte) << endl;
 
 	//the first bit holds the file format. 0: fastq, 1: fasta
-	bool isFasta = ((infoByte & 0x01) == 0x01);
+	_isFasta = ((infoByte & 0x01) == 0x01);
 	
 	
 	
 	//Second bit : option no header
-	bool noHeader = ((infoByte & 0x02) == 0x02);
+	_noHeader = ((infoByte & 0x02) == 0x02);
 	//cerr << "testPrintReads - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
 
-	size_t version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	size_t version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-
-	cout << "\tversion_major: " << version_major << endl;
-	cout << "\tversion_minor: " << version_minor << endl;
-	cout << "\tversion_patch: " << version_patch << endl;
-
-
-	u_int64_t filePosHeader = 0;
-	u_int64_t filePosDna = 0;
-
+	_version_major = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_version_minor = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_version_patch = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	
-	if(! noHeader)
+
+	cout << "\tversion_major: " << _version_major << endl;
+	cout << "\tversion_minor: " << _version_minor << endl;
+	cout << "\tversion_patch: " << _version_patch << endl;
+
+
+	u_int64_t _filePosHeader = 0;
+	u_int64_t _filePosDna = 0;
+	
+	
+	if(! _noHeader)
 	{
 		
 	///////// header setup  /////////
 	//Decode the first header
 	cerr << "Requests::testPrintAllHeadersReadsFile - header setup" << endl;
-	u_int16_t _firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	_firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	for(int i=0; i<_firstHeaderSize; i++){
 		_firstHeader += _rangeDecoder.nextByte(_generalModel);
 		cerr << "Requests::testPrintAllHeadersReadsFile - first header : " << _firstHeader << endl;
@@ -1487,24 +1526,30 @@ void Requests::testPrintAllHeadersReadsFile(){
 	
 	}
 	//MARQUEUR
-	
+	*/
 	/////// dna setup ////////////
-	
+
 	//need to init _filePosDna here
-	cerr << "Requests::testPrintAllHeadersReadsFile - dna setup" << endl;
+
+	/*cerr << "Requests::testPrintAllHeadersReadsFile - dna setup" << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - _filePosDna : " << _filePosDna << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
-		filePosDna += _headerBlockSizes[ii];
-		cerr << "Requests::testPrintAllHeadersReadsFile - file pos dna : " << filePosDna << endl;
+		_filePosDna += _headerBlockSizes[ii];
+		cerr << "Requests::testPrintAllHeadersReadsFile - file pos dna : " << _filePosDna << endl;
 	}
 	
 	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	setupNextComponent(_dnaBlockSizes);
 	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	*/
 
+
+
+/*
 	decodeBloom();
 	decodeAnchorDict();
-
+*/
 		/////////// qualities setup //////////
 	/*if(! isFasta)
 	{
@@ -1529,7 +1574,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	HeaderDecoder* hdecoder;
 	DnaDecoder* ddecoder;
 
-	if(! isFasta)
+	if(! _isFasta)
 	{
 		cout << "Requests::testPrintAllHeadersReadsFile - testPrintReads - temporarily not treating fastq" << endl;
 		//QualDecoder* qd = new QualDecoder(this, _FileQualname);
@@ -1541,7 +1586,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
 	//dnadecoders.push_back(dd);
 		
-	if(! noHeader)
+	if(! _noHeader)
 	{
 	//HeaderDecoder* hd = new HeaderDecoder(_leon, _outputFilename);
 	hdecoder = new HeaderDecoder(_leon, this, _decodeFilename);
@@ -1570,17 +1615,17 @@ void Requests::testPrintAllHeadersReadsFile(){
 			//DnaDecoder* ddecoder;
 			
 			//header decoder
-			if(! noHeader)
+			if(! _noHeader)
 			{
-				cerr << "Requests::testPrintAllHeadersReadsFile - filePosHeader : " << filePosHeader << endl;
+				cerr << "Requests::testPrintAllHeadersReadsFile - _filePosHeader : " << _filePosHeader << endl;
 				blockSize = _headerBlockSizes[i];
 				cerr << "Requests::testPrintAllHeadersReadsFile - header BlockSize : " << blockSize << endl;
 				sequenceCount = _headerBlockSizes[i+1];
 				cerr << "Requests::testPrintAllHeadersReadsFile - sequenceCount : " << sequenceCount << endl;
 				//hdecoder = headerdecoders[j];
-				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
+				hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
 				cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder->setup : " << endl;
-				filePosHeader += blockSize;
+				_filePosHeader += blockSize;
 				
 				//hdecoder->execute();
 			}
@@ -1594,13 +1639,13 @@ void Requests::testPrintAllHeadersReadsFile(){
 			cerr << "Requests::testPrintAllHeadersReadsFile - dna BlockSize : " << blockSize << endl;
 			sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
-			ddecoder->setup(filePosDna, blockSize, sequenceCount);
-			filePosDna += blockSize;
+			ddecoder->setup(_filePosDna, blockSize, sequenceCount);
+			_filePosDna += blockSize;
 			//ddecoder->execute();
 
 			//qual decoder setup
 			//here test if in fastq mode, put null pointer otherwise
-			if(! isFasta)
+			if(! _isFasta)
 			{
 				cout << "fastq not treated temporarily" << endl;
 				//blockSize = _qualBlockSizes[i];
@@ -1630,7 +1675,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	std::istringstream  * stream_qual = NULL;
 	std::istringstream  * stream_header = NULL;
 
-	if(! isFasta)
+	if(! _isFasta)
 		{
 		cout << "fastq not treated temporarily" << endl;
 		//qdecoder = qualdecoders[j];
@@ -1639,7 +1684,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 		}
 			
-	if(! noHeader)
+	if(! _noHeader)
 		{
 		//hdecoder = headerdecoders[j];
 		stream_header = new std::istringstream (hdecoder->_buffer);
@@ -1667,11 +1712,11 @@ void Requests::testPrintAllHeadersReadsFile(){
 		stringstream sint;
 		sint << readid;
 				
-		if( ! noHeader)
+		if( ! _noHeader)
 		{
 			if(getline(*stream_header, line)){
 	//			cout << "debug - testPrintReads - getline" << endl;
-				if(isFasta)
+				if(_isFasta)
 					output_buff += ">";
 				else
 					output_buff += "@";
@@ -1685,7 +1730,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 		}
 		else
 		{
-			if(isFasta)
+			if(_isFasta)
 				output_buff += "> " + sint.str() + '\n';
 			else
 				output_buff += "@ " + sint.str() + '\n';
@@ -1705,7 +1750,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			}
 				
 				
-		if( ! isFasta)
+		if( ! _isFasta)
 		{
 			cout << " - testPrintReads - fastq not treated temporarily" << endl;
 			//if(getline(*stream_qual, line)){
@@ -2304,7 +2349,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 											bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/){
 
 
-	cerr << "debug Requests::getSequenceFileMatchesInData - BEGIN" << endl;
+	cerr << "Requests::getSequenceFileMatchesInData - BEGIN" << endl;
 
 	//the array with colors of each sequence's part of read
  	int sequenceSize = strlen(sequence);
@@ -2315,8 +2360,9 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 	u_int64_t dictSize = strlen(sequence);
 	u_int64_t nbcreated;
 	Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
+	cerr << "Requests::getSequenceFileMatchesInData - search segflt 0" << endl;
 	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
-	
+	cerr << "Requests::getSequenceFileMatchesInData - search segflt 1" << endl;
 	_sequenceAmbiguousMatches.reset();
 	
 	//decode commpressed file, to find matching anchors
@@ -2326,7 +2372,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 	decodeInfos();
 	headerSetUp();
 	dnaSetUp();
-	
+	cerr << "Requests::getSequenceFileMatchesInData - search segflt 2" << endl;
 	decodeBloom();
 	if (! _orderReads){
 		decodeAnchorDict();

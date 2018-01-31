@@ -2515,7 +2515,7 @@ void DnaDecoder::execute(){
 
 			//cerr << "\tDnaDecoder::execute() - after decodeAnchor" << endl;	
 			endRead();
-			cerr << _inputFile->tellg() << " " << _blockStartPos+_blockSize << endl;
+			//cerr << _inputFile->tellg() << " " << _blockStartPos+_blockSize << endl;
 			
 		}	
 		/*
