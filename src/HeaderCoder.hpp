@@ -93,6 +93,11 @@ class AbstractHeaderCoder
 		int _currentFieldCount;
 		
 		Leon* _leon;
+
+		Requests* _requests;
+		bool _decodeReq = false;
+		
+		//bool _orderReads;
 		
 		void startBlock();
 		

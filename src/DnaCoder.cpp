@@ -2455,6 +2455,12 @@ void DnaDecoder::execute(){
 				if (! anchorKmersSorted->get(_anchor, &nbReads))
 				{
 					cerr << "\n\tDnaDecoder::execute() - error : anchor " << _anchor.toString(_kmerSize) << " is not in anchor dictionnary." << endl;
+					
+					if (anchorKmersSorted->get(revcomp(_anchor, _kmerSize), &nbReads))
+					{
+						cerr << "\n\tDnaDecoder::execute() - error : but rev comp " << revcomp(_anchor, _kmerSize).toString(_kmerSize) << " is." << endl;
+					}
+
 					exit(EXIT_FAILURE);
 				}
 				cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;

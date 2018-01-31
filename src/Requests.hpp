@@ -299,6 +299,11 @@ class Requests
 		u_int32_t _anchorAdress;
 		ifstream* _anchorDictFile;
 
+		//Header compression
+		string _firstHeader;
+		u_int64_t _totalHeaderSize;
+		//u_int64_t _totalHeaderCompressedSize;
+
 
 		//Decode requirements
 		string _decodeFilename;

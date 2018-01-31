@@ -34,6 +34,7 @@ AbstractHeaderCoder::AbstractHeaderCoder(Leon* leon) :
 _headerSizeModel(256)
 {
 	_leon = leon;
+	//_orderReads = _leon->_orderReads;
 	_prevHeader = "";
 	_currentHeader = "";
 	/*
@@ -109,7 +110,8 @@ void AbstractHeaderCoder::splitHeader(){
 	int charType;
 	bool digitOnly;
 	int lastCharType = typeOfChar(_currentHeader[0], &digitOnly);
-	
+	cerr << "AbstractHeaderCoder::splitHeader - lastCharType : " << lastCharType << endl;
+	cerr << "AbstractHeaderCoder::splitHeader - _currentHeader.size() : " << _currentHeader.size() << endl;
 	for(_currentPos=0; _currentPos<_currentHeader.size(); _currentPos++){
 		c = _currentHeader[_currentPos];
 		
@@ -129,6 +131,7 @@ void AbstractHeaderCoder::splitHeader(){
 	makeField();
 	
 	_currentFieldCount = _fieldIndex;
+	cerr << "AbstractHeaderCoder::splitHeader - _currentFieldCount : " << _currentFieldCount << endl;
 }
 
 void AbstractHeaderCoder::makeField(){
@@ -188,30 +191,48 @@ void AbstractHeaderCoder::makeField(){
 
 void AbstractHeaderCoder::endHeader(){
 	_prevFieldCount = _currentFieldCount;
-	
+	cerr << "AbstractHeaderCoder::endHeader - search segflt 0 " << endl;
+	splitHeader();
+	cerr << "AbstractHeaderCoder::endHeader - search segflt 1 " << endl;
 	#ifdef PRINT_DEBUG_ENCODER
 		cout << "\tField count: " << _prevFieldCount << endl;
 	#endif
-	
+	cerr << "AbstractHeaderCoder::endHeader - _prevFieldCount : " << _prevFieldCount << endl;
 	for(int i=0; i<_prevFieldCount+1; i++){
+		cerr << "AbstractHeaderCoder::endHeader - i : " << i << endl;
 		_prevFieldPos[i] = _currentFieldPos[i];
+		cerr << "AbstractHeaderCoder::endHeader - _currentFieldPos[" << i << "] : " << _currentFieldPos[i] << endl;
 		_prevFieldValues[i] = _currentFieldValues[i];
+		cerr << "AbstractHeaderCoder::endHeader - _currentFieldValues[" << i << "] : " << _currentFieldValues[i] << endl;
 		_prevFieldTypes[i] = _currentFieldTypes[i];
+		cerr << "AbstractHeaderCoder::endHeader - _currentFieldTypes[" << i <<  "] : " << _currentFieldTypes[i] << endl;
 		_prevFieldZeroValues[i] = _currentFieldZeroValues[i];
+		cerr << "AbstractHeaderCoder::endHeader - _currentFieldZeroValues[" << i << "] : " << _currentFieldZeroValues[i] << endl;
 		
 		_currentFieldZeroValues[i] = 0;
 	}
+	cerr << "AbstractHeaderCoder::endHeader - search segflt 2 " << endl;
 	_prevHeader = _currentHeader;
 	_misIndex = 0;
 	_fieldIndex = 0;
 	
 	_processedSequenceCount += 1;
+	//cerr << "AbstractHeaderCoder::endHeader - test stop" << endl;
+	//exit(EXIT_FAILURE);
 }
 
 void AbstractHeaderCoder::startBlock(){
 
-	_currentHeader = _leon->_firstHeader;
-	
+	if (!_decodeReq)
+	{
+		_currentHeader = _leon->_firstHeader;
+	}
+	else
+	{
+		_currentHeader = _requests->_firstHeader;
+	}
+	cerr << "AbstractHeaderCoder::startBlock - search segflt 0 " << endl;
+	cerr << "AbstractHeaderCoder::startBlock - _typeModel.size() : " << _typeModel.size() << endl;
 	for(int i=0; i<_typeModel.size(); i++){
 		_typeModel[i].clear();
 		_fieldIndexModel[i].clear();
@@ -224,10 +245,13 @@ void AbstractHeaderCoder::startBlock(){
 			_numericModels[i][j].clear();
 			
 	}
+	cerr << "AbstractHeaderCoder::startBlock - search segflt 1 " << endl;
 	_headerSizeModel.clear();
 	
 	splitHeader();
+	cerr << "AbstractHeaderCoder::startBlock - search segflt 2 " << endl;
 	endHeader();
+	cerr << "AbstractHeaderCoder::startBlock - search segflt 3 " << endl;
 	
 	_processedSequenceCount = 0;
 }
@@ -696,13 +720,18 @@ HeaderDecoder::HeaderDecoder(Leon* leon, Requests* req, const string& inputFilen
 AbstractHeaderCoder(leon)
 {
 	//cout << endl << "debug - HeaderDecoder - constructor2 - inputFilename : " << inputFilename << endl;
-	_rangeDecoder = req->_rangeDecoder;
+	
+	//_rangeDecoder = req->_rangeDecoder;
+	
 	_inputFile = new ifstream(inputFilename.c_str(), ios::in|ios::binary);
 	_finished = false;
 	//_outputFile = outputFile;
 	// = new RangeDecoder(inputFile);
 	
 	//_outputFile = new OutputFile(outputFile);
+
+	_decodeReq = true;
+	_requests = req;
 	
 }
 
@@ -714,18 +743,20 @@ HeaderDecoder::~HeaderDecoder(){
 
 void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequenceCount){
 	
-	//cout << endl << "debug - HeaderDecoder - setup - blockStartPos : " << blockStartPos << endl;
-	//cout << "debug - HeaderDecoder - setup - blockSize : " << blockSize << endl;
-	//cout << "debug - HeaderDecoder - setup - sequenceCount : " << sequenceCount << endl;
+	cerr << endl << "HeaderDecoder::setup - blockStartPos : " << blockStartPos << endl;
+	cerr << "HeaderDecoder::setup - blockSize : " << blockSize << endl;
+	cerr << "HeaderDecoder::setup - sequenceCount : " << sequenceCount << endl;
 
 
 
 	startBlock();
+	cerr << "HeaderDecoder::setup - search segflt 0 " << endl;
 	_rangeDecoder.clear();
-	
+	cerr << "HeaderDecoder::setup - search segflt 1 " << endl;
 	_inputFile->seekg(blockStartPos, _inputFile->beg);
+	cerr << "HeaderDecoder::setup - search segflt 2 " << endl;
 	_rangeDecoder.setInputFile(_inputFile);
-	
+	cerr << "HeaderDecoder::setup - search segflt 3 " << endl;
 	_blockStartPos = blockStartPos;
 	_blockSize = blockSize;
 	
@@ -740,10 +771,11 @@ void HeaderDecoder::setup(u_int64_t blockStartPos, u_int64_t blockSize, int sequ
 	//_currentHeader = _leon->_firstHeader;
 	//endHeader();
 	_currentHeader.clear();
+	cerr << "HeaderDecoder::setup - search segflt 4 " << endl;
 	_misIndex = 0;
 	
 	_sequenceCount = sequenceCount;
-	
+	cerr << "HeaderDecoder::setup - search segflt 5 " << endl;
 }
 
 void HeaderDecoder::execute(){
@@ -1008,14 +1040,15 @@ void HeaderDecoder::endHeader(){
 		//}
 	#endif
 	
-	
+	cerr << "HeaderDecoder::endHeader - search segflt 0 " << endl;
 	splitHeader();
-	
+	cerr << "HeaderDecoder::endHeader - search segflt 1 " << endl;
 	
 	//_prevHeaderSize = _currentPos;
 	//_prevFieldCount = _fieldIndex;
 	
 	AbstractHeaderCoder::endHeader();
+	cerr << "HeaderDecoder::endHeader - search segflt 2 " << endl;
 	//for(int i=0; i<_prevFieldCount+1; i++){
 	//	_prevFieldPos[i] = _currentFieldPos[i];
 	//}
@@ -1025,6 +1058,7 @@ void HeaderDecoder::endHeader(){
 	_currentHeader.clear();
 	_misIndex = 0;
 	//_prevPos = 0;
+	cerr << "HeaderDecoder::endHeader - search segflt 3 " << endl;
 }
 
 

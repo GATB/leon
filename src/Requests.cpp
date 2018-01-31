@@ -364,8 +364,8 @@ void Requests::initializeRangeDecoder(){
 
 	_decodeFilename = _inputFilename;
 
-	//cout << "debug initializeRangeDecoder : outputFilename : " << _outputFilename << endl;
-	//cout << "debug initializeRangeDecoder : filename : " << _decodeFilename << endl;
+	//cerr << "Requests::initializeRangeDecoder - outputFilename : " << _outputFilename << endl;
+	cerr << "Requests::initializeRangeDecoder - filename : " << _decodeFilename << endl;
 	_descInputFile = new ifstream(_decodeFilename.c_str(), ios::in|ios::binary);
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
@@ -419,13 +419,14 @@ void Requests::headerSetUp(){
 
 	///////// header setup  /////////
 
-	string firstHeader;
 	if(! _noHeader)
 	{	
 	//Decode the first header
-	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	for(int i=0; i<firstHeaderSize; i++){
-		firstHeader += _rangeDecoder.nextByte(_generalModel);
+	cerr << "Requests::headerSetUp() - _headerBlockSizes : " << _headerBlockSizes.size() << endl;
+	u_int16_t _firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	for(int i=0; i<_firstHeaderSize; i++){
+		cerr << "Requests::headerSetUp() - _headerBlockSize : " << _headerBlockSizes[i] << endl;
+		_firstHeader += _rangeDecoder.nextByte(_generalModel);
 	}
 	setupNextComponent(_headerBlockSizes);
 	
@@ -1467,22 +1468,22 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 	u_int64_t filePosHeader = 0;
 	u_int64_t filePosDna = 0;
-	string firstHeader;
+
 	
 	if(! noHeader)
 	{
 		
 	///////// header setup  /////////
 	//Decode the first header
-	//cerr << "debug - testPrintReads - header setup" << endl;
-	u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	for(int i=0; i<firstHeaderSize; i++){
-		firstHeader += _rangeDecoder.nextByte(_generalModel);
-		//cerr << "debug - testPrintReads - first header : " << firstHeader << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - header setup" << endl;
+	u_int16_t _firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+	for(int i=0; i<_firstHeaderSize; i++){
+		_firstHeader += _rangeDecoder.nextByte(_generalModel);
+		cerr << "Requests::testPrintAllHeadersReadsFile - first header : " << _firstHeader << endl;
 	}
-	//cerr << "debug - testPrintReads - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 	setupNextComponent(_headerBlockSizes);
-	//cerr << "debug - testPrintReads - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1490,20 +1491,19 @@ void Requests::testPrintAllHeadersReadsFile(){
 	/////// dna setup ////////////
 	
 	//need to init _filePosDna here
-	//cerr << "debug - testPrintReads - dna setup" << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - dna setup" << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		filePosDna += _headerBlockSizes[ii];
-		//cerr << "debug - testPrintReads - file pos dna : " << filePosDna << endl;
+		cerr << "Requests::testPrintAllHeadersReadsFile - file pos dna : " << filePosDna << endl;
 	}
 	
-	//cerr << "debug - testPrintReads - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	setupNextComponent(_dnaBlockSizes);
-	//cerr << "debug - testPrintReads - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
 
 	decodeBloom();
 	decodeAnchorDict();
-
 
 		/////////// qualities setup //////////
 	/*if(! isFasta)
@@ -1531,7 +1531,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 	if(! isFasta)
 	{
-		cout << " - testPrintReads - temporarily not treating fastq" << endl;
+		cout << "Requests::testPrintAllHeadersReadsFile - testPrintReads - temporarily not treating fastq" << endl;
 		//QualDecoder* qd = new QualDecoder(this, _FileQualname);
 		//qualdecoders.push_back(qd);
 	}
@@ -1553,7 +1553,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	//cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-		//cerr << "debug - testPrintReads - block nb : " << i << endl;
+		cerr << "Requests::testPrintAllHeadersReadsFile - testPrintReads - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -1572,11 +1572,14 @@ void Requests::testPrintAllHeadersReadsFile(){
 			//header decoder
 			if(! noHeader)
 			{
+				cerr << "Requests::testPrintAllHeadersReadsFile - filePosHeader : " << filePosHeader << endl;
 				blockSize = _headerBlockSizes[i];
-				//cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
+				cerr << "Requests::testPrintAllHeadersReadsFile - header BlockSize : " << blockSize << endl;
 				sequenceCount = _headerBlockSizes[i+1];
+				cerr << "Requests::testPrintAllHeadersReadsFile - sequenceCount : " << sequenceCount << endl;
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
+				cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder->setup : " << endl;
 				filePosHeader += blockSize;
 				
 				//hdecoder->execute();
@@ -1588,7 +1591,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-			//cerr << "debug - testPrintReads - dna BlockSize : " << blockSize << endl;
+			cerr << "Requests::testPrintAllHeadersReadsFile - dna BlockSize : " << blockSize << endl;
 			sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(filePosDna, blockSize, sequenceCount);
@@ -1599,7 +1602,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			//here test if in fastq mode, put null pointer otherwise
 			if(! isFasta)
 			{
-				cout << "testPrintReads - fastq not treated temporarily" << endl;
+				cout << "fastq not treated temporarily" << endl;
 				//blockSize = _qualBlockSizes[i];
 				//sequenceCount = _qualBlockSizes[i+1];
 				//qdecoder = qualdecoders[j];
@@ -1612,13 +1615,13 @@ void Requests::testPrintAllHeadersReadsFile(){
 			}
 
 			if(hdecoder!=NULL){
-				//cerr << "debug - testPrintReads - before hdecoder execute" << endl;
+				cerr << "Requests::testPrintAllHeadersReadsFile - before hdecoder execute" << endl;
 				hdecoder->execute();
-				//cerr << "debug - testPrintReads - after hdecoder execute" << endl;
+				cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder execute" << endl;
 			}
-			//cerr << "debug - testPrintReads - before ddecoder execute" << endl;
+			cerr << "Requests::testPrintAllHeadersReadsFile - before ddecoder execute" << endl;
 			ddecoder->execute();
-			//cerr << "debug - testPrintReads - after ddecoder execute" << endl;
+			cerr << "Requests::testPrintAllHeadersReadsFile - after ddecoder execute" << endl;
 			i += 2;
 
 		}	
@@ -1629,7 +1632,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 
 	if(! isFasta)
 		{
-		cout << " - testPrintReads - fastq not treated temporarily" << endl;
+		cout << "fastq not treated temporarily" << endl;
 		//qdecoder = qualdecoders[j];
 		//stream_qual = new std::istringstream (qdecoder->_buffer);
 		//qdecoder->_buffer.clear();
@@ -1849,7 +1852,6 @@ void Requests::testPrintPFile(){
 
 	u_int64_t filePosHeader = 0;
 	u_int64_t filePosDna = 0;
-	string firstHeader;
 	
 	if(! noHeader)
 	{
@@ -1857,10 +1859,10 @@ void Requests::testPrintPFile(){
 		///////// header setup  /////////
 		//Decode the first header
 		cerr << "debug - testPrintPFile - header setup" << endl;
-		u_int16_t firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-		for(int i=0; i<firstHeaderSize; i++){
-			firstHeader += _rangeDecoder.nextByte(_generalModel);
-			cerr << "debug - testPrintPFile - first header : " << firstHeader << endl;
+		u_int16_t _firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+		for(int i=0; i<_firstHeaderSize; i++){
+			_firstHeader += _rangeDecoder.nextByte(_generalModel);
+			cerr << "debug - testPrintPFile - first header : " << _firstHeader << endl;
 		}
 		cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 		//_filePos = filePosHeader;
