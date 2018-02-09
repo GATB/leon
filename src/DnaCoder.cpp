@@ -2429,59 +2429,117 @@ void DnaDecoder::execute(){
 		//Decoding normal reads 
 		Hash16<kmer_type, u_int32_t >  * anchorKmersSorted = _requests->_anchorKmersSortedD;
 
-		bool decodingNewAnchor = true;
-		u_int32_t nbReads = 0; 
+		u_int32_t nbReads = 0;
+		u_int32_t nbSequencesDecoded = 0;
+
+		//debug vars 
 		int nbTestsMax = 3;
 		_nbTests = 0;
-		while(_processedSequenceCount < _sequenceCount /*&& _nbTests < nbTestsMax*/){
-			if (decodingNewAnchor){
-				++_nbAnchorTest;
+		//debug vars end
+		
+		//first finish ro decode reads from previous blocks' last anchor
+		if (_nbReadsLeft > 0)
+		{
+			cerr << "DnaDecoder::execute() - _nbReadsLeft > 0" << endl;
+			cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
+			
+			nbReads = _nbReadsLeft;
+			for (int i=0; i<nbReads; ++i)
+			{
+
+				//if (_nbTests < nbTestsMax){
 				cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-				cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
+				cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
+				cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
+				decodeSortedAnchorRead();
+				cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
+				endRead();
+				++nbSequencesDecoded;
 
-				u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
-				cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
-
-				_anchor.setVal(anchor_uint64t);
-				cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
-				decodingNewAnchor = false;
-				++_nbTests;
-			}
-			else{
-				//get the number of reads encoded with actual anchor
-				//and verify if anchor is revcomp
-
-				u_int32_t nbReads = 0; 
-				if (! anchorKmersSorted->get(_anchor, &nbReads))
+				cerr << "DnaDecoder::execute() - nbSequencesDecoded : " << nbSequencesDecoded << endl;
+				cerr << "DnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+				if (nbSequencesDecoded >= _sequenceCount)
 				{
-					cerr << "\n\tDnaDecoder::execute() - error : anchor " << _anchor.toString(_kmerSize) << " is not in anchor dictionnary." << endl;
-					
-					if (anchorKmersSorted->get(revcomp(_anchor, _kmerSize), &nbReads))
-					{
-						cerr << "\n\tDnaDecoder::execute() - error : but rev comp " << revcomp(_anchor, _kmerSize).toString(_kmerSize) << " is." << endl;
-					}
-
-					exit(EXIT_FAILURE);
+					cerr << "DnaDecoder::execute() - nbSequencesDecoded >= _sequenceCount" << endl;
+					_nbReadsLeft = nbReads - i -1;
+					cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
+					break;
 				}
-				cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
 
-				for (int i=0; i<nbReads; ++i){
-					//if (_nbTests < nbTestsMax){
-						cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
-						cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
-						cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
-						decodeSortedAnchorRead();
-						endRead();
-						++_nbTests;	
-					//}
-				}
-				decodingNewAnchor = true;		
+			++_nbTests;	
+			//}
 			}
-			cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
-			cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
-			cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
-			//cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
-			//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
+
+			//cerr << "Hahahaha lol voilà" << endl;
+			//exit(EXIT_FAILURE);
+		}
+		if (_nbReadsLeft <= 0)
+		{
+			bool decodingNewAnchor = true;
+			while(_processedSequenceCount < _sequenceCount /*&& _nbTests < nbTestsMax*/){
+				if (decodingNewAnchor){
+					++_nbAnchorTest;
+					cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+					cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
+
+					u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
+					cerr << "\tDnaDecoder::execute() - anchor_uint64t : " << anchor_uint64t << endl;
+
+					_anchor.setVal(anchor_uint64t);
+					cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
+					decodingNewAnchor = false;
+					++_nbTests;
+				}
+				else{
+					//get the number of reads encoded with actual anchor
+					//and verify if anchor is revcomp
+
+					u_int32_t nbReads = 0; 
+					if (! anchorKmersSorted->get(_anchor, &nbReads))
+					{
+						cerr << "\n\tDnaDecoder::execute() - error : anchor " << _anchor.toString(_kmerSize) << " is not in anchor dictionnary." << endl;
+						
+						if (anchorKmersSorted->get(revcomp(_anchor, _kmerSize), &nbReads))
+						{
+							cerr << "\n\tDnaDecoder::execute() - error : but rev comp " << revcomp(_anchor, _kmerSize).toString(_kmerSize) << " is." << endl;
+						}
+
+						exit(EXIT_FAILURE);
+					}
+					cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
+
+					for (int i=0; i<nbReads; ++i){
+
+						//if (_nbTests < nbTestsMax){
+							cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
+							cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
+							cerr << "\tDnaDecoder::execute() - decodeSortedAnchorRead()" << endl;
+							decodeSortedAnchorRead();
+							cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
+							endRead();
+							++nbSequencesDecoded;
+
+							cerr << "DnaDecoder::execute() - nbSequencesDecoded : " << nbSequencesDecoded << endl;
+							cerr << "DnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+							if (nbSequencesDecoded >= _sequenceCount)
+							{
+								cerr << "DnaDecoder::execute() - nbSequencesDecoded >= _sequenceCount" << endl;
+								_nbReadsLeft = nbReads - i -1;
+								cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
+								break;
+							}
+
+							++_nbTests;	
+						//}
+					}
+					decodingNewAnchor = true;		
+				}
+				cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
+				cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
+				cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+				//cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
+				//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
+			}
 		}
 	}
 	else{

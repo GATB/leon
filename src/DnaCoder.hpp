@@ -323,6 +323,7 @@ class DnaDecoder : AbstractDnaCoder
 
 		Requests* _requests;
 		bool _decodeReq = false;
+		u_int32_t _nbReadsLeft;
 
 	
 	private:

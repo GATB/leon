@@ -112,13 +112,13 @@ bool Requests::getSequenceKmer(const char* seq, uint pos, char* kmer){
 }
 
 bool Requests::getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t anchorAddress){
-	cerr << "Requests::getNextAnchor - BEGIN" << endl;
+	//cerr << "Requests::getNextAnchor - BEGIN" << endl;
 	char kmer[_kmerSize+1];
-	cerr << "Requests::getNextAnchor - search segflt 0" << endl;
+	//cerr << "Requests::getNextAnchor - search segflt 0" << endl;
 	while (this->getSequenceKmer(sequence, *pos, kmer)){
-		cerr << "Requests::getNextAnchor - search segflt 1" << endl;
+		//cerr << "Requests::getNextAnchor - search segflt 1" << endl;
 		if (this->anchorExist(kmer, &anchorAddress)){
-			cerr << "Requests::getNextAnchor - search segflt 2" << endl;
+			//cerr << "Requests::getNextAnchor - search segflt 2" << endl;
 			strncpy(anchor, kmer, _kmerSize+1);
 			return true;
 		}
@@ -139,28 +139,28 @@ void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, list<u_int32_t>* >  * s
 	list<u_int32_t>* listPos;
 	char kmer_chars[_kmerSize+1];
 	char anchor_chars[_kmerSize+1];
-	cerr << "Requests::fillSequenceAnchorsDict - search segflt 0" << endl;
+	//cerr << "Requests::fillSequenceAnchorsDict - search segflt 0" << endl;
 	while(getSequenceKmer(sequence, pos, kmer_chars))
 	{	
-		cerr << "Requests::fillSequenceAnchorsDict - search segflt 1" << endl;
+		//cerr << "Requests::fillSequenceAnchorsDict - search segflt 1" << endl;
 		if (getNextAnchor(sequence, &pos, anchor_chars, anchorAddress)){
-			cerr << "Requests::fillSequenceAnchorsDict - search segflt 2" << endl;
+			//cerr << "Requests::fillSequenceAnchorsDict - search segflt 2" << endl;
 			kmer_type anchor = getKmerType(anchor_chars);
 	
 			/* if list empty, create the list
 			** the list is empty if the hash table doesn't contain the kmer 
 			** (first time we add it)
 			*/
-			cerr << "Requests::fillSequenceAnchorsDict - search segflt 3" << endl;
+			//cerr << "Requests::fillSequenceAnchorsDict - search segflt 3" << endl;
 			if (!sequenceAnchorKmers->get(anchor, &listPos)){
 
 				listPos = new list<u_int32_t>();	
 			}
 
 			listPos->push_back(pos);
-			cerr << "Requests::fillSequenceAnchorsDict - search segflt 4" << endl;
+			//cerr << "Requests::fillSequenceAnchorsDict - search segflt 4" << endl;
 			sequenceAnchorKmers->insert(anchor, listPos);
-			cerr << "Requests::fillSequenceAnchorsDict - search segflt 5" << endl;
+			//cerr << "Requests::fillSequenceAnchorsDict - search segflt 5" << endl;
 		}
 
 		pos++;
@@ -261,13 +261,13 @@ kmer_type Requests::getAnchor(ifstream* anchorDictFile, u_int32_t address){
 }
 
 bool Requests::anchorExist(char* kmer_chars, u_int32_t* anchorAddress){
-	cerr << "Requests::anchorExist - BEGIN" << endl;
+	//cerr << "Requests::anchorExist - BEGIN" << endl;
 	kmer_type kmer, kmerMin;
-	cerr << "Requests::anchorExist - search segflt 0" << endl;
+	//cerr << "Requests::anchorExist - search segflt 0" << endl;
 	kmer = this->getKmerType(kmer_chars);
-	cerr << "Requests::anchorExist - search segflt 1" << endl;
+	//cerr << "Requests::anchorExist - search segflt 1" << endl;
 	kmerMin = min(kmer, revcomp(kmer, _kmerSize));
-	cerr << "Requests::anchorExist - search segflt 2" << endl;
+	//cerr << "Requests::anchorExist - search segflt 2" << endl;
 
 	return _leon->anchorExist(kmerMin, anchorAddress);
 }
@@ -504,22 +504,22 @@ void Requests::clearDecoders(){
 void Requests::headerDecoderSetup(int blockIndice){
 
 	u_int64_t blockSize;
-	int sequenceCount;
+	//int _sequenceCount;
 	blockSize = _headerBlockSizes[blockIndice];
 	//cerr << "debug - testPrintReads - header BlockSize : " << blockSize << endl;
-	sequenceCount = _headerBlockSizes[blockIndice+1];
+	_sequenceCount = _headerBlockSizes[blockIndice+1];
 	//hdecoder = headerdecoders[j];
-	_hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
+	_hdecoder->setup(_filePosHeader, blockSize, _sequenceCount);
 	_filePosHeader += blockSize;
 }
 
 void Requests::dnaDecoderSetup(int blockIndice){
 
 	u_int64_t blockSize;
-	int sequenceCount;
+	//int _sequenceCount;
 	blockSize = _dnaBlockSizes[blockIndice];
-	sequenceCount = _dnaBlockSizes[blockIndice+1];
-	_ddecoder->setup(_filePosDna, blockSize, sequenceCount);
+	_sequenceCount = _dnaBlockSizes[blockIndice+1];
+	_ddecoder->setup(_filePosDna, blockSize, _sequenceCount);
 	_filePosDna += blockSize;
 
 }
@@ -530,9 +530,9 @@ void Requests::qualDecoderSetup(int blockIndice){
 		{
 			cout << "testPrintReads - fastq not treated temporarily" << endl;
 				//blockSize = _qualBlockSizes[i];
-				//sequenceCount = _qualBlockSizes[i+1];
+				//_sequenceCount = _qualBlockSizes[i+1];
 				//qdecoder = qualdecoders[j];
-				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
+				//qdecoder->setup(_filePosQual, blockSize, _sequenceCount);
 				//_filePosQual += blockSize;
 		}
 		else
@@ -1395,6 +1395,7 @@ void Requests::printTestAll(){
 void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchorPos){
 
 	_filePos = 0;
+	_sequenceCount = 0;
 	u_int64_t filePosHeader = 0;
 	u_int64_t filePosDna = 0;
 	initializeRangeDecoder();
@@ -1462,6 +1463,7 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 void Requests::testPrintAllHeadersReadsFile(){
 
 	_filePos = 0;
+	_sequenceCount = 0;
 	_filePosHeader = 0;
 	_filePosDna = 0;
 	initializeRangeDecoder();
@@ -1606,7 +1608,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			
 			
 			u_int64_t blockSize;
-			int sequenceCount;
+			//int _sequenceCount;
 			
 			//livingThreadCount = j+1;
 			
@@ -1620,10 +1622,10 @@ void Requests::testPrintAllHeadersReadsFile(){
 				cerr << "Requests::testPrintAllHeadersReadsFile - _filePosHeader : " << _filePosHeader << endl;
 				blockSize = _headerBlockSizes[i];
 				cerr << "Requests::testPrintAllHeadersReadsFile - header BlockSize : " << blockSize << endl;
-				sequenceCount = _headerBlockSizes[i+1];
-				cerr << "Requests::testPrintAllHeadersReadsFile - sequenceCount : " << sequenceCount << endl;
+				_sequenceCount = _headerBlockSizes[i+1];
+				cerr << "Requests::testPrintAllHeadersReadsFile - _sequenceCount : " << _sequenceCount << endl;
 				//hdecoder = headerdecoders[j];
-				hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
+				hdecoder->setup(_filePosHeader, blockSize, _sequenceCount);
 				cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder->setup : " << endl;
 				_filePosHeader += blockSize;
 				
@@ -1637,9 +1639,9 @@ void Requests::testPrintAllHeadersReadsFile(){
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
 			cerr << "Requests::testPrintAllHeadersReadsFile - dna BlockSize : " << blockSize << endl;
-			sequenceCount = _dnaBlockSizes[i+1];
+			_sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
-			ddecoder->setup(_filePosDna, blockSize, sequenceCount);
+			ddecoder->setup(_filePosDna, blockSize, _sequenceCount);
 			_filePosDna += blockSize;
 			//ddecoder->execute();
 
@@ -1649,9 +1651,9 @@ void Requests::testPrintAllHeadersReadsFile(){
 			{
 				cout << "fastq not treated temporarily" << endl;
 				//blockSize = _qualBlockSizes[i];
-				//sequenceCount = _qualBlockSizes[i+1];
+				//_sequenceCount = _qualBlockSizes[i+1];
 				//qdecoder = qualdecoders[j];
-				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
+				//qdecoder->setup(_filePosQual, blockSize, _sequenceCount);
 				//_filePosQual += blockSize;
 			}
 			else
@@ -1789,6 +1791,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAnchorPos){
 	
 	_filePos = 0;
+	_sequenceCount = 0;
 	u_int64_t filePosHeader = 0;
 	u_int64_t filePosDna = 0;
 	initializeRangeDecoder();
@@ -1824,11 +1827,21 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 		//struct ReadInfos* ri = (struct ReadInfos*)malloc(sizeof(struct ReadInfos));
 		struct OrderedReadsInfosBlock* orib = new OrderedReadsInfosBlock{};
 		int nbRead = 0;
-		cerr << "debug Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orib)" << endl;
+		cerr << "Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orib)" << endl;
 
+		int nbSequencesDecoded = 0;
 		while(_ddecoder->getNextOrderedReadsInfosBLock(orib)){
 
 			for (int i=0; i < orib->nbReads; ++i){
+
+				cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded : " << nbSequencesDecoded << endl;
+				cerr << "Requests::testPrintReadsPFile - _sequenceCount : " << _sequenceCount << endl;
+				if (nbSequencesDecoded >= _sequenceCount)
+				{
+					cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded >= _sequenceCount - exit now" << endl;
+					cerr << "Hahahaha lol voilà" << endl;
+					exit(EXIT_FAILURE);
+				}
 			
 				cout << "element " << nbRead << endl;
 				struct ReadInfos* ri = new ReadInfos{};
@@ -1854,6 +1867,7 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 				/*else{
 					cerr << "debug Requests::testPrintReadsPFile - ERROR" << endl;
 				}*/
+				++nbSequencesDecoded;
 			}
 		}
 	}	
@@ -1866,6 +1880,7 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 void Requests::testPrintPFile(){
 	
 	_filePos = 0;
+	_sequenceCount = 0;
 
 	initializeRangeDecoder();
 
@@ -2009,7 +2024,7 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			
 			
 			u_int64_t blockSize;
-			int sequenceCount;
+			//int _sequenceCount;
 			
 			//livingThreadCount = j+1;
 			
@@ -2022,9 +2037,9 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			{
 				blockSize = _headerBlockSizes[i];
 				cerr << "debug - testPrintPFile - header BlockSize : " << blockSize << endl;
-				sequenceCount = _headerBlockSizes[i+1];
+				_sequenceCount = _headerBlockSizes[i+1];
 				//hdecoder = headerdecoders[j];
-				hdecoder->setup(filePosHeader, blockSize, sequenceCount);
+				hdecoder->setup(filePosHeader, blockSize, _sequenceCount);
 				filePosHeader += blockSize;
 				
 				//hdecoder->execute();
@@ -2037,9 +2052,9 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
 			cerr << "debug - testPrintPFile - dna BlockSize : " << blockSize << endl;
-			sequenceCount = _dnaBlockSizes[i+1];
+			_sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
-			ddecoder->setup(filePosDna, blockSize, sequenceCount);
+			ddecoder->setup(filePosDna, blockSize, _sequenceCount);
 			filePosDna += blockSize;
 			//ddecoder->execute();
 
@@ -2049,9 +2064,9 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			{
 				cout << "testPrintPFile - fastq not treated temporarily" << endl;
 				//blockSize = _qualBlockSizes[i];
-				//sequenceCount = _qualBlockSizes[i+1];
+				//_sequenceCount = _qualBlockSizes[i+1];
 				//qdecoder = qualdecoders[j];
-				//qdecoder->setup(_filePosQual, blockSize, sequenceCount);
+				//qdecoder->setup(_filePosQual, blockSize, _sequenceCount);
 				//_filePosQual += blockSize;
 			}
 			else
@@ -2360,19 +2375,20 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 	u_int64_t dictSize = strlen(sequence);
 	u_int64_t nbcreated;
 	Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers = new Hash16<kmer_type, list<u_int32_t>*>(dictSize , &nbcreated);
-	cerr << "Requests::getSequenceFileMatchesInData - search segflt 0" << endl;
+	//cerr << "Requests::getSequenceFileMatchesInData - search segflt 0" << endl;
 	fillSequenceAnchorsDict(sequenceAnchorKmers, sequence);
-	cerr << "Requests::getSequenceFileMatchesInData - search segflt 1" << endl;
+	//cerr << "Requests::getSequenceFileMatchesInData - search segflt 1" << endl;
 	_sequenceAmbiguousMatches.reset();
 	
 	//decode commpressed file, to find matching anchors
 	_filePos = 0;
+	_sequenceCount = 0;
 	initializeRangeDecoder();
 
 	decodeInfos();
 	headerSetUp();
 	dnaSetUp();
-	cerr << "Requests::getSequenceFileMatchesInData - search segflt 2" << endl;
+	//cerr << "Requests::getSequenceFileMatchesInData - search segflt 2" << endl;
 	decodeBloom();
 	if (! _orderReads){
 		decodeAnchorDict();
@@ -2411,6 +2427,9 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 		}
 
 		else{
+
+			int nbSequencesDecoded = 0;
+
 			
 			struct OrderedReadsInfosBlock* orib = new OrderedReadsInfosBlock{};
 			
@@ -2426,6 +2445,14 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 
 					for (int i=0; i < orib->nbReads; ++i){
 						
+
+						if (nbSequencesDecoded >= _sequenceCount)
+						{
+							cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded >= _sequenceCount - exit now" << endl;
+							cerr << "Hahahaha lol voilà" << endl;
+							exit(EXIT_FAILURE);
+						}
+
 						//reading the compressed file block read per read
 						if (_ddecoder->getNextOrderedReadInfos(ri)){
 

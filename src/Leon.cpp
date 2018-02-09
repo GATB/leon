@@ -224,7 +224,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = false;
+	_orderReads = true;
 	//_readSortedFileTest = true;
 
     _compress = false;
@@ -1875,7 +1875,7 @@ void Leon::startDnaCompression(){
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
 		
-		/*cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
+		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
 						pathToFiles + " " +
@@ -1895,7 +1895,7 @@ void Leon::startDnaCompression(){
 		    else{
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
-		  	}*/
+		  	}
 		 	
 		//AFTER MAP REDUCE SORT
 
