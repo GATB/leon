@@ -66,12 +66,13 @@ struct ReadInfos{
 };
 
 
-struct OrderedReadsInfosBlock{
+struct OrderedReadsInfosGroup{
 
 	kmer_type anchor;
 	kmer_type revAnchor;
 	u_int32_t nbReads;
 };
+
 /*
 struct OrderedReadInfos{
 	
@@ -313,7 +314,7 @@ class DnaDecoder : AbstractDnaCoder
 		//return false if end of file
 		//bool getNextAnchor(string* anchor);
 		bool getNextReadInfos(struct ReadInfos* ri);
-		bool getNextOrderedReadsInfosBLock(struct OrderedReadsInfosBlock* orib);
+		bool getNextOrderedReadsInfosGroup(struct OrderedReadsInfosGroup* orig);
 		bool getNextOrderedReadInfos(struct ReadInfos* ri);
 		
 		void execute();

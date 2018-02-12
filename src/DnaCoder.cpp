@@ -2070,6 +2070,7 @@ AbstractDnaCoder(leon)
 
 	_decodeReq = true;
 	_requests = req;
+	_nbReadsLeft = 0;
 	
 }
 
@@ -2266,7 +2267,7 @@ bool DnaDecoder::getNextReadInfos(struct ReadInfos* ri){
 	}
 }
 
-bool DnaDecoder::getNextOrderedReadsInfosBLock(struct OrderedReadsInfosBlock* orib){
+bool DnaDecoder::getNextOrderedReadsInfosGroup(struct OrderedReadsInfosGroup* orig){
 	
 	if (_processedSequenceCount < _sequenceCount){
 	
@@ -2274,22 +2275,22 @@ bool DnaDecoder::getNextOrderedReadsInfosBLock(struct OrderedReadsInfosBlock* or
 
 		//cerr << "\tDnaDecoder::execute() - before decoding anchor" << endl;
 		u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
-		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - anchor_uint64t : " << anchor_uint64t << endl;
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - anchor_uint64t : " << anchor_uint64t << endl;
 
 		_anchor.setVal(anchor_uint64t);
-		orib->anchor.setVal(anchor_uint64t);
-		orib->revAnchor = revcomp(_anchor, _kmerSize);
-		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - anchor : " << _anchor.toString(_kmerSize) << endl;
+		orig->anchor.setVal(anchor_uint64t);
+		orig->revAnchor = revcomp(_anchor, _kmerSize);
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - anchor : " << _anchor.toString(_kmerSize) << endl;
 
 		//get the number of reads encoded with actual anchor
 		//and verify if anchor is revcomp
 
 		u_int32_t nbReads;
-		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - anchorKmersSorted->contains(_anchor) : " << 	anchorKmersSorted->contains(_anchor) << endl; 
-		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - before getting nbReads" << endl; 
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - anchorKmersSorted->contains(_anchor) : " << 	anchorKmersSorted->contains(_anchor) << endl; 
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - before getting nbReads" << endl; 
 		anchorKmersSorted->get(_anchor, &nbReads);
-		orib->nbReads = nbReads;
-		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosBLock() - nbReads : " << orib->nbReads << endl;
+		orig->nbReads = nbReads;
+		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - nbReads : " << orig->nbReads << endl;
 		return true;
 
 	}
@@ -2437,7 +2438,7 @@ void DnaDecoder::execute(){
 		_nbTests = 0;
 		//debug vars end
 		
-		//first finish ro decode reads from previous blocks' last anchor
+		//first finish to decode reads from previous blocks' if there is any
 		if (_nbReadsLeft > 0)
 		{
 			cerr << "DnaDecoder::execute() - _nbReadsLeft > 0" << endl;
@@ -2458,12 +2459,18 @@ void DnaDecoder::execute(){
 
 				cerr << "DnaDecoder::execute() - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 				cerr << "DnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+				//assert that we don't exceed number of reads in the block
+				//if we do, we keep the number of read that is left to decode with
+				//the current anchor, for the begining of next block
 				if (nbSequencesDecoded >= _sequenceCount)
 				{
 					cerr << "DnaDecoder::execute() - nbSequencesDecoded >= _sequenceCount" << endl;
 					_nbReadsLeft = nbReads - i -1;
 					cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
 					break;
+				}
+				else{
+					_nbReadsLeft = 0;
 				}
 
 			++_nbTests;	
@@ -2528,7 +2535,6 @@ void DnaDecoder::execute(){
 								cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
 								break;
 							}
-
 							++_nbTests;	
 						//}
 					}

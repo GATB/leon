@@ -241,31 +241,46 @@ class Requests
 							vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
 							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		bitset<NB_MAX_COLORS> getSequenceColorsInData(char* sequence, 
-													vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
-													bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		int getSequenceNbColorsInData(char* sequence, 
-									vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
-									bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		void getSequenceFileMatchesInData(char* sequence, 
-										vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
-										bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*, 
+							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 		
+		void getSequenceFileMatchesInReadGroup(char* sequence,
+							/*struct OrderedReadsInfosGroup* orig,*/ 
+							kmer_type anchor,
+							int nbSequencesToDecode,
+							Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers,
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+							int& nbSequencesDecoded,
+							int& nbReadsLeft);
+
 		//returns the matches in sequenceMatches
 		//ri : needs the infos of the read to align
 		//listPos : the list of the positions of the read's anchor on the sequence
 		void searchAlignements(char* sequence,
-								ReadInfos* ri,
-								list<u_int32_t>* listPos,
-								Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
-								vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
-								bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
+							ReadInfos* ri,
+							list<u_int32_t>* listPos,
+							Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
+							vector<bitset<NB_MAX_COLORS>>* sequenceMatches/*,
+							bitset<NB_MAX_COLORS> sequenceAmbiguousMatches*/);
 
 		//request global variables
-		bool _orderReads;
+		//if peacock mode - sorted file
+		bool _orderReads; 
+		//buffer containing request as a string
 		char request[1024];
 		int req_buffer_size;
 		bool end_requests;
+		//the maximal length of a sequence
 		int sequenceMaxSize;
+		//the number of reads left to decode with the anchor previously decoded, 
+		//when passing to a new block 
+		//u_int32_t _nbReadsLeft;
 
 		Hash16<kmer_type, list<u_int32_t>*>* _sequenceAnchorKmers;
 		// 1 if a color can be fullfilled using the reads of the dataset of a

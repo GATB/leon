@@ -519,6 +519,8 @@ void Requests::dnaDecoderSetup(int blockIndice){
 	//int _sequenceCount;
 	blockSize = _dnaBlockSizes[blockIndice];
 	_sequenceCount = _dnaBlockSizes[blockIndice+1];
+	cerr << "Requests::dnaDecoderSetup - blockIndice+1 : " << blockIndice+1 << endl;
+	cerr << "Requests::dnaDecoderSetup - _sequenceCount : " << _sequenceCount << endl;
 	_ddecoder->setup(_filePosDna, blockSize, _sequenceCount);
 	_filePosDna += blockSize;
 
@@ -1825,14 +1827,14 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 		qualDecoderSetup(blockIndice);
 
 		//struct ReadInfos* ri = (struct ReadInfos*)malloc(sizeof(struct ReadInfos));
-		struct OrderedReadsInfosBlock* orib = new OrderedReadsInfosBlock{};
+		struct OrderedReadsInfosGroup* orig = new OrderedReadsInfosGroup{};
 		int nbRead = 0;
-		cerr << "Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orib)" << endl;
+		cerr << "Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orig)" << endl;
 
 		int nbSequencesDecoded = 0;
-		while(_ddecoder->getNextOrderedReadsInfosBLock(orib)){
+		while(_ddecoder->getNextOrderedReadsInfosGroup(orig)){
 
-			for (int i=0; i < orib->nbReads; ++i){
+			for (int i=0; i < orig->nbReads; ++i){
 
 				cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 				cerr << "Requests::testPrintReadsPFile - _sequenceCount : " << _sequenceCount << endl;
@@ -2398,21 +2400,27 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 	}
 	initializeDecoders();
 
+	//the number of reads left to decode with the anchor previously decoded, 
+	//when passing to a new block 
+	int nbReadsLeft = 0;
+	struct OrderedReadsInfosGroup* orig = new OrderedReadsInfosGroup{};
 	for (int blockIndice = 0; 
 		blockIndice < _dnaBlockSizes.size(); 
 		blockIndice += 2){
-			
+
+		cerr << "Requests::getSequenceFileMatchesInData - blockIndice : " << blockIndice << endl;
+		cerr << "Requests::getSequenceFileMatchesInData - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
 
 		if(blockIndice >= _dnaBlockSizes.size()) break;
 			
 		dnaDecoderSetup(blockIndice);
 		qualDecoderSetup(blockIndice);
 
-		list<u_int32_t>* listPos;		
-		struct ReadInfos* ri = new ReadInfos{};
-
 		if (! _orderReads){
 			
+			struct ReadInfos* ri = new ReadInfos{};
+			list<u_int32_t>* listPos;
+
 			//reading the compressed file read per read
 			while(_ddecoder->getNextReadInfos(ri)){
 
@@ -2430,45 +2438,33 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 
 			int nbSequencesDecoded = 0;
 
-			
-			struct OrderedReadsInfosBlock* orib = new OrderedReadsInfosBlock{};
-			
-			//reading the compressed file read blocks per read blocks
-			//a block of read is a block of all the reads with same anchor
-			while(_ddecoder->getNextOrderedReadsInfosBLock(orib)){
+			//first finish to decode reads from previous blocks' if there is any
+			if (nbReadsLeft > 0)
+			{
+				cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft > 0" << endl;
+				cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
 				
-				//if the block's anchor is in the sequence's list of anchors
-				//then we try to aline each read of the block to the sequence
-				//else, we just read reads and skip without aligning
-				if(sequenceAnchorKmers->get(orib->anchor, &listPos) ||
-					sequenceAnchorKmers->get(orib->revAnchor, &listPos)){
+				getSequenceFileMatchesInReadGroup(sequence, 
+					orig->anchor, nbReadsLeft, sequenceAnchorKmers, 
+					sequenceMatches, nbSequencesDecoded, nbReadsLeft);
 
-					for (int i=0; i < orib->nbReads; ++i){
-						
-
-						if (nbSequencesDecoded >= _sequenceCount)
-						{
-							cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded >= _sequenceCount - exit now" << endl;
-							cerr << "Hahahaha lol voilà" << endl;
-							exit(EXIT_FAILURE);
-						}
-
-						//reading the compressed file block read per read
-						if (_ddecoder->getNextOrderedReadInfos(ri)){
-
-							searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
-								sequenceMatches/*, _sequenceAmbiguousMatches*/);
-						}
-					}
-				}
-				else{
-
-					for (int i=0; i < orib->nbReads; ++i){
-						_ddecoder->getNextOrderedReadInfos(ri);
-					}
+			}
+			//reading the compressed file read group per read group
+			//a group of read is the group of all the reads with same anchor
+			if (nbReadsLeft <= 0)
+			{
+				while(_ddecoder->getNextOrderedReadsInfosGroup(orig)){
+					
+					getSequenceFileMatchesInReadGroup(sequence, 
+						orig->anchor, orig->nbReads, sequenceAnchorKmers, 
+						sequenceMatches, nbSequencesDecoded, nbReadsLeft);
 				}
 			}
+
+			cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
+			//exit(EXIT_FAILURE);
 		}		
+		cerr << "Requests::getSequenceFileMatchesInData - end block" << endl;
 	}
 
 	for (int i = 0; i < sequenceSize; ++i)
@@ -2482,6 +2478,90 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 
 	emptySequenceAnchorDict(sequenceAnchorKmers, sequence);
 	
+}
+
+void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
+						/*struct OrderedReadsInfosGroup* orig,*/ 
+						kmer_type anchor,
+						int nbSequencesToDecode,
+						Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
+						vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
+						int& nbSequencesDecoded, 
+						int& nbReadsLeft)
+{
+	list<u_int32_t>* listPos;		
+	struct ReadInfos* ri = new ReadInfos{};
+	cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 1" << endl;
+	cerr << "Requests::getSequenceFileMatchesInReadGroup - _sequenceCount : " << _sequenceCount << endl;
+
+				//if the group's anchor is in the sequence's list of anchors
+				//then we try to aline each read of the group to the sequence
+				//else, we just read reads and skip without aligning
+				if(sequenceAnchorKmers->get(/*orig->*/anchor, &listPos)/* ||
+					sequenceAnchorKmers->get(orig->revAnchor, &listPos)*/){
+
+					cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 2" << endl;
+					for (int i=0; i < nbSequencesToDecode; ++i){
+
+						//assert that we don't exceed number of reads in the block
+						//if we do, we keep the number of read that is left to decode with
+						//the current anchor, for the begining of next block
+						if (nbSequencesDecoded >= _sequenceCount)
+						{
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded >= _sequenceCount" << endl;
+							nbReadsLeft = nbSequencesToDecode - i;
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbReadsLeft : " << nbReadsLeft << endl;
+							break;
+						}
+						else
+						{
+							nbReadsLeft = 0;
+						}
+						
+						cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 3" << endl;
+
+						//reading the group read per read
+						if (_ddecoder->getNextOrderedReadInfos(ri)){
+
+							searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
+								sequenceMatches/*, _sequenceAmbiguousMatches*/);
+							++nbSequencesDecoded;
+						}
+						else{
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
+							exit(EXIT_FAILURE);
+						}
+					}
+				}
+				else{
+
+					for (int i=0; i < nbSequencesToDecode; ++i){
+
+						//assert that we don't exceed number of reads in the block
+						//if we do, we keep the number of read that is left to decode with
+						//the current anchor, for the begining of next block
+						if (nbSequencesDecoded >= _sequenceCount)
+						{
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded >= _sequenceCount" << endl;
+							nbReadsLeft = nbSequencesToDecode - i;
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbReadsLeft : " << nbReadsLeft << endl;
+							break;
+						}
+						else
+						{
+							nbReadsLeft = 0;
+						}
+
+						if (_ddecoder->getNextOrderedReadInfos(ri)){
+							++nbSequencesDecoded;
+						}
+						else{
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
+							exit(EXIT_FAILURE);
+						}
+					}
+				}
+			cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 }
 
 void Requests::searchAlignements(char* sequence, 
