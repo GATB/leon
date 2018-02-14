@@ -2491,16 +2491,16 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 {
 	list<u_int32_t>* listPos;		
 	struct ReadInfos* ri = new ReadInfos{};
-	cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 1" << endl;
+	//cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 1" << endl;
 	cerr << "Requests::getSequenceFileMatchesInReadGroup - _sequenceCount : " << _sequenceCount << endl;
 
 				//if the group's anchor is in the sequence's list of anchors
 				//then we try to aline each read of the group to the sequence
 				//else, we just read reads and skip without aligning
-				if(sequenceAnchorKmers->get(/*orig->*/anchor, &listPos)/* ||
-					sequenceAnchorKmers->get(orig->revAnchor, &listPos)*/){
+				if(sequenceAnchorKmers->get(/*orig->*/anchor, &listPos) ||
+					sequenceAnchorKmers->get(/*orig->revAnchor*/revcomp(anchor, _kmerSize), &listPos)){
 
-					cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 2" << endl;
+					//cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 2" << endl;
 					for (int i=0; i < nbSequencesToDecode; ++i){
 
 						//assert that we don't exceed number of reads in the block
@@ -2518,16 +2518,22 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 							nbReadsLeft = 0;
 						}
 						
-						cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 3" << endl;
+						//cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 3" << endl;
 
 						//reading the group read per read
 						if (_ddecoder->getNextOrderedReadInfos(ri)){
-
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - searchAlignements" << endl;
 							searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
 								sequenceMatches/*, _sequenceAmbiguousMatches*/);
 							++nbSequencesDecoded;
+							cerr << "Requests::getSequenceFileMatchesInReadGroup - sequenceMatches : " << endl;
+							for (int i = 0; i < strlen(sequence); ++i)
+							{
+								cout << (*sequenceMatches)[i] << " : " << bitset<NB_MAX_COLORS>((*sequenceMatches)[i]) << endl;
+							}
 						}
-						else{
+						else
+						{
 							cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
 							exit(EXIT_FAILURE);
 						}
