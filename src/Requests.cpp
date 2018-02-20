@@ -131,8 +131,8 @@ bool Requests::getNextAnchor(char* sequence, uint* pos, char* anchor, u_int32_t 
 void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers,
 										char* sequence){
 
-	cerr << "Requests::fillSequenceAnchorsDict - BEGIN" << endl;
-	cerr << "Requests::fillSequenceAnchorsDict - sequence : " << sequence << endl;
+	//cerr << "Requests::fillSequenceAnchorsDict - BEGIN" << endl;
+	//cerr << "Requests::fillSequenceAnchorsDict - sequence : " << sequence << endl;
 
 	u_int32_t anchorAddress;
 	u_int32_t pos = 0;
@@ -375,7 +375,7 @@ void Requests::initializeRangeDecoder(){
 	_decodeFilename = _inputFilename;
 
 	//cerr << "Requests::initializeRangeDecoder - outputFilename : " << _outputFilename << endl;
-	cerr << "Requests::initializeRangeDecoder - filename : " << _decodeFilename << endl;
+	//cerr << "Requests::initializeRangeDecoder - filename : " << _decodeFilename << endl;
 	_descInputFile = new ifstream(_decodeFilename.c_str(), ios::in|ios::binary);
 	//Go to the end of the file to decode blocks informations, data are read in reversed order (from right to left in the file)
 	//The first number is the number of data blocks
@@ -433,10 +433,10 @@ void Requests::headerSetUp(){
 	{	
 	//Decode the first header
 	_firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "Requests::headerSetUp() - _firstHeaderSize : " << _firstHeaderSize << endl;
+	//cerr << "Requests::headerSetUp() - _firstHeaderSize : " << _firstHeaderSize << endl;
 	for(int i=0; i<_firstHeaderSize; i++){
 		_firstHeader += _rangeDecoder.nextByte(_generalModel);
-		cerr << "Requests::headerSetUp() - _firstHeader : " << _firstHeader << endl;
+		//cerr << "Requests::headerSetUp() - _firstHeader : " << _firstHeader << endl;
 	}
 	setupNextComponent(_headerBlockSizes);
 	
@@ -450,29 +450,29 @@ void Requests::dnaSetUp(){
 	//need to init _filePosDna here
 	_filePosDna = 0;
 
-	cerr << "Requests::dnaSetUp() - _headerBlockSizes : " << _headerBlockSizes.size() << endl;
-	cerr << "Requests::dnaSetUp() - _filePosDna : " << _filePosDna << endl;
+	//cerr << "Requests::dnaSetUp() - _headerBlockSizes : " << _headerBlockSizes.size() << endl;
+	//cerr << "Requests::dnaSetUp() - _filePosDna : " << _filePosDna << endl;
 	for(int i=0; i<_headerBlockSizes.size(); i+=2 )
 	{
 		_filePosDna += _headerBlockSizes[i];
-		cerr << "Requests::dnaSetUp() - _filePosDna : " << _filePosDna << endl;
+		//cerr << "Requests::dnaSetUp() - _filePosDna : " << _filePosDna << endl;
 	}
 	
 	setupNextComponent(_dnaBlockSizes);
 }
 
 void Requests::dnaSetUp2(){
-	cerr << "Requests::testPrintAllHeadersReadsFile - dna setup" << endl;
-	cerr << "Requests::testPrintAllHeadersReadsFile - _filePosDna : " << _filePosDna << endl;
+	//cerr << "Requests::testPrintAllHeadersReadsFile - dna setup" << endl;
+	//cerr << "Requests::testPrintAllHeadersReadsFile - _filePosDna : " << _filePosDna << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		_filePosDna += _headerBlockSizes[ii];
-		cerr << "Requests::testPrintAllHeadersReadsFile - file pos dna : " << _filePosDna << endl;
+		//cerr << "Requests::testPrintAllHeadersReadsFile - file pos dna : " << _filePosDna << endl;
 	}
 	
-	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	setupNextComponent(_dnaBlockSizes);
-	cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "Requests::testPrintAllHeadersReadsFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
 	
 }
 void Requests::initializeDecoders(){
@@ -519,8 +519,8 @@ void Requests::dnaDecoderSetup(int blockIndice){
 	//int _sequenceCount;
 	blockSize = _dnaBlockSizes[blockIndice];
 	_sequenceCount = _dnaBlockSizes[blockIndice+1];
-	cerr << "Requests::dnaDecoderSetup - blockIndice+1 : " << blockIndice+1 << endl;
-	cerr << "Requests::dnaDecoderSetup - _sequenceCount : " << _sequenceCount << endl;
+	//cerr << "Requests::dnaDecoderSetup - blockIndice+1 : " << blockIndice+1 << endl;
+	//cerr << "Requests::dnaDecoderSetup - _sequenceCount : " << _sequenceCount << endl;
 	_ddecoder->setup(_filePosDna, blockSize, _sequenceCount);
 	_filePosDna += blockSize;
 
@@ -545,24 +545,24 @@ void Requests::qualDecoderSetup(int blockIndice){
 
 //~~copy of Leon private method...
 void Requests::setupNextComponent(vector<u_int64_t> & blockSizes){
-			cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
+			//cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
 	//Go to the data block position (position 0 for headers, position |headers data| for reads)
 	_inputFile->seekg(_filePos, _inputFile->beg);
-	cerr << "filepos : " << _filePos << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
-	cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
+	//cerr << "filepos : " << _filePos << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile eof : " << _inputFile->eof() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile bad : " << _inputFile->bad() << endl;
+	//cerr << "Requests::setupNextComponent -  _inputFile fail : " << _inputFile->fail() << endl;
 
 	blockSizes.clear();
 	
 	_blockCount = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
-	cerr << "Requests::setupNextComponent - _blockCount : " << _blockCount << endl;
+	//cerr << "Requests::setupNextComponent - _blockCount : " << _blockCount << endl;
 	for(int i=0; i<_blockCount; i++){
 		u_int64_t blockSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 		blockSizes.push_back(blockSize);
-		cerr << "Requests::setupNextComponent - blockSize : " << blockSize << endl;
+		//cerr << "Requests::setupNextComponent - blockSize : " << blockSize << endl;
 	}
 }
 void Requests::decodeBloom(){
@@ -1411,14 +1411,14 @@ void Requests::testPrintReadsFile(bool getReads, bool getAnchors, bool getAnchor
 
 	initializeDecoders();
 
-	cerr << "debug Requests::testPrintReadsFile - reading blocks : " << endl;
-	cerr << "debug Requests::testPrintReadsFile - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug Requests::testPrintReadsFile - reading blocks : " << endl;
+	//cerr << "debug Requests::testPrintReadsFile - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
 
 	for (int blockIndice = 0; 
 		blockIndice < _dnaBlockSizes.size(); 
 		blockIndice += 2){
 			
-		cerr << "debug Requests::testPrintReadsFile - block nb : " << blockIndice << endl;
+		//cerr << "debug Requests::testPrintReadsFile - block nb : " << blockIndice << endl;
 
 		//if(blockIndice >= _dnaBlockSizes.size()) break;
 			
@@ -1602,7 +1602,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 	//cerr << "debug - testPrintReads - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-		cerr << "Requests::testPrintAllHeadersReadsFile - testPrintReads - block nb : " << i << endl;
+		//cerr << "Requests::testPrintAllHeadersReadsFile - testPrintReads - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -1621,14 +1621,14 @@ void Requests::testPrintAllHeadersReadsFile(){
 			//header decoder
 			if(! _noHeader)
 			{
-				cerr << "Requests::testPrintAllHeadersReadsFile - _filePosHeader : " << _filePosHeader << endl;
+				//cerr << "Requests::testPrintAllHeadersReadsFile - _filePosHeader : " << _filePosHeader << endl;
 				blockSize = _headerBlockSizes[i];
-				cerr << "Requests::testPrintAllHeadersReadsFile - header BlockSize : " << blockSize << endl;
+				//cerr << "Requests::testPrintAllHeadersReadsFile - header BlockSize : " << blockSize << endl;
 				_sequenceCount = _headerBlockSizes[i+1];
-				cerr << "Requests::testPrintAllHeadersReadsFile - _sequenceCount : " << _sequenceCount << endl;
+				//cerr << "Requests::testPrintAllHeadersReadsFile - _sequenceCount : " << _sequenceCount << endl;
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(_filePosHeader, blockSize, _sequenceCount);
-				cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder->setup : " << endl;
+				//cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder->setup : " << endl;
 				_filePosHeader += blockSize;
 				
 				//hdecoder->execute();
@@ -1640,7 +1640,7 @@ void Requests::testPrintAllHeadersReadsFile(){
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-			cerr << "Requests::testPrintAllHeadersReadsFile - dna BlockSize : " << blockSize << endl;
+			//cerr << "Requests::testPrintAllHeadersReadsFile - dna BlockSize : " << blockSize << endl;
 			_sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(_filePosDna, blockSize, _sequenceCount);
@@ -1664,13 +1664,13 @@ void Requests::testPrintAllHeadersReadsFile(){
 			}
 
 			if(hdecoder!=NULL){
-				cerr << "Requests::testPrintAllHeadersReadsFile - before hdecoder execute" << endl;
+				//cerr << "Requests::testPrintAllHeadersReadsFile - before hdecoder execute" << endl;
 				hdecoder->execute();
-				cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder execute" << endl;
+				//cerr << "Requests::testPrintAllHeadersReadsFile - after hdecoder execute" << endl;
 			}
-			cerr << "Requests::testPrintAllHeadersReadsFile - before ddecoder execute" << endl;
+			//cerr << "Requests::testPrintAllHeadersReadsFile - before ddecoder execute" << endl;
 			ddecoder->execute();
-			cerr << "Requests::testPrintAllHeadersReadsFile - after ddecoder execute" << endl;
+			//cerr << "Requests::testPrintAllHeadersReadsFile - after ddecoder execute" << endl;
 			i += 2;
 
 		}	
@@ -1808,14 +1808,14 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 
 	initializeDecoders();
 
-	cerr << "debug Requests::testPrintReadsPFile - reading blocks : " << endl;
-	cerr << "debug Requests::testPrintReadsPFile - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug Requests::testPrintReadsPFile - reading blocks : " << endl;
+	//cerr << "debug Requests::testPrintReadsPFile - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
 
 	for (int blockIndice = 0; 
 		blockIndice < _dnaBlockSizes.size(); 
 		blockIndice += 2){
 			
-		cerr << "debug Requests::testPrintReadsPFile - block nb : " << blockIndice << endl;
+		//cerr << "debug Requests::testPrintReadsPFile - block nb : " << blockIndice << endl;
 
 		//if(blockIndice >= _dnaBlockSizes.size()) break;
 			
@@ -1829,19 +1829,19 @@ void Requests::testPrintReadsPFile(bool getReads, bool getAnchors, bool getAncho
 		//struct ReadInfos* ri = (struct ReadInfos*)malloc(sizeof(struct ReadInfos));
 		struct OrderedReadsInfosGroup* orig = new OrderedReadsInfosGroup{};
 		int nbRead = 0;
-		cerr << "Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orig)" << endl;
+		//cerr << "Requests::testPrintReadsPFile - before  : getNextReadsInfosBLock(orig)" << endl;
 
 		int nbSequencesDecoded = 0;
 		while(_ddecoder->getNextOrderedReadsInfosGroup(orig)){
 
 			for (int i=0; i < orig->nbReads; ++i){
 
-				cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded : " << nbSequencesDecoded << endl;
-				cerr << "Requests::testPrintReadsPFile - _sequenceCount : " << _sequenceCount << endl;
+				//cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded : " << nbSequencesDecoded << endl;
+				//cerr << "Requests::testPrintReadsPFile - _sequenceCount : " << _sequenceCount << endl;
 				if (nbSequencesDecoded >= _sequenceCount)
 				{
-					cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded >= _sequenceCount - exit now" << endl;
-					cerr << "Hahahaha lol voilà" << endl;
+					//cerr << "Requests::testPrintReadsPFile - nbSequencesDecoded >= _sequenceCount - exit now" << endl;
+					//cerr << "Hahahaha lol voilà" << endl;
 					exit(EXIT_FAILURE);
 				}
 			
@@ -1898,7 +1898,7 @@ void Requests::testPrintPFile(){
 	
 	//Second bit : option no header
 	bool noHeader = ((infoByte & 0x02) == 0x02);
-	cerr << "testPrintPFile - noHeader : " << noHeader << endl;
+	//cerr << "testPrintPFile - noHeader : " << noHeader << endl;
 
 	_kmerSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 	cout << "\tKmer size: " << _kmerSize << endl;
@@ -1920,16 +1920,16 @@ void Requests::testPrintPFile(){
 		
 		///////// header setup  /////////
 		//Decode the first header
-		cerr << "debug - testPrintPFile - header setup" << endl;
+		//cerr << "debug - testPrintPFile - header setup" << endl;
 		u_int16_t _firstHeaderSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 		for(int i=0; i<_firstHeaderSize; i++){
 			_firstHeader += _rangeDecoder.nextByte(_generalModel);
-			cerr << "debug - testPrintPFile - first header : " << _firstHeader << endl;
+			//cerr << "debug - testPrintPFile - first header : " << _firstHeader << endl;
 		}
-		cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
+		//cerr << "debug - testPrintPFile - headerBlockSizes before setup : " << _headerBlockSizes.size() << endl;
 		//_filePos = filePosHeader;
 		setupNextComponent(_headerBlockSizes);
-		cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
+		//cerr << "debug - testPrintPFile - headerBlockSizes after setup : " << _headerBlockSizes.size() << endl;
 	
 	}
 	//MARQUEUR
@@ -1937,26 +1937,26 @@ void Requests::testPrintPFile(){
 	/////// dna setup ////////////
 	
 	//need to init _filePosDna here
-	cerr << "debug - testPrintPFile - dna setup" << endl;
+	//cerr << "debug - testPrintPFile - dna setup" << endl;
 	for(int ii=0; ii<_headerBlockSizes.size(); ii+=2 )
 	{
 		//filePosDna += _headerBlockSizes[ii];
-		cerr << "debug - testPrintPFile - file pos dna : " << filePosDna << endl;
+		//cerr << "debug - testPrintPFile - file pos dna : " << filePosDna << endl;
 	}
 	
-	cerr << "debug - testPrintPFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintPFile - dnaBlockSizes before setup : " << _dnaBlockSizes.size() << endl;
 	_filePos = filePosDna;
-	cerr << "debug - testPrintPFile - _filePos : " << _filePos << endl;
+	//cerr << "debug - testPrintPFile - _filePos : " << _filePos << endl;
 	setupNextComponent(_dnaBlockSizes);
-	cerr << "debug - testPrintPFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
-	cerr << "debug - testPrintPFile - _filePos : " << _filePos << endl;
+	//cerr << "debug - testPrintPFile - dnaBlockSizes after setup : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintPFile - _filePos : " << _filePos << endl;
 
 
 	decodeBloom();
-	cerr << "debug - testPrintPFile - _filePos after decode bloom : " << _filePos << endl;
+	//cerr << "debug - testPrintPFile - _filePos after decode bloom : " << _filePos << endl;
 	//decodeAnchorDict();
 
-	cerr << "debug - testPrintPFile - read no anchored reads here ?" << endl;
+	//cerr << "debug - testPrintPFile - read no anchored reads here ?" << endl;
 
 	/*u_int64_t nbReadsNoAnchor = CompressionUtils::decodeNumeric(_rangeEncoder, _numericModel);
 	cerr << "debug - testPrintPFile - nbReadsNoAnchor : " << nbReadsNoAnchor << endl;
@@ -1967,9 +1967,9 @@ void Requests::testPrintPFile(){
 		de->encodeSortedFileNoAnchorRead(line);
 	}*/
 
-	cerr << "debug - testPrintPFile - TESTSEG0" << endl;
+	//cerr << "debug - testPrintPFile - TESTSEG0" << endl;
 	decodeSortedAnchorDict();
-cerr << "debug - testPrintPFile - TESTSEG1" << endl;
+//cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 		/////////// qualities setup //////////
 	/*if(! isFasta)
 	{
@@ -2002,7 +2002,7 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 	}
 		
 	//DnaDecoder* dd = new DnaDecoder(_leon, _outputFilename);
-	cerr << " debug - testPrintPFile - decodeFileName : " << _decodeFilename << endl;
+	//cerr << " debug - testPrintPFile - decodeFileName : " << _decodeFilename << endl;
 	ddecoder = new DnaDecoder(_leon, this, _decodeFilename);
 	//dnadecoders.push_back(dd);
 		
@@ -2015,10 +2015,10 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 
 
 	int i=0;
-	cerr << "debug - testPrintPFile - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
+	//cerr << "debug - testPrintPFile - _dnaBlockSizes : " << _dnaBlockSizes.size() << endl;
 	while(i < _dnaBlockSizes.size()){
 		
-		cerr << "debug - testPrintPFile - block nb : " << i << endl;
+		//cerr << "debug - testPrintPFile - block nb : " << i << endl;
 		//for(int j=0; j<_nb_cores; j++){
 			
 
@@ -2038,7 +2038,7 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			if(! noHeader)
 			{
 				blockSize = _headerBlockSizes[i];
-				cerr << "debug - testPrintPFile - header BlockSize : " << blockSize << endl;
+				//cerr << "debug - testPrintPFile - header BlockSize : " << blockSize << endl;
 				_sequenceCount = _headerBlockSizes[i+1];
 				//hdecoder = headerdecoders[j];
 				hdecoder->setup(filePosHeader, blockSize, _sequenceCount);
@@ -2053,7 +2053,7 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			
 			//dna decoder
 			blockSize = _dnaBlockSizes[i];
-			cerr << "debug - testPrintPFile - dna BlockSize : " << blockSize << endl;
+			//cerr << "debug - testPrintPFile - dna BlockSize : " << blockSize << endl;
 			_sequenceCount = _dnaBlockSizes[i+1];
 			//ddecoder = dnadecoders[j];
 			ddecoder->setup(filePosDna, blockSize, _sequenceCount);
@@ -2077,13 +2077,13 @@ cerr << "debug - testPrintPFile - TESTSEG1" << endl;
 			}
 
 			if(hdecoder!=NULL){
-				cerr << "debug - testPrintPFile - before hdecoder execute" << endl;
+				//cerr << "debug - testPrintPFile - before hdecoder execute" << endl;
 				hdecoder->execute();
-				cerr << "debug - testPrintPFile - after hdecoder execute" << endl;
+				//cerr << "debug - testPrintPFile - after hdecoder execute" << endl;
 			}
-			cerr << "debug - testPrintPFile - before dnadecoder execute" << endl;
+			//cerr << "debug - testPrintPFile - before dnadecoder execute" << endl;
 			ddecoder->execute();
-			cerr << "debug - testPrintPFile - after dnadecoder execute" << endl;
+			//cerr << "debug - testPrintPFile - after dnadecoder execute" << endl;
 			i += 2;
 
 		}	
@@ -2366,7 +2366,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 											bitset<NB_MAX_COLORS> _sequenceAmbiguousMatches*/){
 
 
-	cerr << "Requests::getSequenceFileMatchesInData - BEGIN" << endl;
+	//cerr << "Requests::getSequenceFileMatchesInData - BEGIN" << endl;
 
 	//the array with colors of each sequence's part of read
  	int sequenceSize = strlen(sequence);
@@ -2408,8 +2408,8 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 		blockIndice < _dnaBlockSizes.size(); 
 		blockIndice += 2){
 
-		cerr << "Requests::getSequenceFileMatchesInData - blockIndice : " << blockIndice << endl;
-		cerr << "Requests::getSequenceFileMatchesInData - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+		//cerr << "Requests::getSequenceFileMatchesInData - blockIndice : " << blockIndice << endl;
+		//cerr << "Requests::getSequenceFileMatchesInData - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
 
 		if(blockIndice >= _dnaBlockSizes.size()) break;
 			
@@ -2441,8 +2441,8 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 			//first finish to decode reads from previous blocks' if there is any
 			if (nbReadsLeft > 0)
 			{
-				cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft > 0" << endl;
-				cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
+				//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft > 0" << endl;
+				//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
 				
 				getSequenceFileMatchesInReadGroup(sequence, 
 					orig->anchor, nbReadsLeft, sequenceAnchorKmers, 
@@ -2461,10 +2461,10 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 				}
 			}
 
-			cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
+			//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
 			//exit(EXIT_FAILURE);
 		}		
-		cerr << "Requests::getSequenceFileMatchesInData - end block" << endl;
+		//cerr << "Requests::getSequenceFileMatchesInData - end block" << endl;
 	}
 
 	for (int i = 0; i < sequenceSize; ++i)
@@ -2492,7 +2492,7 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 	list<u_int32_t>* listPos;		
 	struct ReadInfos* ri = new ReadInfos{};
 	//cerr << "Requests::getSequenceFileMatchesInReadGroup - search segflt 1" << endl;
-	cerr << "Requests::getSequenceFileMatchesInReadGroup - _sequenceCount : " << _sequenceCount << endl;
+	//cerr << "Requests::getSequenceFileMatchesInReadGroup - _sequenceCount : " << _sequenceCount << endl;
 
 				//if the group's anchor is in the sequence's list of anchors
 				//then we try to aline each read of the group to the sequence
@@ -2508,9 +2508,9 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 						//the current anchor, for the begining of next block
 						if (nbSequencesDecoded >= _sequenceCount)
 						{
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded >= _sequenceCount" << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded >= _sequenceCount" << endl;
 							nbReadsLeft = nbSequencesToDecode - i;
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbReadsLeft : " << nbReadsLeft << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - nbReadsLeft : " << nbReadsLeft << endl;
 							break;
 						}
 						else
@@ -2522,11 +2522,11 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 
 						//reading the group read per read
 						if (_ddecoder->getNextOrderedReadInfos(ri)){
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - searchAlignements" << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - searchAlignements" << endl;
 							searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
 								sequenceMatches/*, _sequenceAmbiguousMatches*/);
 							++nbSequencesDecoded;
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - sequenceMatches : " << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - sequenceMatches : " << endl;
 							for (int i = 0; i < strlen(sequence); ++i)
 							{
 								cout << (*sequenceMatches)[i] << " : " << bitset<NB_MAX_COLORS>((*sequenceMatches)[i]) << endl;
@@ -2534,7 +2534,7 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 						}
 						else
 						{
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
 							exit(EXIT_FAILURE);
 						}
 					}
@@ -2548,9 +2548,9 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 						//the current anchor, for the begining of next block
 						if (nbSequencesDecoded >= _sequenceCount)
 						{
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded >= _sequenceCount" << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded >= _sequenceCount" << endl;
 							nbReadsLeft = nbSequencesToDecode - i;
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - nbReadsLeft : " << nbReadsLeft << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - nbReadsLeft : " << nbReadsLeft << endl;
 							break;
 						}
 						else
@@ -2562,12 +2562,12 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 							++nbSequencesDecoded;
 						}
 						else{
-							cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
+							//cerr << "Requests::getSequenceFileMatchesInReadGroup - error while reading, no read to read anymore..." << endl;
 							exit(EXIT_FAILURE);
 						}
 					}
 				}
-			cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded : " << nbSequencesDecoded << endl;
+			//cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 }
 
 void Requests::searchAlignements(char* sequence, 

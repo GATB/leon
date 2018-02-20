@@ -304,12 +304,12 @@ void Leon::executeRequest(){
 	string signaturesFile = baseInputname + ".signatures_file";
 	string colorsFile = baseInputname + ".colors_file";
 
-	cerr << "Leon::executeRequest() - pathToFileName : " << pathToFileName << endl;
-	cerr << "Leon::executeRequest() - lastindex : " << lastindex << endl;
-	cerr << "Leon::executeRequest() - baseInputname : " << baseInputname << endl;
-	cerr << "Leon::executeRequest() - extension : " << extension << endl;
-	cerr << "Leon::executeRequest() - signaturesFile : " << signaturesFile << endl;
-	cerr << "Leon::executeRequest() - colorsFile : " << colorsFile << endl;
+	//cerr << "Leon::executeRequest() - pathToFileName : " << pathToFileName << endl;
+	//cerr << "Leon::executeRequest() - lastindex : " << lastindex << endl;
+	//cerr << "Leon::executeRequest() - baseInputname : " << baseInputname << endl;
+	//cerr << "Leon::executeRequest() - extension : " << extension << endl;
+	//cerr << "Leon::executeRequest() - signaturesFile : " << signaturesFile << endl;
+	//cerr << "Leon::executeRequest() - colorsFile : " << colorsFile << endl;
 
 	_filePos = 0;
 	
@@ -621,7 +621,7 @@ void Leon::coloriage (){
 			//cerr << "test kmerSignature compute :  " << (unsigned long) (hash1(itKmers->item().getValue(),0) & 255) << endl;
 	
 	}
-	cerr << "debug Leon::coloriage - after filling signature array" << endl;
+	//cerr << "debug Leon::coloriage - after filling signature array" << endl;
 	
 	
 	Iterator<Sequence>* it = _inputBank->iterator(); 
@@ -1503,10 +1503,10 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	//cout << "\tEncoded size (byte): " << size << endl;
 	
 	
-		cerr << "Leon::writeBlock - data : " << data << endl;
-		cerr << "Leon::writeBlock - size : " << size << endl;
-		cerr << "Leon::writeBlock - encodedSequenceCount : " << encodedSequenceCount << endl;
-		cerr << "Leon::writeBlock - blockID : " << blockID << endl;
+		//cerr << "Leon::writeBlock - data : " << data << endl;
+		//cerr << "Leon::writeBlock - size : " << size << endl;
+		//cerr << "Leon::writeBlock - encodedSequenceCount : " << encodedSequenceCount << endl;
+		//cerr << "Leon::writeBlock - blockID : " << blockID << endl;
 	
 	
 	
@@ -1801,7 +1801,7 @@ void Leon::startDnaCompression(){
 	//create a temporary output file to store the anchors dict
 	//_dictAnchorFile = System::file().newFile(_outputFilename + ".adtemp", "wb"); 
 	_dictAnchorFile = new ofstream((_outputFilename + ".adtemp").c_str(), ios::out|ios::binary);
-	cerr << "Leon::startDnaCompression - _dictAnchorFile : " << _outputFilename + ".adtemp" << endl;
+	//cerr << "Leon::startDnaCompression - _dictAnchorFile : " << _outputFilename + ".adtemp" << endl;
 	
 	_lastAnchorValue = 0;
 	_anchorAdress = 0;
@@ -1853,7 +1853,7 @@ void Leon::startDnaCompression(){
 
 		int nbReadsEncodedTest = 0;
 
-		cerr << "Leon::startDnaCompression() - before mapred sort _nbLinesToSort : " << _nbLinesToSort << endl;
+		//cerr << "Leon::startDnaCompression() - before mapred sort _nbLinesToSort : " << _nbLinesToSort << endl;
 		
 		//getting name of file for hdfs
 		std::size_t filenameIndex = _baseOutputname.find_last_of("/\\");
@@ -1875,7 +1875,7 @@ void Leon::startDnaCompression(){
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
 		
-		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
+		//cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
 						pathToFiles + " " +
@@ -1883,17 +1883,17 @@ void Leon::startDnaCompression(){
 						sortedReadsFileName + " " + 
 						std::to_string(_nbLinesToSort) + " " + 
 						" " + std::to_string(_nbReducers); 
-		cerr << "Leon::startDnaCompression() - test system call" << endl;
+		//cerr << "Leon::startDnaCompression() - test system call" << endl;
 		    int ret = std::system(commandLine.c_str());
 		    if (ret > 0){
-		    	cerr << "Leon::startDnaCompression() - map red sort FAILURE" << endl;
+		    	//cerr << "Leon::startDnaCompression() - map red sort FAILURE" << endl;
 		      	remove((_outputFilename + ".adtemp").c_str());
 		      	//remove((_baseOutputname + ".ars.tosort").c_str());
 		      	unsortedReads.close();
 		      	exit(0);
 			}
 		    else{
-		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
+		    	//cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
 		  	}
 		 	
@@ -1912,7 +1912,7 @@ void Leon::startDnaCompression(){
 		kmer_type anchor;
 		u_int32_t nbReads = 0;
 
-		cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading the file : " << sortedReadsFileName << endl;
+		//cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading the file : " << sortedReadsFileName << endl;
 		std::string line;
 		int nbWritedLines = 0;
 		int blockID = 0;
@@ -2117,15 +2117,15 @@ void Leon::startDnaCompression(){
 			if (nbWritedLines  >= READ_PER_BLOCK)
 				{
 					de->encodeSortedFileWriteBlock(&blockID);
-					cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
+					//cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
 					//exit(EXIT_FAILURE);
 					nbWritedLines = 0;
 			}
 
 		}
 		
-		cerr << "\nLeon::startDnaCompression - flush dna encoder" << endl;
-		cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
+		//cerr << "\nLeon::startDnaCompression - flush dna encoder" << endl;
+		//cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
 		de->encodeSortedFileWriteBlock(&blockID);
 		delete de;
 	}
@@ -2299,10 +2299,10 @@ void Leon::writeAnchorDict(){
 	//u_int64_t size = _anchorRangeEncoder.getBufferSize();
 	_compressedSize += size;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
-	cerr << "Leon::writeAnchorDict - encode dict size : " << size << endl;
+	//cerr << "Leon::writeAnchorDict - encode dict size : " << size << endl;
 	//Encode anchors count
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
-	cerr << "Leon::writeAnchorDict - encode anchor count : " << _anchorAdress << endl;
+	//cerr << "Leon::writeAnchorDict - encode anchor count : " << _anchorAdress << endl;
 	//printf("should encode %u anchors \n",_anchorAdress);
 	//cout << "Anchor dict size: " << System::file().getSize(_outputFilename + ".adtemp") << endl;
 	//cout << "\t pos: " << _outputFile->tell() << endl;
@@ -2342,12 +2342,12 @@ void Leon::writeSortedAnchorDict(){
 	_anchorDictSize = size;
 
 	_compressedSize += size;
-	cerr << "Leon::writeSortedAnchorDict - encode dict size : " << size << endl;
+	//cerr << "Leon::writeSortedAnchorDict - encode dict size : " << size << endl;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, size);
 	
 	//Encode anchors count
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _anchorAdress);
-	cerr << "Leon::writeSortedAnchorDict - encode anchor count : " << _anchorAdress << endl;
+	//cerr << "Leon::writeSortedAnchorDict - encode anchor count : " << _anchorAdress << endl;
 	ifstream tempFile((_outputFilename + ".adtemp").c_str(), ios::in|ios::binary);
 	
 	
