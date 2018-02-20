@@ -301,6 +301,7 @@ class Leon : public misc::impl::Tool
 		Order0Model _generalModel;
 		vector<Order0Model> _numericModel;
 		vector<Order0Model> _nbReadsPerAnchorModel;
+		vector<Order0Model> _readGroupBufferSizeModel;
 		RangeEncoder _rangeEncoder;
 		vector<u_int64_t> _blockSizes;
 	
@@ -356,7 +357,7 @@ class Leon : public misc::impl::Tool
 		void writeAnchorDict();
 		void writeSortedAnchorDict();
 		void encodeInsertedAnchor(const kmer_type& kmer);
-		void encodeInsertedSortedAnchor(const kmer_type& anchor, u_int32_t nbReads);
+		void encodeInsertedSortedAnchor(const kmer_type& anchor, u_int32_t nbReads, u_int64_t readGroupBufferSize);
 			
 		RangeEncoder _anchorRangeEncoder;
 		//RangeEncoder _sortedAnchorRangeEncoder;

@@ -1360,6 +1360,7 @@ void DnaEncoder::encodeSortedFileRead(kmer_type anchor, int isRevComp, int readS
 									vector<int> leftErrorPos, vector<u_int8_t> bifurcations, 
 									vector<u_int8_t> binaryBifurcations, vector<u_int8_t> bifurcationTypes){
 
+
 	//readTypeModel is not needed anymore for sorted file
 	//_rangeEncoder.encode(_readTypeModel, 0);
 

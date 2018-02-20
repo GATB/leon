@@ -350,6 +350,7 @@ class Requests
 		vector<Order0Model> _numericModel;
 		Order0Model _anchorDictModel;
 		vector<Order0Model> _nbReadsPerAnchorModel;
+		vector<Order0Model> _readGroupBufferSizeModel;
 
 		//not necessary, infos decode :
 		size_t _version_major;

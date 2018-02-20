@@ -48,6 +48,7 @@ Requests::Requests(IBank* inputBank, string inputFilename, Graph graph,
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
 		_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		_readGroupBufferSizeModel.push_back(Order0Model(256));
 	}
 
 	cout << "nb kmers : " << _nb_kmers_infile << endl;
@@ -401,9 +402,11 @@ void Requests::clearRangeDecoder(){
 	_anchorDictModel.clear();
 	_numericModel.clear();
 	_nbReadsPerAnchorModel.clear();
+	_readGroupBufferSizeModel.clear();
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
 		_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		_readGroupBufferSizeModel.push_back(Order0Model(256));
 	}
 	//test
 	delete _descInputFile;
@@ -666,8 +669,16 @@ void Requests::decodeSortedAnchorDict(){
 
 			u_int64_t nbReads = CompressionUtils::decodeNumeric(_anchorRangeDecoder, _nbReadsPerAnchorModel);
 			//cerr << "\tRequests::decodeSortedAnchorDict() - nbReads : " << nbReads << endl;
+			u_int64_t readGroupBufferSize = CompressionUtils::decodeNumeric(_anchorRangeDecoder, _readGroupBufferSizeModel);
 
 			//_vecAnchorKmers.push_back(kmer);
+
+			//TODO
+			//Hash16<kmer_type anchor, u_int64_t* blockInfos >  * _anchorKmersSortedD
+			//block infos should have :
+			// - nbReads
+			// - readGroupBufferSize
+			
 			_anchorKmersSortedD->insert(anchor, nbReads);
 
 			anchorKmer.clear();

@@ -249,6 +249,7 @@ void Leon::execute()
 	for(int i=0; i<CompressionUtils::NB_MODELS_PER_NUMERIC; i++){
 		_numericModel.push_back(Order0Model(256));
 		_nbReadsPerAnchorModel.push_back(Order0Model(256));
+		_readGroupBufferSizeModel.push_back(Order0Model(256));
 	}
 	
 	if(_compress){
@@ -1911,6 +1912,7 @@ void Leon::startDnaCompression(){
 		bool readingNewAnchor = true;
 		kmer_type anchor;
 		u_int32_t nbReads = 0;
+		u_int64_t readGroupBufferSize = 0;
 
 		cerr << "\nLeon::startDnaCompression() encodeSortedFileAnchor - reading the file : " << sortedReadsFileName << endl;
 		std::string line;
@@ -2094,9 +2096,15 @@ void Leon::startDnaCompression(){
 						//cerr << "debug Leon::startDnaCompression - binaryBifurcations[i] : " << (int) binaryBifurcations[i] << endl;
 					}
 
+					//to compute size of reads group's buffer
+					u_int64_t rangeEncoderBufferSizeOld = _rangeEncoder.getBufferSize();
+
 					de->encodeSortedFileRead(anchor, isRevComp, readSize, anchorPos, Npos,
 											leftErrorPos, bifurcations, binaryBifurcations, bifurcationTypes);
-					nbReadsEncodedTest++;
+
+					readGroupBufferSize += _rangeEncoder.getBufferSize() - rangeEncoderBufferSizeOld;
+
+					//nbReadsEncodedTest++;
 					++nbWritedLines;
 					//cerr << "debug Leon::startDnaCompression - nbReadsEncodedTest : " << (int) nbReadsEncodedTest << endl;
 				}
@@ -2105,11 +2113,12 @@ void Leon::startDnaCompression(){
 				else{
 					//cerr << "\tdebug Leon::startDnaCompression - anchors has : " << nbReads << " reads" << endl;
 						
-					encodeInsertedSortedAnchor(anchor, nbReads);	
+					encodeInsertedSortedAnchor(anchor, nbReads, readGroupBufferSize);	
 					_anchorKmersSorted->insert(anchor, nbReads);
 
 					readingNewAnchor = true;
 					nbReads = 0;
+					readGroupBufferSize = 0;
 				}
 				
 			}
@@ -2565,7 +2574,7 @@ void Leon::encodeInsertedAnchor(const kmer_type& kmer){
 	//cerr << "Leon::encodeInsertedAnchor - end" << endl;
 }
 
-void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads){
+void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads, u_int64_t readGroupBufferSize){
 	
 
 	//cerr << "Leon::encodeInsertedSortedAnchor - begin" << endl;
@@ -2582,6 +2591,7 @@ void Leon::encodeInsertedSortedAnchor(const kmer_type& kmer, u_int32_t u_nbReads
 
 	//cerr << "Leon::encodeInsertedSortedAnchor - encoding nb reads : " << nbReads << endl;
 	CompressionUtils::encodeNumeric(_anchorRangeEncoder, _nbReadsPerAnchorModel, nbReads);
+	CompressionUtils::encodeNumeric(_anchorRangeEncoder, _readGroupBufferSizeModel, readGroupBufferSize);
 	
 
 	if(_anchorRangeEncoder.getBufferSize() >= 4096){
