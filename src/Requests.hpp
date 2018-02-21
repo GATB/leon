@@ -41,6 +41,7 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
+#include <unordered_map>
 
 //#include "RangeCoder.hpp"
 #include "Leon.hpp"
@@ -53,7 +54,6 @@ class Leon;
 class DnaDecoder;
 class HeaderDecoder;
 class QualDecoder;
-
 
 //class HeaderEncoder;
 //class HeaderDecoder;
@@ -80,7 +80,7 @@ class Requests
 			Partition<kmer_count> & solidCollection, 
 			size_t kmerSize, 
 			Hash16<kmer_type, u_int32_t >  * anchorKmers,
-			Hash16<kmer_type, u_int32_t >  * anchorKmersSorted,
+			unordered_map<kmer_type, struct groupInfos*> *  anchorKmersSorted,
 			Leon* leon,
 			DnaDecoder* dnadec/*, 
 			Order0Model generalModel,
@@ -310,8 +310,10 @@ class Requests
 		Kmer<>::ModelCanonical _model;
 		KmerModel* _kmerModel;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers;
-		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
-		Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD; //get at decompression
+		//Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
+		unordered_map<kmer_type, struct groupInfos*> * _anchorKmersSorted;
+		//Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
+		unordered_map<kmer_type, struct groupInfos*> * _anchorKmersSortedD; //get at decompression
 		u_int32_t _anchorAdress;
 		ifstream* _anchorDictFile;
 

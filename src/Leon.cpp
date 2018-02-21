@@ -1875,7 +1875,7 @@ void Leon::startDnaCompression(){
 		// outputfile name : sortedReadsFileName
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
-		
+		/*
 		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
@@ -1897,7 +1897,7 @@ void Leon::startDnaCompression(){
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
 		  	}
-		 	
+		 */	
 		//AFTER MAP REDUCE SORT
 
 		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);	
@@ -1906,7 +1906,8 @@ void Leon::startDnaCompression(){
 		//not normal having to reset _processedSquenceCount... why isn't it 0 already at construction ??
 		de->reset();
 		
-		_anchorKmersSorted = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated );
+		//_anchorKmersSorted = new Hash16<kmer_type, u_int32_t > ( nbestimated/10 , &nbcreated );
+		_anchorKmersSorted = new unordered_map<kmer_type,struct groupInfos*> ();
 
 		//Compression of sortedReads
 		bool readingNewAnchor = true;
@@ -1939,7 +1940,6 @@ void Leon::startDnaCompression(){
 			}
 
 			else{
-
 				//we encode the read and
 				//count the number of reads for the dictionnary
 				if (line != "\0"){
@@ -2095,13 +2095,11 @@ void Leon::startDnaCompression(){
 					for (int i = 0; i<binaryBifurcations.size(); ++i){
 						//cerr << "debug Leon::startDnaCompression - binaryBifurcations[i] : " << (int) binaryBifurcations[i] << endl;
 					}
-
 					//to compute size of reads group's buffer
 					u_int64_t rangeEncoderBufferSizeOld = _rangeEncoder.getBufferSize();
 
 					de->encodeSortedFileRead(anchor, isRevComp, readSize, anchorPos, Npos,
 											leftErrorPos, bifurcations, binaryBifurcations, bifurcationTypes);
-
 					readGroupBufferSize += _rangeEncoder.getBufferSize() - rangeEncoderBufferSizeOld;
 
 					//nbReadsEncodedTest++;
@@ -2112,9 +2110,11 @@ void Leon::startDnaCompression(){
 				// we save the anchor and its nb of reads in a dictionnary
 				else{
 					//cerr << "\tdebug Leon::startDnaCompression - anchors has : " << nbReads << " reads" << endl;
-						
 					encodeInsertedSortedAnchor(anchor, nbReads, readGroupBufferSize);	
-					_anchorKmersSorted->insert(anchor, nbReads);
+					struct groupInfos* gi = (struct groupInfos*) malloc(sizeof(struct groupInfos));
+					gi->nbReads = nbReads;
+					gi->groupBufferSize = readGroupBufferSize;
+					_anchorKmersSorted->emplace(anchor, gi);
 
 					readingNewAnchor = true;
 					nbReads = 0;
@@ -2132,15 +2132,12 @@ void Leon::startDnaCompression(){
 			}
 
 		}
-		
 		cerr << "\nLeon::startDnaCompression - flush dna encoder" << endl;
 		cerr << "Leon::startDnaCompression - nbWritedLines : " << nbWritedLines << endl;
 		de->encodeSortedFileWriteBlock(&blockID);
 		delete de;
 	}
-
-	endDnaCompression();
-	
+	endDnaCompression();	
 	if(! _isFasta)
 	{
 		endQualCompression();
@@ -3296,7 +3293,8 @@ void Leon::decodeSortedAnchorDict(){
 	kmer_type anchor;
 	u_int32_t nbReads = 0;
 	u_int64_t nbcreated ;
-	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	//_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	_anchorKmersSortedD = new unordered_map<kmer_type,struct groupInfos*> ();
 	//cerr << "\tLeon::decodeSortedAnchorDict() - after initialisation" << endl;
 	while(currentAnchorCount < anchorCount){
 
@@ -3310,10 +3308,16 @@ void Leon::decodeSortedAnchorDict(){
 
 			//u_int32_t nbReads = 0;
 			u_int64_t nbReads = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
+			//u_int64_t groupBufferSize = CompressionUtils::decodeNumeric(_rangeDecoder, _readGroupBufferSizeModel);
+			u_int64_t groupBufferSize = CompressionUtils::decodeNumeric(_rangeDecoder, _numericModel);
 			//cerr << "\tLeon::decodeSortedAnchorDict() - nbReads" << nbReads << endl;
 
 			//_vecAnchorKmers.push_back(kmer);
-			_anchorKmersSortedD->insert(anchor, nbReads);
+			struct groupInfos* gi = (struct groupInfos*) malloc(sizeof(struct groupInfos));
+			gi->nbReads = nbReads;
+			gi->groupBufferSize = groupBufferSize;
+
+			_anchorKmersSortedD->emplace(anchor, gi);
 
 			anchorKmer.clear();
 

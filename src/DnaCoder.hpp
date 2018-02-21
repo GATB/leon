@@ -71,6 +71,7 @@ struct OrderedReadsInfosGroup{
 	kmer_type anchor;
 	kmer_type revAnchor;
 	u_int32_t nbReads;
+	u_int64_t groupBufferSize;
 };
 
 /*

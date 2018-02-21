@@ -2272,7 +2272,7 @@ bool DnaDecoder::getNextOrderedReadsInfosGroup(struct OrderedReadsInfosGroup* or
 	
 	if (_processedSequenceCount < _sequenceCount){
 	
-		Hash16<kmer_type, u_int32_t >  * anchorKmersSorted = _requests->_anchorKmersSortedD;
+		unordered_map<kmer_type, struct groupInfos* >  * anchorKmersSorted = _requests->_anchorKmersSortedD;
 
 		//cerr << "\tDnaDecoder::execute() - before decoding anchor" << endl;
 		u_int64_t anchor_uint64t = CompressionUtils::decodeNumeric(_rangeDecoder, _anchorKmerTypeModel);
@@ -2287,10 +2287,13 @@ bool DnaDecoder::getNextOrderedReadsInfosGroup(struct OrderedReadsInfosGroup* or
 		//and verify if anchor is revcomp
 
 		u_int32_t nbReads;
+		struct groupInfos* gi = (struct groupInfos*) malloc(sizeof(struct groupInfos));
 		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - anchorKmersSorted->contains(_anchor) : " << 	anchorKmersSorted->contains(_anchor) << endl; 
 		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - before getting nbReads" << endl; 
-		anchorKmersSorted->get(_anchor, &nbReads);
-		orig->nbReads = nbReads;
+		//anchorKmersSorted->get(_anchor, &nbReads);
+		gi = anchorKmersSorted->at(_anchor);
+		orig->nbReads = gi->nbReads;
+		orig->groupBufferSize = gi->groupBufferSize;
 		//cerr << "\tDnaDecoder::getNextOrderedReadsInfosGroup() - nbReads : " << orig->nbReads << endl;
 		return true;
 
@@ -2429,9 +2432,10 @@ void DnaDecoder::execute(){
 		*/
 
 		//Decoding normal reads 
-		Hash16<kmer_type, u_int32_t >  * anchorKmersSorted = _requests->_anchorKmersSortedD;
+		unordered_map<kmer_type, struct groupInfos*> * anchorKmersSorted = _requests->_anchorKmersSortedD;
 
 		u_int32_t nbReads = 0;
+		u_int64_t groupBufferSize = 0;
 		u_int32_t nbSequencesDecoded = 0;
 
 		//debug vars 
@@ -2460,32 +2464,38 @@ void DnaDecoder::execute(){
 
 				cerr << "DnaDecoder::execute() - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 				cerr << "DnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+				cerr << "DnaDecoder::execute() - search sgfl 0" << endl;
 				//assert that we don't exceed number of reads in the block
 				//if we do, we keep the number of read that is left to decode with
 				//the current anchor, for the begining of next block
 				if (nbSequencesDecoded >= _sequenceCount)
 				{
+					cerr << "DnaDecoder::execute() - search sgfl 1" << endl;
 					cerr << "DnaDecoder::execute() - nbSequencesDecoded >= _sequenceCount" << endl;
 					_nbReadsLeft = nbReads - i -1;
 					cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
 					break;
 				}
 				else{
+					cerr << "DnaDecoder::execute() - search sgfl 2" << endl;
 					_nbReadsLeft = 0;
 				}
+				cerr << "DnaDecoder::execute() - search sgfl 3" << endl;
 
 			++_nbTests;	
 			//}
 			}
-
+			cerr << "DnaDecoder::execute() - search sgfl 4" << endl;
 			//cerr << "Hahahaha lol voilà" << endl;
 			//exit(EXIT_FAILURE);
 		}
 		if (_nbReadsLeft <= 0)
 		{
+			cerr << "DnaDecoder::execute() - search sgfl 5" << endl;
 			bool decodingNewAnchor = true;
 			while(_processedSequenceCount < _sequenceCount /*&& _nbTests < nbTestsMax*/){
 				if (decodingNewAnchor){
+					cerr << "DnaDecoder::execute() - search sgfl 6" << endl;
 					++_nbAnchorTest;
 					cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
 					cerr << "\n\n\tDnaDecoder::execute() - decode anchor" << endl;
@@ -2497,13 +2507,36 @@ void DnaDecoder::execute(){
 					cerr << "\tDnaDecoder::execute() - anchor : " << _anchor.toString(_kmerSize) << endl;
 					decodingNewAnchor = false;
 					++_nbTests;
+					cerr << "DnaDecoder::execute() - search sgfl 7" << endl;
 				}
 				else{
 					//get the number of reads encoded with actual anchor
 					//and verify if anchor is revcomp
-
+					cerr << "DnaDecoder::execute() - search sgfl 8" << endl;
 					u_int32_t nbReads = 0; 
-					if (! anchorKmersSorted->get(_anchor, &nbReads))
+					struct groupInfos* gi = (struct groupInfos*) malloc(sizeof(struct groupInfos));
+					try {
+						cerr << "DnaDecoder::execute() - search sgfl 8.1" << endl;
+					    gi = anchorKmersSorted->at(_anchor);      // vector::at throws an out-of-range
+					    nbReads = gi->nbReads;
+					    groupBufferSize = gi->groupBufferSize;
+					    cerr << "DnaDecoder::execute() - search sgfl 8.2" << endl;
+					}
+					catch (const std::out_of_range& oor) {
+						cerr << "DnaDecoder::execute() - search sgfl 8.3" << endl;
+						cerr << "\n\tDnaDecoder::execute() - error : anchor " << _anchor.toString(_kmerSize) << " is not in anchor dictionnary." << endl;
+						
+						try {
+							cerr << "DnaDecoder::execute() - search sgfl 8.4" << endl;
+					    gi = anchorKmersSorted->at(revcomp(_anchor, _kmerSize));      // vector::at throws an out-of-range
+						cerr << "DnaDecoder::execute() - search sgfl 8.5" << endl;
+						}
+						catch (const std::out_of_range& oor) {
+							cerr << "\n\tDnaDecoder::execute() - error : but rev comp " << revcomp(_anchor, _kmerSize).toString(_kmerSize) << " is." << endl;
+						}
+						exit(EXIT_FAILURE);
+					}
+					/*if (! anchorKmersSorted->get(_anchor, &nbReads))
 					{
 						cerr << "\n\tDnaDecoder::execute() - error : anchor " << _anchor.toString(_kmerSize) << " is not in anchor dictionnary." << endl;
 						
@@ -2513,11 +2546,11 @@ void DnaDecoder::execute(){
 						}
 
 						exit(EXIT_FAILURE);
-					}
+					}*/
 					cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
-
+												cerr << "DnaDecoder::execute() - search sgfl 9" << endl;
 					for (int i=0; i<nbReads; ++i){
-
+							cerr << "DnaDecoder::execute() - search sgfl 10" << endl;
 						//if (_nbTests < nbTestsMax){
 							cerr << "\n\n\tDnaDecoder::execute() - NB TEST : " << _nbTests << endl;
 							cerr << "\n\tDnaDecoder::execute() - decode read nb " << i+1 << endl;
@@ -2529,8 +2562,10 @@ void DnaDecoder::execute(){
 
 							cerr << "DnaDecoder::execute() - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 							cerr << "DnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+							cerr << "DnaDecoder::execute() - search sgfl 11" << endl;
 							if (nbSequencesDecoded >= _sequenceCount)
 							{
+								cerr << "DnaDecoder::execute() - search sgfl 12" << endl;
 								cerr << "DnaDecoder::execute() - nbSequencesDecoded >= _sequenceCount" << endl;
 								_nbReadsLeft = nbReads - i -1;
 								cerr << "DnaDecoder::execute() - _nbReadsLeft : " << _nbReadsLeft << endl;
@@ -2538,12 +2573,14 @@ void DnaDecoder::execute(){
 							}
 							++_nbTests;	
 						//}
+														cerr << "DnaDecoder::execute() - search sgfl 13" << endl;
 					}
 					decodingNewAnchor = true;		
 				}
 				cerr << "\tDnaDecoder::execute() - iteration nb : " << _nbTests << endl;
 				cerr << "\tDnaDecoder::execute() - _processedSequenceCount : " << _processedSequenceCount << endl;
 				cerr << "\tDnaDecoder::execute() - _sequenceCount : " << _sequenceCount << endl;
+				cerr << "DnaDecoder::execute() - search sgfl 14" << endl;
 				//cerr << "\tDnaDecoder::execute() - _currentSeq : " << _currentSeq << endl;
 				//cerr << "\tDnaDecoder::execute() - _buffer : " << _buffer.c_str() << endl; 
 			}

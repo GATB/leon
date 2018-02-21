@@ -78,12 +78,19 @@ typedef kmer::impl::Kmer<>::Count       kmer_count;
 
 
 #include <pthread.h>
+#include <unordered_map>
 
 using namespace std::chrono;
 
 class HeaderEncoder;
 class HeaderDecoder;
 class DnaEncoder;
+
+struct groupInfos{
+
+	u_int64_t nbReads;
+	u_int64_t groupBufferSize;	
+};
 
 class Leon : public misc::impl::Tool
 {
@@ -366,10 +373,11 @@ class Leon : public misc::impl::Tool
 		//map<kmer_type, u_int32_t> _anchorKmers; //uses 46 B per elem inserted
 		//OAHash<kmer_type> _anchorKmers;
 		Hash16<kmer_type, u_int32_t >  * _anchorKmers ; //will  use approx 20B per elem inserted
-		Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
-
+		//Hash16<kmer_type, u_int32_t >  * _anchorKmersSorted;
+		unordered_map<kmer_type,struct groupInfos*> * _anchorKmersSorted;
 		//tmp test decompression
-		Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
+		//Hash16<kmer_type, u_int32_t >  * _anchorKmersSortedD;
+		unordered_map<kmer_type,struct groupInfos*> * _anchorKmersSortedD;
 
 		//Header decompression
 	

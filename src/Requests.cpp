@@ -6,7 +6,7 @@ Requests::Requests(IBank* inputBank, string inputFilename, Graph graph,
 	Kmer<>::ModelCanonical model, 
 	Partition<kmer_count> & solidCollection, size_t kmerSize, 
 	Hash16<kmer_type, u_int32_t >  * anchorKmers,
-	Hash16<kmer_type, u_int32_t >  * anchorKmersSorted,
+	unordered_map<kmer_type, struct groupInfos*> *  anchorKmersSorted,
 	Leon* leon,
 	DnaDecoder* dnadec): _generalModel(256), _anchorDictModel(5){
 	
@@ -651,7 +651,9 @@ void Requests::decodeSortedAnchorDict(){
 
 	kmer_type anchor;
 	u_int64_t nbcreated ;
-	_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	//_anchorKmersSortedD = new Hash16<kmer_type, u_int32_t > (anchorCount, &nbcreated );
+	_anchorKmersSortedD = new unordered_map<kmer_type,struct groupInfos*> ();
+
 	//cerr << "\tRequests::decodeSortedAnchorDict() - after initialisation" << endl;
 	
 	while(currentAnchorCount < anchorCount){
@@ -673,13 +675,12 @@ void Requests::decodeSortedAnchorDict(){
 
 			//_vecAnchorKmers.push_back(kmer);
 
-			//TODO
-			//Hash16<kmer_type anchor, u_int64_t* blockInfos >  * _anchorKmersSortedD
-			//block infos should have :
-			// - nbReads
-			// - readGroupBufferSize
+			struct groupInfos* gi = (struct groupInfos*) malloc(sizeof(struct groupInfos));
+			gi->nbReads = nbReads;
+			gi->groupBufferSize = readGroupBufferSize;
+			_anchorKmersSortedD->emplace(anchor, gi);
 			
-			_anchorKmersSortedD->insert(anchor, nbReads);
+			//_anchorKmersSortedD->at(anchor) = gi;
 
 			anchorKmer.clear();
 
@@ -845,11 +846,19 @@ void Requests::fgetRequests(){
 			while(strcmp(kmer_chars, "q")!=0){
 				if(this->fgetKmer(kmer_chars)){
 					anchor = getKmerType(kmer_chars);
-					
+					/*
 					if(_anchorKmersSorted->get(anchor, &nbReads)){
 						cout << "present, nbReads for this anchor : " << nbReads << endl;
 					}
 					else{
+						cout << "not present" << endl;
+					}*/
+					try{
+						struct groupInfos* gi = (struct groupInfos*) malloc(sizeof(struct groupInfos));
+						gi = _anchorKmersSortedD->at(anchor);
+						cout << "present, nbReads for this anchor : " << gi->nbReads << endl;
+					}
+					catch (const std::out_of_range& oor) {
 						cout << "not present" << endl;
 					}
 				}
