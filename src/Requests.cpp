@@ -2465,7 +2465,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 				cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
 				
 				getSequenceFileMatchesInReadGroup(sequence, 
-					orig->anchor, nbReadsLeft, sequenceAnchorKmers, 
+					orig->anchor, nbReadsLeft, orig->groupBufferSize, sequenceAnchorKmers, 
 					sequenceMatches, nbSequencesDecoded, nbReadsLeft);
 
 			}
@@ -2476,7 +2476,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 				while(_ddecoder->getNextOrderedReadsInfosGroup(orig)){
 					
 					getSequenceFileMatchesInReadGroup(sequence, 
-						orig->anchor, orig->nbReads, sequenceAnchorKmers, 
+						orig->anchor, orig->nbReads, orig->groupBufferSize, sequenceAnchorKmers, 
 						sequenceMatches, nbSequencesDecoded, nbReadsLeft);
 				}
 			}
@@ -2504,6 +2504,7 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 						/*struct OrderedReadsInfosGroup* orig,*/ 
 						kmer_type anchor,
 						int nbSequencesToDecode,
+						u_int64_t groupBufferSize,
 						Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers, 
 						vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
 						int& nbSequencesDecoded, 
@@ -2560,6 +2561,9 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 					}
 				}
 				else{
+
+					//groupBufferSize,
+					//nbSequencesDecoded += nbSequencesToDecode
 
 					for (int i=0; i < nbSequencesToDecode; ++i){
 

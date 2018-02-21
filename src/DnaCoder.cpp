@@ -2548,7 +2548,8 @@ void DnaDecoder::execute(){
 						exit(EXIT_FAILURE);
 					}*/
 					cerr << "\n\tDnaDecoder::execute() - nbReads to decode : " << nbReads << endl;
-												cerr << "DnaDecoder::execute() - search sgfl 9" << endl;
+					cerr << "DnaDecoder::execute() - search sgfl 9" << endl;
+
 					for (int i=0; i<nbReads; ++i){
 							cerr << "DnaDecoder::execute() - search sgfl 10" << endl;
 						//if (_nbTests < nbTestsMax){

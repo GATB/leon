@@ -1397,11 +1397,19 @@ void Leon::executeCompression(){
 		requests.fgetRequests();
 
 		//}while(!requests.end_requests);
-		return;
+		cerr << "sg flt 0" << endl;
+		auto it = _anchorKmersSortedD->begin();
+		while (it != _anchorKmersSortedD->end()) { it = _anchorKmersSortedD->erase(it); }
+		delete _anchorKmersSortedD;
+		//return;
 	}
 
 	//originally in endCompression();
 	delete _anchorKmers;
+	cerr << "sg flt 3" << endl;
+    auto it = _anchorKmersSorted->begin();
+	while (it != _anchorKmersSorted->end()) { it = _anchorKmersSorted->erase(it); }
+	delete _anchorKmersSorted;
 
 //END TMP REQUEST EMPLACEMENT CODE TEST
 }
@@ -1875,7 +1883,7 @@ void Leon::startDnaCompression(){
 		// outputfile name : sortedReadsFileName
 		// number of line to sort : _nbLinesToSort
 		// default nb reducers (10 ?)
-		/*
+		
 		cerr << "Leon::startDnaCompression() - _binaryPath :" <<  _binaryPath << endl;
 
 		string commandLine = "sh " + launch_mapred_sort_script_path + " " + 
@@ -1897,7 +1905,7 @@ void Leon::startDnaCompression(){
 		    	cerr << "Leon::startDnaCompression() - map red sort SUCCESS" << endl;
 		    	//remove((_baseOutputname + ".ars.tosort").c_str());
 		  	}
-		 */	
+		 	
 		//AFTER MAP REDUCE SORT
 
 		std::ifstream sortedReads(pathToFiles + sortedReadsFileName);	

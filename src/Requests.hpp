@@ -254,6 +254,7 @@ class Requests
 							/*struct OrderedReadsInfosGroup* orig,*/ 
 							kmer_type anchor,
 							int nbSequencesToDecode,
+							u_int64_t groupBufferSize,
 							Hash16<kmer_type, list<u_int32_t>*>* sequenceAnchorKmers,
 							vector<bitset<NB_MAX_COLORS>>* sequenceMatches,
 							int& nbSequencesDecoded,
