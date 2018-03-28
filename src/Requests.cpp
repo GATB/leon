@@ -1,6 +1,76 @@
 #include "Requests.hpp"
 #define TIME_MESURES
 
+//TODO:
+//duplication of leon's thread_arg_decoder structure...
+//fix this later
+typedef struct
+{
+	QualDecoder * qual_decoder;
+	HeaderDecoder * header_decoder;
+	DnaDecoder * dna_decoder;
+	Requests * requests;
+	Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers;
+	char* sequence;
+	vector<bitset<NB_MAX_COLORS>>* sequenceMatches;
+
+} thread_arg_decoder;
+/*
+typedef struct 
+{
+	QualDecoder * qual_decoder;
+	HeaderDecoder * header_decoder;
+	DnaDecoder * dna_decoder;
+	Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers;
+} thread_args;*/
+
+void * decoder_all_thread_request(void * args)
+{
+	
+	thread_arg_decoder * targ = (thread_arg_decoder*) args;
+	//QualDecoder * qual_decoder = targ->qual_decoder;
+	DnaDecoder * dna_decoder = targ->dna_decoder;
+	HeaderDecoder * header_decoder = targ->header_decoder;
+	
+	/*if(qual_decoder!=NULL)
+		qual_decoder->execute();
+	*/
+	if(header_decoder!=NULL)
+		header_decoder->execute();
+
+	dna_decoder->execute();
+	
+	pthread_exit(0);
+}
+//duplication of leon's thread_arg_decoder structure...
+//fix this later -- end
+
+void * getSequenceFileMatchesInData_all_thread_request(void * args)
+{
+
+	thread_arg_decoder * targ = (thread_arg_decoder*) args;
+	DnaDecoder * dna_decoder = targ->dna_decoder;
+	Requests * requests = targ->requests;
+	Hash16<kmer_type, list<u_int32_t>* >  * sequenceAnchorKmers = targ->sequenceAnchorKmers;
+	char* sequence = targ->sequence;
+	vector<bitset<NB_MAX_COLORS>>* sequenceMatches = targ->sequenceMatches;
+
+	struct ReadInfos* ri = new ReadInfos{};
+	list<u_int32_t>* listPos;
+
+	//reading the compressed file read per read
+	while(dna_decoder->getNextReadInfos(ri)){
+
+		//if the read's anchor is in the sequence's list of anchors
+		//then we try to aline the read to the sequence
+		if(sequenceAnchorKmers->get(ri->anchor, &listPos)){
+
+				requests->searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
+							sequenceMatches/*, _sequenceAmbiguousMatches*/);
+		}
+	}
+}
+
 /*****constructor*****/
 Requests::Requests(IBank* inputBank, string inputFilename, Graph graph, 
 	Kmer<>::ModelCanonical model, 
@@ -92,6 +162,15 @@ Requests::Requests(IBank* inputBank, string inputFilename, Graph graph,
 	    fclose(colors_file);
 	}
 
+	pthread_mutex_init(&sequenceAmbiguousMatches_mutex, NULL);
+	pthread_mutex_init(&sequenceMatches_mutex, NULL);
+
+}
+
+Requests::~Requests()
+{
+	pthread_mutex_destroy(&sequenceAmbiguousMatches_mutex);
+	pthread_mutex_destroy(&sequenceMatches_mutex);
 }
 
 /*****utilities*****/
@@ -2404,20 +2483,125 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 	//when passing to a new block 
 	int nbReadsLeft = 0;
 	struct OrderedReadsInfosGroup* orig = new OrderedReadsInfosGroup{};
-	for (int blockIndice = 0; 
+	
+	int _nb_cores = _leon->_nb_cores;
+	if (! _orderReads){
+		//try to thread it...
+		vector<QualDecoder*> qualdecoders;
+		vector<DnaDecoder*> dnadecoders;
+		vector<HeaderDecoder*> headerdecoders;
+		
+		for(int threadIndice=0; threadIndice<_nb_cores; threadIndice++){
+			
+			if(! _isFasta)
+			{
+				cout << "fastq not treated temporarily" << endl;
+				/*
+				QualDecoder* qd = new QualDecoder(this, _FileQualname);
+				qualdecoders.push_back(qd);*/
+			}
+			
+			DnaDecoder* dd = new DnaDecoder(_leon, this, _decodeFilename);
+			dnadecoders.push_back(dd);
+			
+			if(! _noHeader)
+			{
+			HeaderDecoder* hd = new HeaderDecoder(_leon, this, _inputFilename);
+			headerdecoders.push_back(hd);
+			}
+		}
+	
+		pthread_t * tab_threads = new pthread_t [_nb_cores];
+		
+		thread_arg_decoder *  targ = new thread_arg_decoder [_nb_cores];
+
+		int livingThreadCount = 0;
+
+		for (int blockIndice = 0; 
 		blockIndice < _dnaBlockSizes.size(); 
-		blockIndice += 2){
+		blockIndice += 2)
+		{
 
-		//cerr << "Requests::getSequenceFileMatchesInData - blockIndice : " << blockIndice << endl;
-		//cerr << "Requests::getSequenceFileMatchesInData - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
-
-		if(blockIndice >= _dnaBlockSizes.size()) break;
+			for(int threadIndice=0; threadIndice<_nb_cores; threadIndice++){
 			
-		dnaDecoderSetup(blockIndice);
-		qualDecoderSetup(blockIndice);
 
-		if (! _orderReads){
-			
+				if(blockIndice >= _dnaBlockSizes.size()) break;
+				
+				
+				u_int64_t blockSize;
+				int sequenceCount;
+				
+				livingThreadCount = threadIndice+1;
+				
+				QualDecoder* qdecoder;
+				HeaderDecoder* hdecoder;
+				DnaDecoder* ddecoder;
+				
+				//header decoder
+				if(! _noHeader)
+				{
+					blockSize = _headerBlockSizes[blockIndice];
+					sequenceCount = _headerBlockSizes[blockIndice+1];
+					hdecoder = headerdecoders[threadIndice];
+					hdecoder->setup(_filePosHeader, blockSize, sequenceCount);
+					_filePosHeader += blockSize;
+				}
+				else
+				{
+					hdecoder= NULL;
+				}
+				
+				//dna decoder
+				blockSize = _dnaBlockSizes[blockIndice];
+				sequenceCount = _dnaBlockSizes[blockIndice+1];
+				ddecoder = dnadecoders[threadIndice];
+				ddecoder->setup(_filePosDna, blockSize, sequenceCount);
+				_filePosDna += blockSize;
+
+				//qual decoder setup
+				//here test if in fastq mode, put null pointer otherwise
+				if(! _isFasta)
+				{
+					cout << "fastq not treated temporarily" << endl;
+					/*blockSize = _qualBlockSizes[blockIndice];
+					sequenceCount = _qualBlockSizes[blockIndice+1];
+					qdecoder = qualdecoders[threadIndice];
+					qdecoder->setup(_filePosQual, blockSize, sequenceCount);
+					_filePosQual += blockSize;
+					*/
+				}
+				else
+				{
+					qdecoder= NULL;
+				}
+				
+				
+				targ[threadIndice].qual_decoder = qdecoder;
+				targ[threadIndice].dna_decoder = ddecoder;
+				targ[threadIndice].header_decoder = hdecoder;
+				targ[threadIndice].requests = *this;
+				targ[threadIndice].sequenceAnchorKmers = ;
+				targ[threadIndice].sequence = ;
+				targ[threadIndice].sequenceMatches = ;
+				
+				pthread_create(&tab_threads[threadIndice], NULL, getSequenceFileMatchesInData_all_thread_request, targ + threadIndice);
+				
+				//this->_progress_decode->inc(1);
+
+			}
+
+			//cerr << "Requests::getSequenceFileMatchesInData - blockIndice : " << blockIndice << endl;
+			//cerr << "Requests::getSequenceFileMatchesInData - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+
+			//previous code begin
+			//non parallelized
+			/*
+			if(blockIndice >= _dnaBlockSizes.size()) break;
+				
+			dnaDecoderSetup(blockIndice);
+			qualDecoderSetup(blockIndice);
+
+
 			struct ReadInfos* ri = new ReadInfos{};
 			list<u_int32_t>* listPos;
 
@@ -2429,12 +2613,30 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 				if(sequenceAnchorKmers->get(ri->anchor, &listPos)){
 
 					searchAlignements(sequence, ri, listPos, sequenceAnchorKmers, 
-									sequenceMatches/*, _sequenceAmbiguousMatches*/);
+									sequenceMatches/*, _sequenceAmbiguousMatches*//*);
 				}
 			}
+			*/
+			//previous code end
 		}
+		
+	}
+	else
+	{
 
-		else{
+		for (int blockIndice = 0; 
+		blockIndice < _dnaBlockSizes.size(); 
+		blockIndice += 2)
+		{
+
+		//cerr << "Requests::getSequenceFileMatchesInData - blockIndice : " << blockIndice << endl;
+		//cerr << "Requests::getSequenceFileMatchesInData - _dnaBlockSizes.size() : " << _dnaBlockSizes.size() << endl;
+
+			if(blockIndice >= _dnaBlockSizes.size()) break;
+				
+			dnaDecoderSetup(blockIndice);
+			qualDecoderSetup(blockIndice);
+
 
 			int nbSequencesDecoded = 0;
 
@@ -2443,7 +2645,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 			{
 				//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft > 0" << endl;
 				//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
-				
+					
 				getSequenceFileMatchesInReadGroup(sequence, 
 					orig->anchor, nbReadsLeft, sequenceAnchorKmers, 
 					sequenceMatches, nbSequencesDecoded, nbReadsLeft);
@@ -2454,18 +2656,17 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 			if (nbReadsLeft <= 0)
 			{
 				while(_ddecoder->getNextOrderedReadsInfosGroup(orig)){
-					
+						
 					getSequenceFileMatchesInReadGroup(sequence, 
 						orig->anchor, orig->nbReads, sequenceAnchorKmers, 
 						sequenceMatches, nbSequencesDecoded, nbReadsLeft);
 				}
 			}
 
-			//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
-			//exit(EXIT_FAILURE);
-		}		
+		//cerr << "Requests::getSequenceFileMatchesInData - nbReadsLeft : " << nbReadsLeft << endl;
+		//exit(EXIT_FAILURE)	
 		//cerr << "Requests::getSequenceFileMatchesInData - end block" << endl;
-	}
+		}
 
 	for (int i = 0; i < sequenceSize; ++i)
 	{
@@ -2478,6 +2679,7 @@ void Requests::getSequenceFileMatchesInData(char* sequence,
 
 	emptySequenceAnchorDict(sequenceAnchorKmers, sequence);
 	
+	}
 }
 
 void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
@@ -2570,6 +2772,15 @@ void Requests::getSequenceFileMatchesInReadGroup(char* sequence,
 			//cerr << "Requests::getSequenceFileMatchesInReadGroup - nbSequencesDecoded : " << nbSequencesDecoded << endl;
 }
 
+
+//use : 
+/*
+pthread_mutex_init(&toDefine_mutex, NULL);
+pthread_mutex_lock(&toDefine_mutex);
+pthread_mutex_unlock(&toDefine_mutex);
+pthread_mutex_destroy(&toDefine_mutex);
+*/
+
 void Requests::searchAlignements(char* sequence, 
 								ReadInfos* ri,
 								list<u_int32_t>* listPos,
@@ -2642,7 +2853,9 @@ void Requests::searchAlignements(char* sequence,
 				// cerr << "read color : " << readColor << endl;
 
 				if (readAlreadyAlined){
+					pthread_mutex_lock(&sequenceAmbiguousMatches_mutex);
 					_sequenceAmbiguousMatches |= readColor;
+					pthread_mutex_unlock(&sequenceAmbiguousMatches_mutex);
 				}
 
 				int nbMismatchIndex = 0;
@@ -2655,7 +2868,9 @@ void Requests::searchAlignements(char* sequence,
 									
 					if (seqPos != mismatches[nbMismatchIndex])
 					{
+						pthread_mutex_lock(&sequenceMatches_mutex);
 						(*sequenceMatches)[seqPos] |= readColor;
+						pthread_mutex_unlock(&sequenceMatches_mutex);
 						// cerr << "read color test : " << readColor << endl;
 						// cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
 					}

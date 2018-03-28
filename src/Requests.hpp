@@ -86,6 +86,8 @@ class Requests
 			Order0Model generalModel,
 			vector<Order0Model> numericModel,
 			Order0Model anchorDictModel*/);
+
+		~Requests();
 		
 		/*****utilities*****/
 
@@ -376,6 +378,8 @@ class Requests
 
 		unsigned char* _signature_array;
 		unsigned char* _color_array;
+
+		pthread_mutex_t toDefine_mutex;
 		
 
 	protected:
