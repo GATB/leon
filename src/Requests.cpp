@@ -2247,7 +2247,22 @@ bitset<NB_MAX_COLORS> Requests::getKmerColors(char* kmer){
 
 	Node node = getKmerNode(kmer);
 
+	/*
+	Actually, don't counter the possibles collisions of mphf, use signature_array :
+
+	kmer_type kmerType = getKmerType(kmer);
+
+	unsigned long mphf_index = _graph.nodeMPHFIndex(node);
+	unsigned char signature = hash1(kmerType,0) & 255 ;
+	if ( signature ==  _signature_array[mphf_index] )
+	{*/
 	return _color_array[_graph.nodeMPHFIndex(node)];
+	/*}
+	else
+	error !
+
+	TODO rewrite func : return bool, if true bitset receive colors, else bitset of 0s
+	*/
 }
 
 bitset<NB_MAX_COLORS> Requests::getKmerColors(kmer_type kmer){
@@ -2259,6 +2274,7 @@ bitset<NB_MAX_COLORS> Requests::getKmerColors(kmer_type kmer){
 
 	Node node = getKmerNode(kmer);
 
+	//TODO : same correction here as for Requests::getKmerColors(char* kmer)
 	return _color_array[_graph.nodeMPHFIndex(node)];
 }
 
