@@ -633,21 +633,34 @@ void Leon::coloriage (){
 	#endif
 	Kmer<>::ModelCanonical model (_kmerSize);
 
+
+	cout << "Leon::coloriage - search sgflt 1" << endl;
+
 	// We declare a kmer iterator
 	Kmer<>::ModelCanonical::Iterator itKmer (model);
 	for (size_t ii=0; ii<_nbBanks; ii++)
 	{
+		if (ii >0)
+			cout << "Leon::coloriage - search sgflt 2" << endl;
 		Iterator<Sequence>* itSeq = itBanks[ii];
 		cout << "banque : "<< ii << endl;
+		if (ii >0)
+			cout << "Leon::coloriage - search sgflt 3" << endl;
 		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
 		{
+			if (ii >0)
+				cout << "Leon::coloriage - search sgflt 4" << endl;
 			Sequence& seq = itSeq->item();
 			char* data = seq.getDataBuffer();
 
 			// We set the data from which we want to extract kmers.
 			itKmer.setData ((*itSeq)->getData());
+			if (ii >0)
+				cout << "Leon::coloriage - search sgflt 5" << endl;
 			for (itKmer.first(); !itKmer.isDone(); itKmer.next())
 			{
+				if (ii >0)
+					cout << "Leon::coloriage - search sgflt 6" << endl;
 				Node node(Node::Value(itKmer->value()));
 				unsigned long  mphf_index = _graph.nodeMPHFIndex(node) ;
 				unsigned char signature = hash1(itKmer->value(),0) & 255 ;
@@ -658,16 +671,22 @@ void Leon::coloriage (){
 					//cout << "\tdebug - Leon::coloriage - signature :" << (int) signature << endl;
 					//cout << "\tdebug - Leon::coloriage - _signature_array[mphf_index] :" << (int) _signature_array[mphf_index] << endl;
 				//}
+				if (ii >0)
+					cout << "Leon::coloriage - search sgflt 7" << endl;
 				if ( signature ==  _signature_array[mphf_index] )
 				{
 					//cout << "\tdebug - Leon::coloriage - =============" << endl;
 					_color_array[mphf_index] |=   (1 << ii) ;
 					
 				}
-				
+				if (ii >0)
+					cout << "Leon::coloriage - search sgflt 8" << endl;
 			}
 		}
+		if (ii >0)
+			cout << "Leon::coloriage - search sgflt 9" << endl;
 	}
+		cout << "Leon::coloriage - search sgflt 10" << endl;
 
 	
 //	for(int cc = 0; cc< solidFileSize ; cc++)
@@ -1223,8 +1242,13 @@ void Leon::executeCompression(){
         std::cout << kmer_chars << " is not present" << std::endl;
     }
     */
-	
+	cout << "Leon::executeCompression - before coloriage" << endl;
+	cerr << "Leon::executeCompression - before coloriage" << endl;
+	//exit(EXIT_FAILURE);
 	coloriage();
+	cout << "Leon::executeCompression - after coloriage" << endl;
+	cerr << "Leon::executeCompression - after coloriage" << endl;
+	exit(EXIT_FAILURE);
 
 	u_int64_t nb_kmers = 0;// _graph.iterator().size();
 	//printf("nb kmers %llu \n",nb_kmers);
