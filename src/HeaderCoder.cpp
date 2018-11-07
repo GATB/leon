@@ -273,11 +273,12 @@ HeaderEncoder::HeaderEncoder(const HeaderEncoder& copy) :
 AbstractHeaderCoder(NULL), _totalHeaderSize(0),_seqId(0)
 {
 
-	
+	cout << "HeaderEncoder::HeaderEncoder - seg flt 0" << endl;
 	_leon = copy._leon;
 	
 	_thread_id = __sync_fetch_and_add (&_leon->_nb_thread_living, 1);
 	startBlock();
+		cout << "HeaderEncoder::HeaderEncoder - seg flt 1" << endl;
 
 	//_firstHeader = copy._firstHeader;
 	//_rangeEncoder = new RangeEncoder();
@@ -342,19 +343,22 @@ void HeaderEncoder::operator()(Sequence& sequence){
 	_lastSequenceIndex = sequence.getIndex();
 	_seqId = sequence.getIndex() ;
 
+	cout << "HeaderEncoder::operator - seg flt 0" << endl;
 
 	_currentHeader = sequence.getComment();
 	
 	_totalHeaderSize += _currentHeader.size();
 	
 	processNextHeader();
-	
+		cout << "HeaderEncoder::operator - seg flt 1" << endl;
 	
 	if(_processedSequenceCount >= Leon::READ_PER_BLOCK ){
 		
 		writeBlock();
+		cout << "HeaderEncoder::operator - seg flt 1.5" << endl;
 		startBlock();
 	}
+		cout << "HeaderEncoder::operator - seg flt 2" << endl;
 	
 }
 
@@ -362,13 +366,15 @@ void HeaderEncoder::writeBlock(){
 	if(_rangeEncoder.getBufferSize() > 0){
 		_rangeEncoder.flush();
 	}
-	
+	cout << "HeaderEncoder::writeBlock - seg flt 0" << endl;
 	int blockId = (  _seqId / Leon::READ_PER_BLOCK)   ;
-
+cout << "HeaderEncoder::writeBlock - seg flt 1" << endl;
 	//printf("\nheader coder writeblock   bid %i   tid %i \n",blockId, _thread_id);
-	
+	cout << "HeaderEncoder::writeBlock - seg flt 2" << endl;
 	_leon->writeBlock(_rangeEncoder.getBuffer(), _rangeEncoder.getBufferSize(), _processedSequenceCount,blockId);
+	cout << "HeaderEncoder::writeBlock - seg flt 3" << endl;
 	_rangeEncoder.clear();
+	cout << "HeaderEncoder::writeBlock - seg flt 4" << endl;
 }
 
 void HeaderEncoder::processNextHeader(){
@@ -377,9 +383,13 @@ void HeaderEncoder::processNextHeader(){
 		cout << _prevHeader << endl;
 		cout << _currentHeader << endl;
 	#endif
+				cout << "HeaderEncoder::processNextHeader - seg flt 0" << endl;
 	splitHeader();
+				cout << "HeaderEncoder::processNextHeader - seg flt 1" << endl;
 	compareHeader();
+					cout << "HeaderEncoder::processNextHeader - seg flt 2" << endl;
 	endHeader();
+					cout << "HeaderEncoder::processNextHeader - seg flt 3" << endl;
 }
 
 void HeaderEncoder::compareHeader(){

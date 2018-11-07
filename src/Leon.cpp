@@ -224,7 +224,7 @@ void Leon::execute()
 		_lossless = true;
 	
 	//	if(getParser()->saw ("-order"))....
-	_orderReads = true;
+	_orderReads = false;
 	//_readSortedFileTest = true;
 
     _compress = false;
@@ -634,33 +634,30 @@ void Leon::coloriage (){
 	Kmer<>::ModelCanonical model (_kmerSize);
 
 
-	cout << "Leon::coloriage - search sgflt 1" << endl;
+	//cout << "Leon::coloriage - search sgflt 1" << endl;
 
 	// We declare a kmer iterator
 	Kmer<>::ModelCanonical::Iterator itKmer (model);
 	for (size_t ii=0; ii<_nbBanks; ii++)
 	{
-		if (ii >0)
-			cout << "Leon::coloriage - search sgflt 2" << endl;
+		
 		Iterator<Sequence>* itSeq = itBanks[ii];
 		cout << "banque : "<< ii << endl;
-		if (ii >0)
-			cout << "Leon::coloriage - search sgflt 3" << endl;
+		
 		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
 		{
-			if (ii >0)
-				cout << "Leon::coloriage - search sgflt 4" << endl;
+			
+			
+			
 			Sequence& seq = itSeq->item();
 			char* data = seq.getDataBuffer();
 
 			// We set the data from which we want to extract kmers.
 			itKmer.setData ((*itSeq)->getData());
-			if (ii >0)
-				cout << "Leon::coloriage - search sgflt 5" << endl;
+			
 			for (itKmer.first(); !itKmer.isDone(); itKmer.next())
 			{
-				if (ii >0)
-					cout << "Leon::coloriage - search sgflt 6" << endl;
+				
 				Node node(Node::Value(itKmer->value()));
 				unsigned long  mphf_index = _graph.nodeMPHFIndex(node) ;
 				unsigned char signature = hash1(itKmer->value(),0) & 255 ;
@@ -671,22 +668,19 @@ void Leon::coloriage (){
 					//cout << "\tdebug - Leon::coloriage - signature :" << (int) signature << endl;
 					//cout << "\tdebug - Leon::coloriage - _signature_array[mphf_index] :" << (int) _signature_array[mphf_index] << endl;
 				//}
-				if (ii >0)
-					cout << "Leon::coloriage - search sgflt 7" << endl;
+				
 				if ( signature ==  _signature_array[mphf_index] )
 				{
 					//cout << "\tdebug - Leon::coloriage - =============" << endl;
 					_color_array[mphf_index] |=   (1 << ii) ;
 					
 				}
-				if (ii >0)
-					cout << "Leon::coloriage - search sgflt 8" << endl;
+				
 			}
 		}
-		if (ii >0)
-			cout << "Leon::coloriage - search sgflt 9" << endl;
+		
 	}
-		cout << "Leon::coloriage - search sgflt 10" << endl;
+	
 
 	
 //	for(int cc = 0; cc< solidFileSize ; cc++)
@@ -1248,7 +1242,7 @@ void Leon::executeCompression(){
 	coloriage();
 	cout << "Leon::executeCompression - after coloriage" << endl;
 	cerr << "Leon::executeCompression - after coloriage" << endl;
-	exit(EXIT_FAILURE);
+
 
 	u_int64_t nb_kmers = 0;// _graph.iterator().size();
 	//printf("nb kmers %llu \n",nb_kmers);
@@ -1325,7 +1319,8 @@ void Leon::executeCompression(){
 	}*/
 
 
-
+cout << "Leon::executeCompression - before startHeaderCompression" << endl;
+	cerr << "Leon::executeCompression - before startHeaderCompression" << endl;
     //Compression
 	//temporarily disable header compression for peacock
 	if(! _noHeader && ! _orderReads)
@@ -1333,7 +1328,8 @@ void Leon::executeCompression(){
 		startHeaderCompression();
 	}
 	
-	
+	cout << "Leon::executeCompression - after startHeaderCompression" << endl;
+	cerr << "Leon::executeCompression - after startHeaderCompression" << endl;
 
 	//_blockWrit
 	//setBlockWriter(0);
@@ -1342,9 +1338,13 @@ void Leon::executeCompression(){
 	startDnaCompression();
 	
 
-	
+	cout << "Leon::executeCompression - after startDnaCompression" << endl;
+	cerr << "Leon::executeCompression - after startDnaCompression" << endl;
 	
 	endCompression();
+
+	cout << "Leon::executeCompression - after endCompression" << endl;
+	cerr << "Leon::executeCompression - after endCompression" << endl;
 
 
 	//TMP REQUEST EMPLACEMENT CODE TEST
@@ -1527,13 +1527,13 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	//cout << "\tEncoded size (byte): " << size << endl;
 	
 	
-		//cerr << "Leon::writeBlock - data : " << data << endl;
-		//cerr << "Leon::writeBlock - size : " << size << endl;
-		//cerr << "Leon::writeBlock - encodedSequenceCount : " << encodedSequenceCount << endl;
-		//cerr << "Leon::writeBlock - blockID : " << blockID << endl;
+	cout << "Leon::writeBlock - data : " << data << endl;
+	cout << "Leon::writeBlock - size : " << size << endl;
+	cout << "Leon::writeBlock - encodedSequenceCount : " << encodedSequenceCount << endl;
+	cout << "Leon::writeBlock - blockID : " << blockID << endl;
 	
 	
-	
+cout << "Leon::writeBlock - search seg flt 0 : " << endl;	
 #ifdef SERIAL
 	_outputFile->fwrite(data, size, 1);
 	
@@ -1545,7 +1545,7 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	
 	
 	pthread_mutex_lock(&writeblock_mutex);
-
+cout << "Leon::writeBlock - search seg flt 1 : " << endl;
 	_compressedSize += size;
 
 	//int thread_id = encoder->getId();
@@ -1557,11 +1557,11 @@ void Leon::writeBlock(u_int8_t* data, u_int64_t size, int encodedSequenceCount,u
 	
 	_blockSizes[2*blockID] = size ;
 	_blockSizes[2*blockID+1] = encodedSequenceCount;
-	
+cout << "Leon::writeBlock - search seg flt 2 : " << endl;	
 	
 	pthread_mutex_unlock(&writeblock_mutex);
 
-
+cout << "Leon::writeBlock - search seg flt 3 : " << endl;
 		
 	/*
 	int thread_id = encoder->getId();
@@ -1662,7 +1662,7 @@ void Leon::startHeaderCompression(){
                                                           );
     LOCAL(itSeq);
     
-    
+    cout << "Leon::startHeaderCompression - seg flt 0" << endl;
 	_totalHeaderSize = 0;
 	_compressedSize = 0;
 	
@@ -1674,18 +1674,19 @@ void Leon::startHeaderCompression(){
 	//ifstream inputFileTemp(getInput()->getStr(STR_URI_FILE).c_str(), ios::in);
 	//getline(inputFileTemp, _firstHeader);   //should be get comment from itseq
 	//inputFileTemp.close();
+		    cout << "Leon::startHeaderCompression - seg flt 1" << endl;
 	itSeq->first();
 	_firstHeader = itSeq->item().getComment();
 	_firstHeader.erase(_firstHeader.begin());
 	itSeq->reset();
-
+    cout << "Leon::startHeaderCompression - seg flt 2" << endl;
 	#ifdef PRINT_DEBUG
 		cout << "\tFirst Header: " << _firstHeader << endl;
 		cout << "\tSize: " << _firstHeader.size() << endl;
 	#endif
 	
 	_totalHeaderSize += _firstHeader.size();
-	
+	    cout << "Leon::startHeaderCompression - seg flt 3" << endl;
 	//encode the size of the first header on 2 byte and the header itself
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _firstHeader.size());
 	for(int i=0; i < _firstHeader.size(); i++){
@@ -1697,21 +1698,23 @@ void Leon::startHeaderCompression(){
 	//_rangeEncoder.clear();
 	
 	//cout << "Block start pos: " << _outputFile->tell() << endl;
-	
+	    cout << "Leon::startHeaderCompression - seg flt 4" << endl;
 	//iterate on read sequences and compress headers
 	TIME_INFO (getTimeInfo(), "header compression");
 
 	//int nb_threads_living = 0 ;
-	
+	    cout << "Leon::startHeaderCompression - seg flt 5" << endl;
 	#ifdef SERIAL
 		setDispatcher (new SerialDispatcher());
 	#else
 		setDispatcher (  new Dispatcher (_nb_cores) );
 	#endif
-
+    cout << "Leon::startHeaderCompression - seg flt 6" << endl;
 	//getDispatcher()->iterate (itSeq,  HeaderEncoder(this, &nb_threads_living), 10000);
 	getDispatcher()->iterate (itSeq,  HeaderEncoder(this), READ_PER_BLOCK);
+	    cout << "Leon::startHeaderCompression - seg flt 7" << endl;
 	endHeaderCompression();
+	    cout << "Leon::startHeaderCompression - seg flt 8" << endl;
 }
 
 
@@ -1720,18 +1723,18 @@ void Leon::startHeaderCompression(){
 void Leon::endHeaderCompression(){
 	//u_int64_t descriptionStartPos = _outputFile->tell();
 	//cout << "Description start pos: " << descriptionStartPos << endl;
-	
+	cout << "Leon::endHeaderCompression - seg flt 0" << endl;
 	CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes.size());
 	for(int i=0; i<_blockSizes.size(); i++){
 		//cout << "block size: " << _blockSizes[i] << endl;
 		CompressionUtils::encodeNumeric(_rangeEncoder, _numericModel, _blockSizes[i]);
 	}
 	
-
+cout << "Leon::startHeaderCompression - seg flt 1" << endl;
 
 		
 	_headerCompRate = ((double)_compressedSize / _totalHeaderSize);
-	
+	cout << "Leon::startHeaderCompression - seg flt 2" << endl;
 	//#ifdef PRINT_DEBUG
 	cout << "\tEnd header compression" << endl;
 	//cout << "\t\tData blocks count: " << _blockSizes.size() << endl;
@@ -1741,11 +1744,12 @@ void Leon::endHeaderCompression(){
 	std::cout.precision(4);
 	cout << "\t\tCompression rate: " << (float)(_headerCompRate) << endl;
 		
-
+cout << "Leon::startHeaderCompression - seg flt 3" << endl;
 	//#endif
 	//_rangeEncoder.clear();
 	_blockSizes.clear();
 	//printf("end endHeaderCompression \n");
+	cout << "Leon::startHeaderCompression - seg flt 4" << endl;
 }
 
 

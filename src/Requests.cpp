@@ -160,7 +160,9 @@ void Requests::fillSequenceAnchorsDict(Hash16<kmer_type, list<u_int32_t>* >  * s
 			listPos->push_back(pos);
 			//cerr << "Requests::fillSequenceAnchorsDict - search segflt 4" << endl;
 			sequenceAnchorKmers->insert(anchor, listPos);
-			//cerr << "Requests::fillSequenceAnchorsDict - search segflt 5" << endl;
+		
+		//cerr << "Requests::fillSequenceAnchorsDict - search segflt 5" << endl;
+
 		}
 
 		pos++;
@@ -2609,15 +2611,20 @@ void Requests::searchAlignements(char* sequence,
 		// iterate on the positions of the list
 		// we keep a boolean to know if the read has already been alined
 		bool readAlreadyAlined = false;
+		cerr << "yo : " << endl;
 		for (std::list<u_int32_t>::iterator it=listPos->begin(); it != listPos->end(); ++it){
+			cerr << "posAnchor : " << *it << endl;
 
 			anchorSequencePos = *it;
-			bitset<NB_MAX_COLORS> readColor = getReadColor(ri);
+			bitset<NB_MAX_COLORS> readColor = getReadColor(ri); //could be done later
 
 			char read_chars[ri->sread.size()+1];
 			getSequenceChars(read_chars, ri->sread);
 
 			int seqStartPos = max(((int)anchorSequencePos-ri->anchorPos),0);
+			cerr << "anchorSequencePos : " << anchorSequencePos << endl;
+			cerr << "ri->anchorPos : " << ri->anchorPos << endl;
+			cerr << "seqStartPos : " << seqStartPos << endl;
 			int seqPos = seqStartPos;
 			int readPos = max((ri->anchorPos-(int)anchorSequencePos),0);
 			//memset(mismatches, -1, NB_MAX_SNPS+1);
@@ -2673,7 +2680,7 @@ void Requests::searchAlignements(char* sequence,
 					{
 						(*sequenceMatches)[seqPos] |= readColor;
 						// cerr << "read color test : " << readColor << endl;
-						// cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
+						 cerr << sequence[seqPos] << " - seqPos test : " << seqPos << endl;
 					}
 					else{
 						//we verify that we don't exceed the nbMismatches before increment

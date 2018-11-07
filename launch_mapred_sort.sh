@@ -3,7 +3,7 @@
 set -e 
 #set -o pipefail
 
-ABSOLUTE_PATH_TO_REPOSITORY=""
+ABSOLUTE_PATH_TO_REPOSITORY="/home/tbraquel/NGS/gatb-tool-leon"
 
 if [ "$ABSOLUTE_PATH_TO_REPOSITORY" = "" ]; then
 	echo "please give the absolute path to the leon repository in the script launch_mapred_sort.sh, in the variable ABSOLUTE_PATH_TO_REPOSITORY"
